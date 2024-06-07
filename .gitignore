@@ -1,0 +1,39 @@
+# Ignore everything by default.
+*
+
+# Zsh configuration files
+!.potions/.zshrc
+!.potions/.zsh
+!.potions/.zsh/*
+!.potions/.zsh/contrib
+!.potions/.zsh/contrib/*
+!.potions/.zsh_aliases
+!.potions/.zsh_plugins.txt
+
+# Git configuration files
+!.gitconfig
+!.gitignore
+!.gitexcludes
+
+# Vim configuration files
+!.vim
+!.vim/*
+!.vimrc
+
+# Ignore Vim swapfiles
+.vim/.netrwhist
+.vim/plugged
+.vim/.*.swp
+.vim/*/.*.swp
+.vim/*/*/.*.swp
+.vim/*/*/*/.*.swp
+
+# Local tools and scripts
+!bin
+!bin/*
+
+# Screen and tmux configuration files
+!.screenrc
+!.tmux.conf
+!.tmux
+!.tmux/*.yml
