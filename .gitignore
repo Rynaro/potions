@@ -1,14 +1,20 @@
-# Ignore everything by default.
+# Ignore everything by default
 *
 
-# Zsh configuration files
+# Allow the Installer and Env
+!.zshenv
+!potions-shelf.sh
+
+# Allow the .potions directory and its contents
+!.potions
+!.potions/
 !.potions/.zshrc
-!.potions/.zsh
-!.potions/.zsh/*
-!.potions/.zsh/contrib
-!.potions/.zsh/contrib/*
 !.potions/.zsh_aliases
 !.potions/.zsh_plugins.txt
+!.potions/.zsh
+!.potions/.zsh/
+!.potions/.zsh/contrib
+!.potions/.zsh/contrib/*
 
 # Git configuration files
 !.gitconfig
@@ -17,6 +23,7 @@
 
 # Vim configuration files
 !.vim
+!.vim/
 !.vim/*
 !.vimrc
 
@@ -30,10 +37,11 @@
 
 # Local tools and scripts
 !bin
-!bin/*
+!bin/
 
 # Screen and tmux configuration files
 !.screenrc
 !.tmux.conf
 !.tmux
-!.tmux/*.yml
+!.tmux/
+!.tmux/*.yml# Ignore everything by default
