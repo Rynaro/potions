@@ -3,7 +3,17 @@
 
 # Allow the Installer and Env
 !.zshenv
-!potions-shelf.sh
+!install.sh
+
+# Allow Installer packs
+!os_packages
+!os_packages/
+!os_packages/common/
+!os_packages/common/*.sh
+!os_packages/macos/
+!os_packages/macos/*.sh
+!os_packages/wsl/
+!os_packages/wsl/*.sh
 
 # Allow the .potions directory and its contents
 !.potions
