@@ -2,9 +2,10 @@
 
 source "$(dirname "$0")/packages/accessories.sh"
 
-# Function to install Git
+# Function to install Zsh
 install_package() {
-  brew install git
+  pkg install -y zsh
 }
 
 install_package
+

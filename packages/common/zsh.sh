@@ -8,10 +8,12 @@ install_package() {
     echo "Zsh is already installed."
   else
     echo "Installing Zsh..."
-    if [ "$OS_TYPE" = "Darwin" ]; then
-      brew install zsh
-    elif [ -n "$(command -v apt-get)" ]; then
-      sudo apt-get install -y zsh
+    if is_macos; then
+      safe_source "$(dirname "$0")/../macos/zsh.sh"
+    elif is_wsl; then
+      safe_source "$(dirname "$0")/../wsl/zsh.sh"
+    elif is_termux; then
+      safe_source "$(dirname "$0")/../termux/zsh.sh"
     fi
   fi
 }
@@ -24,8 +26,12 @@ configure_package() {
 
   # Change the default shell to Zsh
   if [ "$SHELL" != "$(command -v zsh)" ]; then
-    echo "Changing the default shell to Zsh..."
-    chsh -s "$(command -v zsh)"
+    if is_termux; then
+      chsh -s zsh
+    else
+      echo "Changing the default shell to Zsh..."
+      chsh -s "$(command -v zsh)"
+    fi
   fi
 }
 

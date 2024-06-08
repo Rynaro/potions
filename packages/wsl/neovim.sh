@@ -2,9 +2,9 @@
 
 source "$(dirname "$0")/packages/accessories.sh"
 
-# Function to install Git
+# Function to install Neovim
 install_package() {
-  brew install git
+  sudo apt-get install -y neovim
 }
 
 install_package

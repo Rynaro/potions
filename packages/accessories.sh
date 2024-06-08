@@ -3,11 +3,13 @@
 OS_TYPE="$(uname -s)"
 
 update_repositories() {
-  echo "Update Repositories..."
-  if [ "$OS_TYPE" = "Darwin" ]; then
+  echo "Updating repositories..."
+  if is_macos; then
     brew update
-  elif [ -n "$(command -v apt-get)" ]; then
+  elif command_exists apt-get; then
     sudo apt-get update
+  elif is_termux; then
+    pkg update
   fi
 }
 
@@ -19,4 +21,19 @@ command_exists() {
 # Function to safely source a script if it exists
 safe_source() {
   [ -f "$1" ] && source "$1"
+}
+
+# Function to check if the environment is Termux
+is_termux() {
+  [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/termux-info" ]
+}
+
+# Function to check if the environment is WSL
+is_wsl() {
+  grep -qi microsoft /proc/version
+}
+
+# Function to check if the environment is macOS
+is_macos() {
+  [ "$(uname -s)" = "Darwin" ]
 }

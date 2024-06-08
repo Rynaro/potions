@@ -4,7 +4,7 @@ source "$(dirname "$0")/packages/accessories.sh"
 
 # Function to install Git
 install_package() {
-  brew install git
+  pkg install -y git
 }
 
 install_package

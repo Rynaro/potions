@@ -8,10 +8,12 @@ install_package() {
     echo "Neovim is already installed."
   else
     echo "Installing Neovim..."
-    if [ "$OS_TYPE" = "Darwin" ]; then
-      brew install neovim
-    elif [ -n "$(command -v apt-get)" ]; then
-      sudo apt-get install -y neovim
+    if is_macos; then
+      safe_source "$(dirname "$0")/../macos/zsh.sh"
+    elif is_wsl; then
+      safe_source "$(dirname "$0")/../wsl/zsh.sh"
+    elif is_termux; then
+      safe_source "$(dirname "$0")/../termux/zsh.sh"
     fi
   fi
 }

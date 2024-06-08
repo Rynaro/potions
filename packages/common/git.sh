@@ -8,10 +8,12 @@ install_package() {
     echo "Git is already installed."
   else
     echo "Installing Git..."
-    if [ "$OS_TYPE" = "Darwin" ]; then
+    if is_macos; then
       safe_source "$(dirname "$0")/../macos/git.sh"
-    elif [ -n "$(command -v apt-get)" ]; then
+    elif is_wsl; then
       safe_source "$(dirname "$0")/../wsl/git.sh"
+    elif is_termux; then
+      safe_source "$(dirname "$0")/../termux/git.sh"
     fi
   fi
 }

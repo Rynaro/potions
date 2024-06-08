@@ -11,6 +11,7 @@ prepare_system() {
 }
 
 install_packages() {
+  safe_source "packages/common/curl.sh"
   safe_source "packages/common/zsh.sh"
   safe_source "packages/common/git.sh"
   safe_source "packages/common/openvpn.sh"
