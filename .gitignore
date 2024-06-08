@@ -1,6 +1,9 @@
 # Ignore everything by default
 *
 
+# Allow README.md
+!README.md
+
 # Allow the Installer and Env
 !.zshenv
 !install.sh
