@@ -9,10 +9,10 @@ install_package() {
   else
     if is_macos; then
       safe_source "$(dirname "$0")/../macos/openvpn.sh"
-    elif is_wsl; then
-      safe_source "$(dirname "$0")/../wsl/openvpn.sh"
     elif is_termux; then
       safe_source "$(dirname "$0")/../termux/openvpn.sh"
+    elif is_wsl; then
+      safe_source "$(dirname "$0")/../wsl/openvpn.sh"
     fi
   fi
 }

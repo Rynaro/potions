@@ -10,10 +10,10 @@ install_package() {
     echo "Installing curl..."
     if is_macos; then
       safe_source "$(dirname "$0")/../macos/curl.sh"
-    elif is_wsl; then
-      safe_source "$(dirname "$0")/../wsl/curl.sh"
     elif is_termux; then
       safe_source "$(dirname "$0")/../termux/curl.sh"
+    elif is_wsl; then
+      safe_source "$(dirname "$0")/../wsl/curl.sh"
     fi
   fi
 }

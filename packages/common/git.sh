@@ -10,10 +10,10 @@ install_package() {
     echo "Installing Git..."
     if is_macos; then
       safe_source "$(dirname "$0")/../macos/git.sh"
-    elif is_wsl; then
-      safe_source "$(dirname "$0")/../wsl/git.sh"
     elif is_termux; then
       safe_source "$(dirname "$0")/../termux/git.sh"
+    elif is_wsl; then
+      safe_source "$(dirname "$0")/../wsl/git.sh"
     fi
   fi
 }
