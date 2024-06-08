@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "$(dirname "$0")/acessories.sh"
+source "$(dirname "$0")/packages/accessories.sh"
 
 install_package() {
   if command_exists git; then

@@ -11,6 +11,14 @@ if command -v antidote &> /dev/null; then
   antidote load
 fi
 
+# Neovim as the default editor
+export EDITOR=nvim
+
+# Docker completion
+if [ -f "/usr/share/zsh/vendor-completions/_docker" ]; then
+  fpath=("/usr/share/zsh/vendor-completions" $fpath)
+fi
+
 # Git Prompt configuration
 PROMPT='%F{cyan}%n%f%F{magenta}@%f%F{red}%m%f:%b$(git_super_status) %~ %(#.#.$) '
 
@@ -38,3 +46,4 @@ esac
 autoload -Uz compinit && compinit
 
 safe_source "${ZDOTDIR:-$HOME}/.zsh_aliases"
+safe_source "${ZDOTDIR:-$HOME}/.zsh_secure_aliases"

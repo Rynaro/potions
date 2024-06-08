@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "$(dirname "$0")/packages/acessories.sh"
+source "$(dirname "$0")/packages/accessories.sh"
 
 prepare_system() {
   if [ "$OS_TYPE" = "Darwin" ]; then

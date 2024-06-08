@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "$(dirname "$0")/../accessories.sh"
+source "$(dirname "$0")/packages/accessories.sh"
 
 # Function to install OpenVPN
 install_package() {
