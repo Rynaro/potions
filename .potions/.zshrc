@@ -30,14 +30,14 @@ if [ "$OS_TYPE" = "Darwin" ]; then
   safe_source "$(brew --prefix nvm)/nvm.sh"
   safe_source "/Users/henrique/.docker/init-zsh.sh"
 elif [ "$OS_TYPE" = "Linux" ]; then
-  if grep -qi microsoft /proc/version; then
-    # WSL-specific configurations
+  if [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/termux-info" ]; then
+    # Termux-specific configurations
     export PATH="$HOME/.rbenv/bin:$PATH"
     eval "$(rbenv init - zsh)"
     export NVM_DIR="$HOME/.nvm"
     safe_source "$NVM_DIR/nvm.sh"
-  elif [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/termux-info" ]; then
-    # Termux-specific configurations
+  elif grep -qi microsoft /proc/version; then
+    # WSL-specific configurations
     export PATH="$HOME/.rbenv/bin:$PATH"
     eval "$(rbenv init - zsh)"
     export NVM_DIR="$HOME/.nvm"
