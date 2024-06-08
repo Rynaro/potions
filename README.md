@@ -27,8 +27,7 @@ Turn a fresh installation of macOS, WSL, or Termux into a fully-configured, beau
 
 2. **Ensure Scripts are Executable:**
 
-_All package files are already 0755. But in case you want to make sure._
-
+    _All package files are already 0755. But in case you want to make sure._
 
     ```sh
     chmod +x install.sh
