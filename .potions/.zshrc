@@ -22,32 +22,28 @@ fi
 # Git Prompt configuration
 PROMPT='%F{cyan}%n%f%F{magenta}@%f%F{red}%m%f:%b$(git_super_status) %~ %(#.#.$) '
 
-case "$OS_TYPE" in
-  Darwin)
-    # macOS-specific configurations
-    export PATH="/opt/homebrew/bin:/opt/homebrew/opt/libpq/bin:$(brew --prefix openvpn)/sbin:$PATH"
+if [ "$OS_TYPE" = "Darwin" ]; then
+  # macOS-specific configurations
+  export PATH="/opt/homebrew/bin:/opt/homebrew/opt/libpq/bin:$(brew --prefix openvpn)/sbin:$PATH"
+  eval "$(rbenv init - zsh)"
+  export NVM_DIR="$HOME/.nvm"
+  safe_source "$(brew --prefix nvm)/nvm.sh"
+  safe_source "/Users/henrique/.docker/init-zsh.sh"
+elif [ "$OS_TYPE" = "Linux" ]; then
+  if grep -qi microsoft /proc/version; then
+    # WSL-specific configurations
+    export PATH="$HOME/.rbenv/bin:$PATH"
     eval "$(rbenv init - zsh)"
     export NVM_DIR="$HOME/.nvm"
-    safe_source "$(brew --prefix nvm)/nvm.sh"
-    safe_source "/Users/henrique/.docker/init-zsh.sh"
-    ;;
-  Android)
+    safe_source "$NVM_DIR/nvm.sh"
+  elif [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/termux-info" ]; then
     # Termux-specific configurations
     export PATH="$HOME/.rbenv/bin:$PATH"
     eval "$(rbenv init - zsh)"
     export NVM_DIR="$HOME/.nvm"
     safe_source "$NVM_DIR/nvm.sh"
-    ;;
-  Linux)
-    # WSL-specific configurations
-    if grep -qi microsoft /proc/version; then
-      export PATH="$HOME/.rbenv/bin:$PATH"
-      eval "$(rbenv init - zsh)"
-      export NVM_DIR="$HOME/.nvm"
-      safe_source "$NVM_DIR/nvm.sh"
-    fi
-    ;;
-esac
+  fi
+fi
 
 # Initialize command completion
 autoload -Uz compinit && compinit
