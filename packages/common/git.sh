@@ -9,11 +9,11 @@ install_package() {
   else
     echo "Installing Git..."
     if is_macos; then
-      safe_source "$(dirname "$0")/../macos/git.sh"
+      safe_source "$(dirname "$0")/packages/macos/git.sh"
     elif is_termux; then
-      safe_source "$(dirname "$0")/../termux/git.sh"
+      safe_source "$(dirname "$0")/packages/termux/git.sh"
     elif is_wsl; then
-      safe_source "$(dirname "$0")/../wsl/git.sh"
+      safe_source "$(dirname "$0")/packages/wsl/git.sh"
     fi
   fi
 }

@@ -9,11 +9,11 @@ install_package() {
   else
     echo "Installing Neovim..."
     if is_macos; then
-      safe_source "$(dirname "$0")/../macos/zsh.sh"
+      safe_source "$(dirname "$0")/packages/macos/zsh.sh"
     elif is_termux; then
-      safe_source "$(dirname "$0")/../termux/zsh.sh"
+      safe_source "$(dirname "$0")/packages/termux/zsh.sh"
     elif is_wsl; then
-      safe_source "$(dirname "$0")/../wsl/zsh.sh"
+      safe_source "$(dirname "$0")/packages/wsl/zsh.sh"
     fi
   fi
 }

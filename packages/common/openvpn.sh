@@ -7,13 +7,13 @@ install_package() {
   if command_exists openvpn; then
     echo "OpenVPN is already installed."
   else
-    echo "Installing OpenVPN..."
+    echo "Installing ..."
     if is_macos; then
-      safe_source "$(dirname "$0")/../macos/openvpn.sh"
+      safe_source "$(dirname "$0")/packages/macos/openvpn.sh"
     elif is_termux; then
-      safe_source "$(dirname "$0")/../termux/openvpn.sh"
+      safe_source "$(dirname "$0")/packages/termux/openvpn.sh"
     elif is_wsl; then
-      safe_source "$(dirname "$0")/../wsl/openvpn.sh"
+      safe_source "$(dirname "$0")/packages/wsl/openvpn.sh"
     fi
   fi
 }

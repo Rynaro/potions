@@ -31,6 +31,13 @@ case "$OS_TYPE" in
     safe_source "$(brew --prefix nvm)/nvm.sh"
     safe_source "/Users/henrique/.docker/init-zsh.sh"
     ;;
+  Android)
+    # Termux-specific configurations
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init - zsh)"
+    export NVM_DIR="$HOME/.nvm"
+    safe_source "$NVM_DIR/nvm.sh"
+    ;;
   Linux)
     # WSL-specific configurations
     if grep -qi microsoft /proc/version; then
@@ -39,13 +46,6 @@ case "$OS_TYPE" in
       export NVM_DIR="$HOME/.nvm"
       safe_source "$NVM_DIR/nvm.sh"
     fi
-    ;;
-  Android)
-    # Termux-specific configurations
-    export PATH="$HOME/.rbenv/bin:$PATH"
-    eval "$(rbenv init - zsh)"
-    export NVM_DIR="$HOME/.nvm"
-    safe_source "$NVM_DIR/nvm.sh"
     ;;
 esac
 
