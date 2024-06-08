@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# Function to check if a command exists
-command_exists() {
-  command -v "$1" &> /dev/null
-}
+source "$(dirname "$0")/../accessories.sh"
 
 # Function to install Zsh
-install_zsh() {
+install_package() {
   if command_exists zsh; then
     echo "Zsh is already installed."
   else
@@ -14,11 +11,12 @@ install_zsh() {
     if [ "$OS_TYPE" = "Darwin" ]; then
       brew install zsh
     elif [ -n "$(command -v apt-get)" ]; then
-      sudo apt-get update
       sudo apt-get install -y zsh
     fi
   fi
+}
 
+configure_package() {
   # Send the Zsh Stuff out!
   cp -r .potions ~/
   cp .zshenv ~/
@@ -31,4 +29,5 @@ install_zsh() {
   fi
 }
 
-install_zsh
+install_package
+configure_package

@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# Function to check if a command exists
-command_exists() {
-  command -v "$1" &> /dev/null
-}
+source "$(dirname "$0")/../accessories.sh"
 
 # Function to install NVM
-install_nvm() {
+install_package() {
   if [ -d "$HOME/.nvm" ]; then
     echo "NVM is already installed."
   else
@@ -15,4 +12,4 @@ install_nvm() {
   fi
 }
 
-install_nvm
+install_package

@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# Function to check if a command exists
-command_exists() {
-  command -v "$1" &> /dev/null
-}
+source "$(dirname "$0")/acessories.sh"
 
-# Function to install Homebrew (macOS only)
-install_homebrew() {
+# Function to install HomeBrew
+install_package() {
   if command_exists brew; then
     echo "Homebrew is already installed."
   else
@@ -15,4 +12,4 @@ install_homebrew() {
   fi
 }
 
-install_homebrew
+install_package

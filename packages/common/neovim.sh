@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# Function to check if a command exists
-command_exists() {
-  command -v "$1" &> /dev/null
-}
+source "$(dirname "$0")/../accessories.sh"
 
 # Function to install Neovim
-install_neovim() {
+install_package() {
   if command_exists nvim; then
     echo "Neovim is already installed."
   else
@@ -14,10 +11,9 @@ install_neovim() {
     if [ "$OS_TYPE" = "Darwin" ]; then
       brew install neovim
     elif [ -n "$(command -v apt-get)" ]; then
-      sudo apt-get update
       sudo apt-get install -y neovim
     fi
   fi
 }
 
-install_neovim
+install_package

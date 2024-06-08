@@ -1,25 +1,22 @@
 #!/bin/bash
 
-# Function to check if a command exists
-command_exists() {
-  command -v "$1" &> /dev/null
-}
+source "$(dirname "$0")/../accessories.sh"
 
 # Function to install Git
-install_git() {
+install_package() {
   if command_exists git; then
     echo "Git is already installed."
   else
     echo "Installing Git..."
     if [ "$OS_TYPE" = "Darwin" ]; then
-      brew install git
+      safe_source "$(dirname "$0")/../macos/git.sh"
     elif [ -n "$(command -v apt-get)" ]; then
-      sudo apt-get install -y git
+      safe_source "$(dirname "$0")/../wsl/git.sh"
     fi
   fi
 }
 
-configure_git() {
+configure_package() {
   git config --global alias.ch checkout
   git config --global alias.cm commit
   git config --global alias.cmm 'commit -m'
@@ -34,5 +31,5 @@ configure_git() {
   git config --global core.editor vim
 }
 
-install_git
-configure_git
+install_package
+configure_package

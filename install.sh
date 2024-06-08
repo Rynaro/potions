@@ -1,53 +1,28 @@
 #!/bin/bash
 
-# Detect the operating system
-OS_TYPE="$(uname -s)"
+source "$(dirname "$0")/packages/acessories.sh"
 
-# Function to safely source a script if it exists
-safe_source() {
-  [ -f "$1" ] && source "$1"
+prepare_system() {
+  if [ "$OS_TYPE" = "Darwin" ]; then
+    safe_source "packages/macos/homebrew.sh"
+  fi
+
+  update_repositories
 }
 
-update_repositories() {
-  safe_source "os_packages/common/update_repositories.sh"
+install_packages() {
+  safe_source "packages/common/zsh.sh"
+  safe_source "packages/common/git.sh"
+  safe_source "packages/common/openvpn.sh"
+  safe_source "packages/common/rbenv.sh"
+  safe_source "packages/common/neovim.sh"
+  safe_source "packages/common/nvm.sh"
+  safe_source "packages/common/antidote.sh"
 }
 
-# Common package installation
-install_common_packages() {
-  safe_source "os_packages/common/install_git.sh"
-  safe_source "os_packages/common/install_rbenv.sh"
-  safe_source "os_packages/common/install_neovim.sh"
-  safe_source "os_packages/common/install_nvm.sh"
-  safe_source "os_packages/common/install_zsh.sh"
-  safe_source "os_packages/common/install_antidote.sh"
-}
+echo "Preparing System..."
+prepare_system
+echo "Installing Packages..."
+install_packages
 
-# macOS specific installations
-install_macos_packages() {
-  safe_source "os_packages/macos/install_homebrew.sh"
-  safe_source "os_packages/macos/install_openvpn.sh"
-}
-
-# WSL specific installations
-install_wsl_packages() {
-  safe_source "os_packages/wsl/install_openvpn.sh"
-}
-
-update_repositories
-
-# Install common packages
-install_common_packages
-
-# OS-specific installations
-case "$OS_TYPE" in
-  Darwin)
-    install_macos_packages
-    ;;
-  Linux)
-    if grep -qi microsoft /proc/version; then
-      install_wsl_packages
-    fi
-    ;;
-esac
-
-echo "Setup completed."
+echo "Setup completed!"

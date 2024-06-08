@@ -1,12 +1,8 @@
 #!/bin/bash
 
-# Function to check if a command exists
-command_exists() {
-  command -v "$1" &> /dev/null
-}
+source "$(dirname "$0")/../accessories.sh"
 
-# Function to install rbenv and ruby-build from git
-install_rbenv() {
+install_package() {
   if [ -d "$HOME/.rbenv" ]; then
     echo "rbenv is already installed."
   else
@@ -22,4 +18,4 @@ install_rbenv() {
   fi
 }
 
-install_rbenv
+install_package

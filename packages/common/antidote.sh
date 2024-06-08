@@ -1,7 +1,9 @@
 #!/bin/bash
 
+source "$(dirname "$0")/../accessories.sh"
+
 # Function to install Antidote
-install_antidote() {
+install_package() {
   if [ -d "${ZDOTDIR:-$HOME}/.antidote" ]; then
     echo "Antidote is already installed."
   else
@@ -10,4 +12,4 @@ install_antidote() {
   fi
 }
 
-install_antidote
+install_package
