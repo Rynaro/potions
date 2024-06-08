@@ -40,6 +40,13 @@ case "$OS_TYPE" in
       safe_source "$NVM_DIR/nvm.sh"
     fi
     ;;
+  Android)
+    # Termux-specific configurations
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init - zsh)"
+    export NVM_DIR="$HOME/.nvm"
+    safe_source "$NVM_DIR/nvm.sh"
+    ;;
 esac
 
 # Initialize command completion
