@@ -29,6 +29,7 @@ Turn a fresh installation of macOS, WSL, or Termux into a fully-configured, beau
 
 _All package files are already 0755. But in case you want to make sure._
 
+
     ```sh
     chmod +x install.sh
     chmod +x packages/common/*.sh
