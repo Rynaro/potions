@@ -6,7 +6,7 @@ update_repositories() {
   echo "Updating repositories..."
   if is_macos; then
     brew update
-  elif command_exists apt-get; then
+  elif is_wsl; then
     sudo apt-get update
   elif is_termux; then
     pkg update
