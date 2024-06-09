@@ -5,9 +5,9 @@ source "$(dirname "$0")/packages/accessories.sh"
 prepare_package() {
   if is_macos; then
     safe_source "$(dirname "$0")/packages/macos/rbenv.sh"
-  elsif is_linux; then
+  elif is_linux; then
     safe_source "$(dirname "$0")/packages/debian/rbenv.sh"
-  elsif is_wsl; then
+  elif is_wsl; then
     safe_source "$(dirname "$0")/packages/wsl/rbenv.sh"
   fi
 }
