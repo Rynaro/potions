@@ -14,6 +14,8 @@ install_package() {
       safe_source "$(dirname "$0")/packages/termux/git.sh"
     elif is_wsl; then
       safe_source "$(dirname "$0")/packages/wsl/git.sh"
+    elif is_linux; then
+      safe_source "$(dirname "$0")/packages/debian/git.sh"
     fi
   fi
 }

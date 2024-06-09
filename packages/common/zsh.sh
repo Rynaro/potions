@@ -14,6 +14,8 @@ install_package() {
       safe_source "$(dirname "$0")/packages/termux/zsh.sh"
     elif is_wsl; then
       safe_source "$(dirname "$0")/packages/wsl/zsh.sh"
+    elif is_linux; then
+      safe_source "$(dirname "$0")/packages/debian/zsh.sh"
     fi
   fi
 }

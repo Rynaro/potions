@@ -3,7 +3,7 @@
 source "$(dirname "$0")/packages/accessories.sh"
 
 prepare_system() {
-  if [ "$OS_TYPE" = "Darwin" ]; then
+  if is_macos; then
     safe_source "packages/macos/homebrew.sh"
   fi
 
@@ -12,13 +12,15 @@ prepare_system() {
 
 install_packages() {
   safe_source "packages/common/curl.sh"
+  safe_source "packages/common/wget.sh"
   safe_source "packages/common/zsh.sh"
   safe_source "packages/common/git.sh"
   safe_source "packages/common/openvpn.sh"
-  safe_source "packages/common/rbenv.sh"
+  safe_source "packages/common/ruby.sh"
   safe_source "packages/common/neovim.sh"
   safe_source "packages/common/nvm.sh"
   safe_source "packages/common/antidote.sh"
+  safe_source "packages/common/proot-distro.sh"
 }
 
 echo "Preparing System..."

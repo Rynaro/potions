@@ -20,6 +20,8 @@
 !packages/wsl/*.sh
 !packages/termux/
 !packages/termux/*.sh
+!packages/debian/
+!packages/debian/*.sh
 
 # Allow the .potions directory and its contents
 !.potions

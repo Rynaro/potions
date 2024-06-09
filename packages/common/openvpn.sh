@@ -14,6 +14,8 @@ install_package() {
       safe_source "$(dirname "$0")/packages/termux/openvpn.sh"
     elif is_wsl; then
       safe_source "$(dirname "$0")/packages/wsl/openvpn.sh"
+    elif is_linux; then
+      safe_source "$(dirname "$0")/packages/debian/openvpn.sh"
     fi
   fi
 }

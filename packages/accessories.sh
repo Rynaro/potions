@@ -8,7 +8,7 @@ update_repositories() {
     brew update
   elif is_termux; then
     pkg update
-  elif is_wsl; then
+  elif is_wsl || is_linux; then
     sudo apt-get update
   fi
 }
@@ -35,5 +35,10 @@ is_wsl() {
 
 # Function to check if the environment is macOS
 is_macos() {
-  [ "$(uname -s)" = "Darwin" ]
+  [ $OS_TYPE = "Darwin" ]
+}
+
+# Function to check if the environment is Linux-based kernel
+is_linux() {
+  [ $OS_TYPE = "Linux" ]
 }
