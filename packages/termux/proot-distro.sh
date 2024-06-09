@@ -14,6 +14,9 @@ install_package() {
 configure_package() {
   proot-distro install debian
 
+  # Prompt for the hostname
+read -p "Enter the hostname for the distro: " HOSTNAME
+
   # Prompt for the username
   read -p "Enter the username for the new user: " USER_NAME
 
@@ -27,6 +30,11 @@ configure_package() {
 # Update and upgrade packages
 echo "Updating and upgrading packages inside $DISTRO_NAME..."
 apt-get update && apt-get upgrade -y
+
+# Set the hostname
+echo "Setting the hostname to $HOSTNAME..."
+echo $HOSTNAME > /etc/hostname
+hostname $HOSTNAME
 
 # Install necessary packages
 echo "Installing necessary packages..."
