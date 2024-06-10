@@ -28,6 +28,7 @@ if command -v antidote &> /dev/null; then
 fi
 
 # Neovim as the default editor
+export PATH="$HOME/.neovim/bin:$PATH"
 export EDITOR=nvim
 
 # Git Prompt configuration

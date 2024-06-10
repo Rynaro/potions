@@ -21,13 +21,11 @@ install_package() {
 }
 
 configure_package() {
-  # Send the Zsh Stuff out!
-  cp -r .potions ~/
-  cp .zshenv ~/
-  source .zshenv
-
   # Change the default shell to Zsh
   if [ "$SHELL" != "$(command -v zsh)" ]; then
+    cp .zshenv ~/
+    source .zshenv
+
     if is_termux; then
       chsh -s zsh
     else

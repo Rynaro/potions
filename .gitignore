@@ -34,6 +34,11 @@
 !.potions/.zsh/contrib
 !.potions/.zsh/contrib/*
 
+# Allow NVim config files
+!.potions/nvim
+!.potions/nvim/init.vim
+
+
 # Git configuration files
 !.gitconfig
 !.gitignore

@@ -2,9 +2,9 @@
 
 source "$(dirname "$0")/packages/accessories.sh"
 
-# Function to install Neovim
-install_package() {
-  sudo apt-get install -y neovim
+prepare_package() {
+  sudo apt-get install -y ninja-build gettext cmake \
+    unzip curl build-essential
 }
 
-install_package
+prepare_package

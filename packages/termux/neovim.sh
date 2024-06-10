@@ -3,7 +3,7 @@
 source "$(dirname "$0")/packages/accessories.sh"
 
 prepare_package() {
-  brew install ninja cmake gettext curl
+  pkg install ninja gettext cmake unzip curl clang
 }
 
 prepare_package

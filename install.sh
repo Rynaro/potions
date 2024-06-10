@@ -8,6 +8,8 @@ prepare_system() {
   fi
 
   update_repositories
+  echo "Copying Potions to Home!"
+  cp -r .potions ~/
 }
 
 install_packages() {
@@ -18,6 +20,7 @@ install_packages() {
   safe_source "packages/common/openvpn.sh"
   safe_source "packages/common/ruby.sh"
   safe_source "packages/common/neovim.sh"
+  safe_source "packages/common/vim-plug.sh"
   safe_source "packages/common/nvm.sh"
   safe_source "packages/common/antidote.sh"
   safe_source "packages/common/proot-distro.sh"
