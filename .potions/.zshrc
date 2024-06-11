@@ -59,3 +59,7 @@ autoload -Uz compinit && compinit
 
 safe_source "${ZDOTDIR:-$HOME}/.zsh_aliases"
 safe_source "${ZDOTDIR:-$HOME}/.zsh_secure_aliases"
+
+if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+  tmux attach -t default || tmux new -s default
+fi
