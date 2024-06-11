@@ -38,6 +38,9 @@
 !.potions/nvim
 !.potions/nvim/init.vim
 
+# Allow TMUX config files
+!.potions/tmux
+!.potions/tmux/tmux.conf
 
 # Git configuration files
 !.gitconfig
