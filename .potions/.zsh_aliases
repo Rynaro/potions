@@ -4,6 +4,9 @@ alias python=python3
 alias ssh-activate="eval \`ssh-agent -s\` && ssh-add"
 alias openvpn-stop-session='sudo killall -9 openvpn'
 
+# TMUX
+alias tmux='tmux -f ~/.potions/tmux/tmux.conf'
+
 # Dev
 alias be='bundle exec'
 alias dc='docker-compose'

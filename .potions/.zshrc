@@ -59,3 +59,13 @@ autoload -Uz compinit && compinit
 
 safe_source "${ZDOTDIR:-$HOME}/.zsh_aliases"
 safe_source "${ZDOTDIR:-$HOME}/.zsh_secure_aliases"
+
+# Enable word navigation with Ctrl + arrow keys
+bindkey "^[[1;5C" forward-word  # Ctrl + Right Arrow
+bindkey "^[[1;5D" backward-word # Ctrl + Left Arrow
+bindkey "^[[5C" forward-word    # Alternative sequence for Ctrl + Right Arrow
+bindkey "^[[5D" backward-word   # Alternative sequence for Ctrl + Left Arrow
+
+if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+  tmux attach -t default || tmux new -s default
+fi

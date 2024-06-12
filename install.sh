@@ -23,6 +23,7 @@ install_packages() {
   safe_source "packages/common/vim-plug.sh"
   safe_source "packages/common/nvm.sh"
   safe_source "packages/common/antidote.sh"
+  safe_source "packages/common/tmux.sh"
   safe_source "packages/common/proot-distro.sh"
 }
 
