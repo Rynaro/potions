@@ -17,7 +17,7 @@ Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 
 " Telescope for fuzzy finding
 Plug 'nvim-lua/plenary.nvim'
-Plug 'nvim-telescope/telescope.nvim', {'tag': '0.1.0'}
+Plug 'nvim-telescope/telescope.nvim', {'tag': '0.1.6'}
 
 " Additional plugins
 Plug 'nvim-tree/nvim-web-devicons'
