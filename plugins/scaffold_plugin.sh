@@ -19,38 +19,33 @@ create_plugin() {
   cat <<EOL > "$plugin_dir/install.sh"
 #!/bin/bash
 
-# Function to install package 1
-install_package1() {
-  echo "Installing package 1..."
-  bash "\$(dirname "\$0")/packages/package1.sh"
+# Function to prepare to install packages
+prepare() {
+  # sudo apt update
 }
 
-# Function to install package 2
-install_package2() {
-  echo "Installing package 2..."
-  bash "\$(dirname "\$0")/packages/package2.sh"
+# Function to install packages
+install_packages() {
+  echo "Installing Plugin: $plugin_name..."
+  safe_source "packages/package1.sh"
+  bash "packages/package2.sh"
 }
 
-# Function to configure package 1
-configure_package1() {
-  echo "Configuring package 1..."
-  # Configuration commands for package 1
+# Function to consolidate post-installation scripts
+post_install() {
+  # Add your post install scripts
 }
 
-# Function to configure package 2
-configure_package2() {
-  echo "Configuring package 2..."
-  # Configuration commands for package 2
-}
+# Run pipeline
+configure
+install_packages
+post_install
 
-# Run installations
-install_package1
-install_package2
-
-# Run configurations
-configure_package1
-configure_package2
 EOL
+
+  # Create utilities.sh
+  cat packages/accessories.sh > "$plugin_dir/utilities.sh"
+
 
   # Create a blank package1.sh script
   cat <<EOL > "$plugin_dir/packages/package1.sh"
