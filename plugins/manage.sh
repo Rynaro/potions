@@ -2,19 +2,8 @@
 
 PLUGINS_DIR="plugins"
 
-# Function to install plugins
-install_plugins() {
-  for plugin_dir in $PLUGINS_DIR/*; do
-    if [ -d "$plugin_dir" ]; then
-      repo_name=$(basename "$plugin_dir")
-      if [ -f "$plugin_dir/install.sh" ]; then
-        bash "$plugin_dir/install.sh"
-      else
-        echo "No install.sh found for $repo_name"
-      fi
-    fi
-  done
-}
+source "$(dirname "$0")/packages/accessories.sh"
+
 
 # Main function to manage plugins
 manage_plugins() {
@@ -23,10 +12,13 @@ manage_plugins() {
 
   case $action in
     install)
+      safe_source "$(dirname "$0")/plugins/obtain.sh"
+      safe_source "$(dirname "$0")/plugins/install.sh"
+      obtain_plugins
       install_plugins
       ;;
     create)
-      bash "$(dirname "$0")/plugins/generators.sh" create "$plugin_name"
+      safe_source "$(dirname "$0")/plugins/generators.sh" create "$plugin_name"
       ;;
     *)
       echo "Usage: $0 {install|create <plugin_name>}"

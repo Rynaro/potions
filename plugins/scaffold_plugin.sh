@@ -19,6 +19,10 @@ create_plugin() {
   cat <<EOL > "$plugin_dir/install.sh"
 #!/bin/bash
 
+PLUGIN_NAME="$plugin_name"
+PLUGIN_VERSION="0.0.1"
+PLUGIN_RELATIVE_FOLDER="$(dirname "$0")/$1"
+
 # Function to prepare to install packages
 prepare() {
   # sudo apt update

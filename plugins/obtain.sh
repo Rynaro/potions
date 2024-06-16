@@ -33,6 +33,3 @@ obtain_plugins() {
   done < <(grep -v '^#' "$PLUGINS_FILE")
 }
 
-# Execute the obtain_plugins function
-obtain_plugins
-
