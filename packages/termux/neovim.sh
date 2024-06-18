@@ -3,7 +3,7 @@
 source "$(dirname "$0")/packages/accessories.sh"
 
 prepare_package() {
-  pkg install ninja gettext cmake unzip curl clang
+  pkg install ninja gettext cmake unzip curl clang ripgrep
 }
 
 prepare_package
