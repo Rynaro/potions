@@ -48,7 +48,7 @@ post_install
 EOL
 
   # Create utilities.sh
-  cat packages/accessories.sh > "$plugin_dir/utilities.sh"
+  cat plugins/utilities.sh > "$plugin_dir/utilities.sh"
 
 
   # Create a blank package1.sh script
@@ -56,13 +56,13 @@ EOL
 #!/bin/bash
 
 # Function to install package 1
-install_package1() {
+install_package() {
   echo "Installing package 1..."
   # Installation commands for package 1
 }
 
 # Run installation
-install_package1
+install_package
 EOL
 
   # Create a blank package2.sh script
@@ -70,17 +70,18 @@ EOL
 #!/bin/bash
 
 # Function to install package 2
-install_package2() {
+install_package() {
   echo "Installing package 2..."
   # Installation commands for package 2
 }
 
 # Run installation
-install_package2
+install_package
 EOL
 
   # Make the scripts executable
   chmod +x "$plugin_dir/install.sh"
+  chmod +x "$plugin_dir/utilities.sh"
   chmod +x "$plugin_dir/packages/package1.sh"
   chmod +x "$plugin_dir/packages/package2.sh"
 
