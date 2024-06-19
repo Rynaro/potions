@@ -23,6 +23,11 @@
 !packages/debian/
 !packages/debian/*.sh
 
+# Plugin Management System
+!plugins.sh
+!plugins/
+!plugins/*.sh
+
 # Allow the .potions directory and its contents
 !.potions
 !.potions/
