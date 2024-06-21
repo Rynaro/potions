@@ -26,6 +26,8 @@ Plug 'romgrk/barbar.nvim'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'arcticicestudio/nord-vim'
 
+Plug 'mg979/vim-visual-multi', {'branch': 'master'} " Multiple cursors on editor
+Plug 'lukas-reineke/indent-blankline.nvim' " Context Indent Lines
 call plug#end()
 
 " Basic settings
@@ -45,6 +47,45 @@ let NERDTreeShowHidden=1
 " Automatically open NERDTree when starting nvim in a directory
 autocmd StdinReadPre * let s:std_in=1
 autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists('s:std_in') | exe 'NERDTree' argv()[0] | wincmd p | enew | exe 'cd '.argv()[0] | endif
+
+" Function to ensure a file ends with a newline if the last line is not blank
+function! EnsureTrailingNewline()
+  " Get the last line of the file
+  let l:last_line = getline('$')
+  " Check if the last line is not empty
+  if l:last_line != ''
+    " Add a newline at the end of the file
+    call append(line('$'), '')
+  endif
+endfunction
+
+" Autocommand to call the function before saving a file
+augroup EnsureTrailingNewline
+  autocmd!
+  autocmd BufWritePre * call EnsureTrailingNewline()
+augroup END
+
+" Define a custom highlight group for trailing whitespace
+highlight ExtraWhitespace ctermbg=red guibg=red
+
+" Function to match trailing whitespace
+function! HighlightTrailingWhitespace()
+  match ExtraWhitespace /\s\+$/
+endfunction
+
+" Autocommand to call the function on specific events
+augroup HighlightTrailingWhitespace
+  autocmd!
+  autocmd BufWinEnter * call HighlightTrailingWhitespace()
+  autocmd InsertLeave * call HighlightTrailingWhitespace()
+  autocmd BufWritePre * call HighlightTrailingWhitespace()
+  autocmd BufWritePost * call HighlightTrailingWhitespace()
+  autocmd TextChanged * call HighlightTrailingWhitespace()
+  autocmd VimEnter * call HighlightTrailingWhitespace()
+augroup END
+
+" Key mapping to move tab back in insert mode with Shift+Tab
+inoremap <S-Tab> <C-d>
 
 " Barbar keybindings for buffer management
 nnoremap <silent> <A-,> :BufferPrevious<CR>
@@ -90,6 +131,16 @@ nnoremap <A-j> :m .+1<CR>==
 xnoremap <A-k> :m '<-2<CR>gv=gv
 xnoremap <A-j> :m '>+1<CR>gv=gv
 
+" vim-visual-multi keybindings for VSCode-like multi-cursor editing
+let g:VM_maps = {}
+let g:VM_maps['Find Under']         = '<C-d>'  " Start multi-cursor (similar to VSCode's Ctrl+D)
+let g:VM_maps['Find Subword Under'] = '<C-d>'  " Start multi-cursor (similar to VSCode's Ctrl+D)
+let g:VM_maps['Select All']         = '<C-S-L>'  " Select all occurrences (similar to VSCode's Ctrl+Shift+L)
+let g:VM_maps['Skip Region']        = '<C-x>'  " Skip current occurrence
+let g:VM_maps['Remove Region']      = '<C-S-k>'  " Remove current cursor (similar to VSCode's Ctrl+U)
+let g:VM_maps['Add Cursor Down']    = '<A-Down>'  " Add cursor down (similar to VSCode's Alt+Down)
+let g:VM_maps['Add Cursor Up']      = '<A-Up>'    " Add cursor up (similar to VSCode's Alt+Up)
+
 " Telescope configuration and keybindings
 lua << EOF
 local builtin = require('telescope.builtin')
@@ -125,10 +176,18 @@ lua << END
 require('lualine').setup()
 END
 
+" Indent Blank Line Settings
+lua << EOF
+require("ibl").setup()
+EOF
+
 " Treesitter configuration for better syntax highlighting and navigation
 lua << EOF
 require'nvim-treesitter.configs'.setup {
   highlight = {
+    enable = true,
+  },
+  indent = {
     enable = true,
   },
   incremental_selection = {
@@ -160,5 +219,11 @@ require'nvim-treesitter.configs'.setup {
       },
     },
   },
+  rainbow = {
+    enable = true,
+    extended_mode = true, -- Highlight also non-parentheses delimiters
+    max_file_lines = nil, -- Do not limit number of lines
+  },
 }
 EOF
+
