@@ -26,6 +26,8 @@ Plug 'romgrk/barbar.nvim'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'arcticicestudio/nord-vim'
 
+Plug 'mg979/vim-visual-multi', {'branch': 'master'} " Multiple cursors on editor
+
 call plug#end()
 
 " Basic settings
@@ -45,6 +47,23 @@ let NERDTreeShowHidden=1
 " Automatically open NERDTree when starting nvim in a directory
 autocmd StdinReadPre * let s:std_in=1
 autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists('s:std_in') | exe 'NERDTree' argv()[0] | wincmd p | enew | exe 'cd '.argv()[0] | endif
+
+" Function to ensure a file ends with a newline
+function! EnsureTrailingNewline()
+  " Get the last character of the file
+  let l:last_char = getline('$')[-1:]
+  " Check if the last character is not a newline
+  if l:last_char != "\n"
+    " Add a newline at the end of the file
+    normal! Go
+  endif
+endfunction
+
+" Autocommand to call the function before saving a file
+augroup EnsureTrailingNewline
+  autocmd!
+  autocmd BufWritePre * call EnsureTrailingNewline()
+augroup END
 
 " Barbar keybindings for buffer management
 nnoremap <silent> <A-,> :BufferPrevious<CR>
@@ -89,6 +108,16 @@ nnoremap <A-k> :m .-2<CR>==
 nnoremap <A-j> :m .+1<CR>==
 xnoremap <A-k> :m '<-2<CR>gv=gv
 xnoremap <A-j> :m '>+1<CR>gv=gv
+
+" vim-visual-multi keybindings for VSCode-like multi-cursor editing
+let g:VM_maps = {}
+let g:VM_maps['Find Under']         = '<C-d>'  " Start multi-cursor (similar to VSCode's Ctrl+D)
+let g:VM_maps['Find Subword Under'] = '<C-d>'  " Start multi-cursor (similar to VSCode's Ctrl+D)
+let g:VM_maps['Select All']         = '<C-S-L>'  " Select all occurrences (similar to VSCode's Ctrl+Shift+L)
+let g:VM_maps['Skip Region']        = '<C-x>'  " Skip current occurrence
+let g:VM_maps['Remove Region']      = '<C-S-k>'  " Remove current cursor (similar to VSCode's Ctrl+U)
+let g:VM_maps['Add Cursor Down']    = '<A-Down>'  " Add cursor down (similar to VSCode's Alt+Down)
+let g:VM_maps['Add Cursor Up']      = '<A-Up>'    " Add cursor up (similar to VSCode's Alt+Up)
 
 " Telescope configuration and keybindings
 lua << EOF
