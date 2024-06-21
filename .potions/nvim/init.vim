@@ -27,7 +27,7 @@ Plug 'nvim-lualine/lualine.nvim'
 Plug 'arcticicestudio/nord-vim'
 
 Plug 'mg979/vim-visual-multi', {'branch': 'master'} " Multiple cursors on editor
-
+Plug 'lukas-reineke/indent-blankline.nvim' " Context Indent Lines
 call plug#end()
 
 " Basic settings
@@ -48,14 +48,14 @@ let NERDTreeShowHidden=1
 autocmd StdinReadPre * let s:std_in=1
 autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists('s:std_in') | exe 'NERDTree' argv()[0] | wincmd p | enew | exe 'cd '.argv()[0] | endif
 
-" Function to ensure a file ends with a newline
+" Function to ensure a file ends with a newline if the last line is not blank
 function! EnsureTrailingNewline()
-  " Get the last character of the file
-  let l:last_char = getline('$')[-1:]
-  " Check if the last character is not a newline
-  if l:last_char != "\n"
+  " Get the last line of the file
+  let l:last_line = getline('$')
+  " Check if the last line is not empty
+  if l:last_line != ''
     " Add a newline at the end of the file
-    normal! Go
+    call append(line('$'), '')
   endif
 endfunction
 
@@ -64,6 +64,28 @@ augroup EnsureTrailingNewline
   autocmd!
   autocmd BufWritePre * call EnsureTrailingNewline()
 augroup END
+
+" Define a custom highlight group for trailing whitespace
+highlight ExtraWhitespace ctermbg=red guibg=red
+
+" Function to match trailing whitespace
+function! HighlightTrailingWhitespace()
+  match ExtraWhitespace /\s\+$/
+endfunction
+
+" Autocommand to call the function on specific events
+augroup HighlightTrailingWhitespace
+  autocmd!
+  autocmd BufWinEnter * call HighlightTrailingWhitespace()
+  autocmd InsertLeave * call HighlightTrailingWhitespace()
+  autocmd BufWritePre * call HighlightTrailingWhitespace()
+  autocmd BufWritePost * call HighlightTrailingWhitespace()
+  autocmd TextChanged * call HighlightTrailingWhitespace()
+  autocmd VimEnter * call HighlightTrailingWhitespace()
+augroup END
+
+" Key mapping to move tab back in insert mode with Shift+Tab
+inoremap <S-Tab> <C-d>
 
 " Barbar keybindings for buffer management
 nnoremap <silent> <A-,> :BufferPrevious<CR>
@@ -154,10 +176,18 @@ lua << END
 require('lualine').setup()
 END
 
+" Indent Blank Line Settings
+lua << EOF
+require("ibl").setup()
+EOF
+
 " Treesitter configuration for better syntax highlighting and navigation
 lua << EOF
 require'nvim-treesitter.configs'.setup {
   highlight = {
+    enable = true,
+  },
+  indent = {
     enable = true,
   },
   incremental_selection = {
@@ -189,5 +219,11 @@ require'nvim-treesitter.configs'.setup {
       },
     },
   },
+  rainbow = {
+    enable = true,
+    extended_mode = true, -- Highlight also non-parentheses delimiters
+    max_file_lines = nil, -- Do not limit number of lines
+  },
 }
 EOF
+
