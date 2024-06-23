@@ -9,9 +9,8 @@ Turn a fresh installation of macOS, WSL, or Termux into a fully-configured, beau
   - Zsh
   - curl
   - OpenVPN
-  - rbenv
-  - nvm
   - Neovim
+  - Proot-Distro (with Debian)
 - Environment-specific installations for macOS, WSL, and Termux.
 - Configures Zsh as the default shell.
 - Sets up custom Zsh configurations and aliases.
