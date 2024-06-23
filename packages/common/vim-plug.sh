@@ -19,5 +19,10 @@ configure_package() {
   echo 'source ~/.potions/nvim/init.vim' > ~/.config/nvim/init.vim
 }
 
-install_package
-configure_package
+if is_termux; then
+  echo "Neovim will be configured inside the proot-distro"
+elif
+  install_package
+  configure_package
+fi
+
