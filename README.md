@@ -1,3 +1,6 @@
+<img src="https://github.com/Rynaro/potions/assets/5271543/64fa7339-4424-4345-9ee1-a6b7cd45460e" height="150" />
+
+
 # Potions
 
 Turn a fresh installation of macOS, WSL, or Termux into a fully-configured, beautiful, and modern development environment by running a single command. That's the one-line pitch for Potions. No need to write bespoke configs for every essential tool just to get started or to be up on all the latest command-line tools. Potions is an opinionated take on what your development setup can be at its best.
