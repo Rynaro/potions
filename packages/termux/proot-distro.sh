@@ -6,27 +6,32 @@ REPO_DIR="potions"
 
 source "$(dirname "$0")/packages/accessories.sh"
 
+is_distro_installed() {
+  proot-distro list | grep -q "$DISTRO_NAME"
+}
+
 # Function to install PRoot-Distro
 install_package() {
   pkg install -y proot-distro
 }
 
 configure_package() {
-  proot-distro install debian
+  if ! is_distro_installed; then
+    proot-distro install $DISTRO_NAME
 
-  # Prompt for the hostname
-read -p "Enter the hostname for the distro: " HOSTNAME
+    # Prompt for the hostname
+    read -p "Enter the hostname for the distro: " HOSTNAME
 
-  # Prompt for the username
-  read -p "Enter the username for the new user: " USER_NAME
+    # Prompt for the username
+    read -p "Enter the username for the new user: " USER_NAME
 
-  # Prompt for the password
-  read -sp "Enter password for the new user $USER_NAME: " USER_PASSWORD
-  echo
+    # Prompt for the password
+    read -sp "Enter password for the new user $USER_NAME: " USER_PASSWORD
+    echo
 
-  # Start the distro
-  echo "Starting $DISTRO_NAME..."
-  proot-distro login $DISTRO_NAME << EOF
+    # Start the distro
+    echo "Starting $DISTRO_NAME..."
+    proot-distro login $DISTRO_NAME << EOF
 # Update and upgrade packages
 echo "Updating and upgrading packages inside $DISTRO_NAME..."
 apt-get update && apt-get upgrade -y
@@ -71,7 +76,11 @@ EOU
 # Exit the distro
 exit
 EOF
+  else
+    echo "$DISTRO_NAME is already installed"
+  fi
 }
 
 install_package
 configure_package
+
