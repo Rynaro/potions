@@ -36,34 +36,21 @@ set number
 set tabstop=2
 set shiftwidth=2
 set expandtab
+set guicursor=n-v-c:block,r-cr:hor20,o:hor50
 
 " Set colorscheme
 colorscheme nord
+" Force custom visual mode selection colors
+highlight Visual ctermfg=White ctermbg=DarkGrey guifg=White guibg=DarkGrey
 
 " NERDTree settings
 nnoremap <silent> <C-n> :NERDTreeToggle<CR>
+nnoremap <silent> <leader>nf :NERDTreeFind<CR>
 let NERDTreeShowHidden=1
 
 " Automatically open NERDTree when starting nvim in a directory
 autocmd StdinReadPre * let s:std_in=1
 autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists('s:std_in') | exe 'NERDTree' argv()[0] | wincmd p | enew | exe 'cd '.argv()[0] | endif
-
-" Function to ensure a file ends with a newline if the last line is not blank
-function! EnsureTrailingNewline()
-  " Get the last line of the file
-  let l:last_line = getline('$')
-  " Check if the last line is not empty
-  if l:last_line != ''
-    " Add a newline at the end of the file
-    call append(line('$'), '')
-  endif
-endfunction
-
-" Autocommand to call the function before saving a file
-augroup EnsureTrailingNewline
-  autocmd!
-  autocmd BufWritePre * call EnsureTrailingNewline()
-augroup END
 
 " Define a custom highlight group for trailing whitespace
 highlight ExtraWhitespace ctermbg=red guibg=red
@@ -83,6 +70,49 @@ augroup HighlightTrailingWhitespace
   autocmd TextChanged * call HighlightTrailingWhitespace()
   autocmd VimEnter * call HighlightTrailingWhitespace()
 augroup END
+
+" Key mapping to copy the opened file relative path
+nnoremap <silent> <leader>yr :let @+=expand('%')<CR>
+
+" Key mapping to copy the opened file absolute path
+nnoremap <silent> <leader>ya :let @+=expand('%:p')<CR>
+
+" Move to the beginning of the line Ctrl+Alt+Left
+nnoremap <S-A-Left> ^
+inoremap <S-A-Left> <C-o>^
+vnoremap <S-A-Left> ^
+
+" Move to the end of the line Ctrl+Alt+Right
+nnoremap <S-A-Right> $
+inoremap <S-A-Right> <C-o>$
+vnoremap <S-A-Right> $
+
+" Moving to the Previous Paragraph (Ctrl+Alt+Up)
+nnoremap <C-A-Up> {
+
+" Moving to the Next Paragraph (Ctrl+Alt+Down)
+nnoremap <C-A-Down> }
+
+" Keybindings for large line movements and navigation
+nnoremap <C-u> 10k
+nnoremap <C-d> 10j
+nnoremap <silent> <leader>gg gg
+nnoremap <silent> <leader>G G
+
+" Keybindings for copy, cut, and paste
+vnoremap <silent> <C-c> "+y
+vnoremap <silent> <C-x> "+d
+nnoremap <silent> <C-v> "+p
+inoremap <silent> <C-v> <C-r>+
+
+" Keybindings for moving lines up and down
+nnoremap <A-k> :m .-2<CR>==
+nnoremap <A-j> :m .+1<CR>==
+xnoremap <A-k> :m '<-2<CR>gv=gv
+xnoremap <A-j> :m '>+1<CR>gv=gv
+
+" Key mapping for select all file content while in Visual Mode
+nnoremap <leader>a ggVG
 
 " Key mapping to move tab back in insert mode with Shift+Tab
 inoremap <S-Tab> <C-d>
@@ -112,24 +142,6 @@ nnoremap <silent> <Space>bn :BufferOrderByName<CR>
 nnoremap <silent> <Space>bd :BufferOrderByDirectory<CR>
 nnoremap <silent> <Space>bl :BufferOrderByLanguage<CR>
 nnoremap <silent> <Space>bw :BufferOrderByWindowNumber<CR>
-
-" Keybindings for large line movements and navigation
-nnoremap <C-u> 10k
-nnoremap <C-d> 10j
-nnoremap <silent> <leader>gg gg
-nnoremap <silent> <leader>G G
-
-" Keybindings for copy, cut, and paste
-vnoremap <silent> <C-c> "+y
-vnoremap <silent> <C-x> "+d
-nnoremap <silent> <C-v> "+p
-inoremap <silent> <C-v> <C-r>+
-
-" Keybindings for moving lines up and down
-nnoremap <A-k> :m .-2<CR>==
-nnoremap <A-j> :m .+1<CR>==
-xnoremap <A-k> :m '<-2<CR>gv=gv
-xnoremap <A-j> :m '>+1<CR>gv=gv
 
 " vim-visual-multi keybindings for VSCode-like multi-cursor editing
 let g:VM_maps = {}
@@ -226,4 +238,3 @@ require'nvim-treesitter.configs'.setup {
   },
 }
 EOF
-
