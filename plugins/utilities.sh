@@ -1,6 +1,6 @@
 #!/bin/bash
 
-UTILITIES_VERSION=1.0.0
+UTILITIES_VERSION=1.1.0
 
 OS_TYPE="$(uname -s)"
 
