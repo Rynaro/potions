@@ -87,6 +87,3 @@ EOL
 
   echo "Plugin $plugin_name has been created at $plugin_dir"
 }
-
-# Execute the create_plugin function with provided arguments
-create_plugin "$@"
