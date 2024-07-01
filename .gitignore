@@ -27,6 +27,8 @@
 !plugins.sh
 !plugins/
 !plugins/*.sh
+!plugins/templates/
+!plugins/templates/*.sh
 
 # Allow the .potions directory and its contents
 !.potions
