@@ -1,6 +1,6 @@
 #!/bin/bash
 
-UTILITIES_VERSION=1.0.0
+UTILITIES_VERSION=1.1.0
 
 OS_TYPE="$(uname -s)"
 
@@ -17,7 +17,19 @@ update_repositories() {
 
 # Function to check if a command exists
 command_exists() {
-  command -v "$1" &> /dev/null
+  local cmd="$1"
+
+  # Check in bash
+  if command -v "$cmd" &> /dev/null; then
+    return 0
+  fi
+
+  # Check in zsh
+  if ZDOTDIR="$HOME/.potions" zsh -c "command -v $cmd" &> /dev/null; then
+    return 0
+  fi
+
+  return 1
 }
 
 # Function to safely source a script if it exists
