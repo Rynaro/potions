@@ -99,6 +99,8 @@ Create a `plugins.txt` file in the root directory with the following content to 
 Rynaro/mini-rails
 ```
 
+Check my personal plugins file! [Rynaro's plugins.txt](https://gist.github.com/Rynaro/589a00e84682b873d2d644ae34858077)
+
 ## Contributing to the Documentation
 
 Please help us improve Potions' documentation here in this repository!
