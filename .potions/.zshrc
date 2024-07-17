@@ -36,7 +36,8 @@ PROMPT='%F{cyan}%n%f%F{magenta}@%f%F{red}%m%f:%b$(git_super_status) %~ %(#.#.$) 
 
 if is_macos; then
   # macOS-specific configurations
-  export PATH="/opt/homebrew/bin:/opt/homebrew/opt/libpq/bin:$(brew --prefix openvpn)/sbin:$PATH"
+  export PATH="/opt/homebrew/bin:/opt/homebrew/opt/libpq/bin:$PATH"
+  export PATH="$(brew --prefix openvpn)/sbin:$PATH"
   eval "$(rbenv init - zsh)"
   export NVM_DIR="$HOME/.nvm"
   safe_source "$(brew --prefix nvm)/nvm.sh"
