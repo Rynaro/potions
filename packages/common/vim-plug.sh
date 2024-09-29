@@ -21,7 +21,7 @@ configure_package() {
 
 if is_termux; then
   echo "Neovim will be configured inside the proot-distro"
-elif
+else
   install_package
   configure_package
 fi
