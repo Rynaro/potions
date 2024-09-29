@@ -66,11 +66,6 @@ else
     echo "Repository already cloned."
 fi
 
-# Navigate to the repository directory and run the install script
-cd $REPO_DIR
-echo "Running install.sh script..."
-bash install.sh
-
 EOU
 
 # Exit the distro
