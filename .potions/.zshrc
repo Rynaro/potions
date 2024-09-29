@@ -42,7 +42,7 @@ if is_macos; then
   export NVM_DIR="$HOME/.nvm"
   safe_source "$(brew --prefix nvm)/nvm.sh"
   safe_source "/Users/henrique/.docker/init-zsh.sh"
-elif is_linux; then
+elif ! is_termux && is_linux; then
   # Linux-based configurations
   export PATH="$HOME/.rbenv/bin:$PATH"
   eval "$(rbenv init - zsh)"
