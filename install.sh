@@ -20,16 +20,22 @@ prepare_system() {
 }
 
 install_packages() {
-  install_package 'curl'
-  install_package 'wget'
-  install_package 'git'
-  install_package 'openvpn'
-  install_package 'zsh'
-  install_package 'neovim'
-  install_package 'vim-plug'
-  install_package 'antidote'
-  install_package 'tmux'
-  install_package 'proot-distro'
+  packages=(
+    'curl'
+    'wget'
+    'git'
+    'openvpn'
+    'zsh'
+    'neovim'
+    'vim-plug'
+    'antidote'
+    'tmux'
+    'proot-distro'
+)
+
+  for pkg in "${packages[@]}"; do
+    unpack_it "$pkg"
+  done
 }
 
 if [[ "$1" == "--only-dotfiles" ]]; then

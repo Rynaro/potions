@@ -2,7 +2,7 @@
 
 # Environment Variables
 OS_TYPE="$(uname -s)"
-USER_HOME_FOLDER="$(get_home_folder)"
+USER_HOME_FOLDER="$(get_user_home_folder)"
 POTIONS_HOME="$USER_HOME_FOLDER/.potions"
 ZDOTDIR=$POTIONS_HOME
 
@@ -23,8 +23,9 @@ update_repositories() {
 }
 
 # Function to source the common holding package
-install_package() {
-  safe_source "packages/common/$1.sh"
+unpack_it() {
+  local package="$1"
+  safe_source "packages/common/$package.sh"
 }
 
 # Function to check if a command exists
@@ -63,7 +64,7 @@ get_user_home_folder() {
     exit_with_message "No home folder found for this user, consider add a HOME varible to your environment!"
   fi
 
-  home_folder
+  echo $home_folder
 }
 
 # Function to check if apt is the package manager
