@@ -4,6 +4,12 @@
 # Allow README.md
 !README.md
 
+# Assets
+!assets
+!assets/
+!assets/images/
+!assets/images/*.jpg
+
 # Allow the Installer and Env
 !.zshenv
 !install.sh
