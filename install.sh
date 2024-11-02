@@ -20,16 +20,22 @@ prepare_system() {
 }
 
 install_packages() {
-  safe_source "packages/common/curl.sh"
-  safe_source "packages/common/wget.sh"
-  safe_source "packages/common/zsh.sh"
-  safe_source "packages/common/git.sh"
-  safe_source "packages/common/openvpn.sh"
-  safe_source "packages/common/neovim.sh"
-  safe_source "packages/common/vim-plug.sh"
-  safe_source "packages/common/antidote.sh"
-  safe_source "packages/common/tmux.sh"
-  safe_source "packages/common/proot-distro.sh"
+  packages=(
+    'curl'
+    'wget'
+    'git'
+    'openvpn'
+    'zsh'
+    'neovim'
+    'vim-plug'
+    'antidote'
+    'tmux'
+    'proot-distro'
+)
+
+  for pkg in "${packages[@]}"; do
+    unpack_it "$pkg"
+  done
 }
 
 if [[ "$1" == "--only-dotfiles" ]]; then

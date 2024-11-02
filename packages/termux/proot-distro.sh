@@ -1,8 +1,6 @@
 #!/bin/bash
 
 DISTRO_NAME="debian"
-REPO_URL="https://github.com/Rynaro/potions"
-REPO_DIR="potions"
 
 source "$(dirname "$0")/packages/accessories.sh"
 
@@ -54,19 +52,6 @@ else
     echo "$USER_NAME:$USER_PASSWORD" | chpasswd
     echo "$USER_NAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 fi
-
-# Switch to the new user
-echo "Switching to user $USER_NAME..."
-su - $USER_NAME << EOU
-# Clone the repository
-if [ ! -d "$REPO_DIR" ]; then
-    echo "Cloning the repository $REPO_URL..."
-    git clone $REPO_URL
-else
-    echo "Repository already cloned."
-fi
-
-EOU
 
 # Exit the distro
 exit

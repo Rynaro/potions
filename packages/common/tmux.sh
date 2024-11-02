@@ -21,8 +21,12 @@ install_package() {
   fi
 }
 
+prepare_package() {
+  mkdir -p $POTIONS_HOME/tmux/plugins
+}
+
 configure_package() {
-  git clone https://github.com/tmux-plugins/tpm ~/.potions/tmux/plugins/tpm
+  git clone https://github.com/tmux-plugins/tpm $POTIONS_HOME/tmux/plugins/tpm
 }
 
 install_package
