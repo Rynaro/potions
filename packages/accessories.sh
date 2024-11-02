@@ -22,6 +22,11 @@ update_repositories() {
   fi
 }
 
+# Function to source the common holding package
+install_package() {
+  safe_source "packages/common/$1"
+}
+
 # Function to check if a command exists
 command_exists() {
   command -v "$1" &> /dev/null
