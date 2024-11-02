@@ -2,7 +2,6 @@
 
 # Function to install OpenVPN
 install_package() {
-  echo "Installing OpenVPN..."
   brew install openvpn
 }
 

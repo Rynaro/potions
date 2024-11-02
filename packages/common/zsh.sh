@@ -23,15 +23,8 @@ install_package() {
 configure_package() {
   # Change the default shell to Zsh
   if [ "$SHELL" != "$(command -v zsh)" ]; then
-    cp .zshenv ~/
+    cp .zshenv $USER_HOME_FOLDER
     source .zshenv
-
-    if is_termux; then
-      chsh -s zsh
-    else
-      echo "Changing the default shell to Zsh..."
-      chsh -s "$(command -v zsh)"
-    fi
   fi
 }
 

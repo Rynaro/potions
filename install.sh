@@ -22,12 +22,12 @@ prepare_system() {
 install_packages() {
   safe_source "packages/common/curl.sh"
   safe_source "packages/common/wget.sh"
-  safe_source "packages/common/zsh.sh"
   safe_source "packages/common/git.sh"
   safe_source "packages/common/openvpn.sh"
+  safe_source "packages/common/zsh.sh"
   safe_source "packages/common/neovim.sh"
-  safe_source "packages/common/vim-plug.sh"
-  safe_source "packages/common/antidote.sh"
+  safe_source "packages//vim-plug.sh"
+  safe_source "packages/common/te.sh"
   safe_source "packages/common/tmux.sh"
   safe_source "packages/common/proot-distro.sh"
 }
