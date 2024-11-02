@@ -24,7 +24,7 @@ update_repositories() {
 
 # Function to source the common holding package
 install_package() {
-  safe_source "packages/common/$1"
+  safe_source "packages/common/$1.sh"
 }
 
 # Function to check if a command exists
