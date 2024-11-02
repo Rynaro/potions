@@ -1,5 +1,4 @@
-<img src="https://github.com/Rynaro/potions/assets/5271543/64fa7339-4424-4345-9ee1-a6b7cd45460e" height="150" />
-
+<img src="https://github.com/user-attachments/assets/8d81012c-41d8-4db9-b801-db40ef52be0b" height="200" />
 
 # Potions
 
