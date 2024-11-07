@@ -26,6 +26,8 @@ configure_package() {
     cp .zshenv $USER_HOME_FOLDER
     source .zshenv
   fi
+
+  chsh -s zsh
 }
 
 install_package
