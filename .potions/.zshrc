@@ -86,5 +86,6 @@ setopt HIST_IGNORE_SPACE
 setopt HIST_REDUCE_BLANKS
 
 if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-  tmux new -s default
+  TMUX_PROFILE_NAME="potions-$(date +%s%N | cut -b1-6)+"
+  tmux new -s default -s "$TMUX_PROFILE_NAME" -f "$POTIONS_HOME/tmux/tmux.conf"
 fi
