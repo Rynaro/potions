@@ -4,23 +4,21 @@
 source "$(dirname "$0")/packages/accessories.sh"
 
 update_potions() {
-  echo "Updating Potions files..."
+  log 'Sending Potions files to HOME...'
   cp -r .potions ~/
-  echo "Potions files updated!"
 }
 
 prepare_system() {
   if is_macos; then
-    safe_source "packages/macos/homebrew.sh"
+    unpack_it 'macos/homebrew'
   fi
 
   update_repositories
-  echo "Copying Potions to Home!"
-  cp -r .potions ~/
+  update_potions
 }
 
 install_packages() {
-  packages=(
+  local packages=(
     'curl'
     'wget'
     'git'
@@ -31,7 +29,7 @@ install_packages() {
     'antidote'
     'tmux'
     'proot-distro'
-)
+  )
 
   for pkg in "${packages[@]}"; do
     unpack_it "$pkg"
@@ -39,14 +37,13 @@ install_packages() {
 }
 
 if [[ "$1" == "--only-dotfiles" ]]; then
-  echo "Updating only dotfiles..."
+  log 'Updating only dotfiles...'
   update_potions
 else
-  echo "Preparing System..."
+  log 'Preparing System...'
   prepare_system
-  echo "Installing Packages..."
+  log 'Installing Packages...'
   install_packages
 fi
 
-echo "Setup completed!"
-
+log 'Setup completed!'

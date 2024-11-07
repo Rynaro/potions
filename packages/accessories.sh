@@ -22,6 +22,15 @@ update_repositories() {
   fi
 }
 
+prepare_logging_stream() {
+  ensure_directory $LOGS_FOLDER
+  ensure_files "$LOGS_FOLDER" "$LOG_OUTPUT_FILE"
+}
+
+log() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
 # Function to source the common holding package
 unpack_it() {
   local package="$1"
@@ -70,6 +79,45 @@ get_user_home_folder() {
 # Function to check if apt is the package manager
 is_apt_package_manager() {
   command_exists apt
+}
+
+# Function to check and create directory
+ensure_directory() {
+    local dir="$1"
+    if [ -d "$dir" ]; then
+        log "Directory '$dir' already exists."
+    else
+        log "Directory '$dir' does not exist. Creating..."
+        mkdir -p "$dir"
+        if [ $? -eq 0 ]; then
+            log "Successfully created directory '$dir'."
+        else
+            log "Error: Failed to create directory '$dir'." >&2
+            exit 1
+        fi
+    fi
+}
+
+ensure_files() {
+    local dir="$1"
+    shift
+    local files=("$@")
+
+    for file in "${files[@]}"; do
+        local filepath="$dir/$file"
+        if [ -f "$filepath" ]; then
+            echo "File '$filepath' already exists."
+        else
+            echo "File '$filepath' does not exist. Creating..."
+            touch "$filepath"
+            if [ $? -eq 0 ]; then
+                echo "Successfully created file '$filepath'."
+            else
+                echo "Error: Failed to create file '$filepath'." >&2
+                exit 1
+            fi
+        fi
+    done
 }
 
 # Beautifully message and go!
