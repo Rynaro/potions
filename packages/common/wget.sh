@@ -5,17 +5,17 @@ source "$(dirname "$0")/packages/accessories.sh"
 # Function to install wget
 install_package() {
   if command_exists wget; then
-    echo "wget is already installed."
+    log "wget is already installed."
   else
-    echo "Installing wget..."
+    log "Installing wget..."
     if is_macos; then
-      safe_source "$(dirname "$0")/packages/macos/wget.sh"
+      unpack_it 'macos/wget'
     elif is_termux; then
-      safe_source "$(dirname "$0")/packages/termux/wget.sh"
+      unpack_it 'termux/wget'
     elif is_wsl; then
-      safe_source "$(dirname "$0")/packages/wsl/wget.sh"
+      unpack_it 'wsl/wget'
     elif is_linux; then
-      safe_source "$(dirname "$0")/packages/debian/wget.sh"
+      unpack_it 'debian/wget'
     fi
   fi
 }

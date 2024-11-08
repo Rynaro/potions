@@ -5,17 +5,17 @@ source "$(dirname "$0")/packages/accessories.sh"
 # Function to install OpenVPN
 install_package() {
   if command_exists openvpn; then
-    echo "OpenVPN is already installed."
+    log "OpenVPN is already installed."
   else
-    echo "Installing ..."
+    log "Installing OpenVPN..."
     if is_macos; then
-      safe_source "$(dirname "$0")/packages/macos/openvpn.sh"
+      unpack_it 'macos/openvpn'
     elif is_termux; then
-      safe_source "$(dirname "$0")/packages/termux/openvpn.sh"
+      unpack_it 'termux/openvpn'
     elif is_wsl; then
-      safe_source "$(dirname "$0")/packages/wsl/openvpn.sh"
+      unpack_it 'wsl/openvpn'
     elif is_linux; then
-      safe_source "$(dirname "$0")/packages/debian/openvpn.sh"
+      unpack_it 'debian/openvpn'
     fi
   fi
 }

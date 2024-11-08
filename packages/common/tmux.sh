@@ -2,27 +2,26 @@
 
 source "$(dirname "$0")/packages/accessories.sh"
 
-
 # Function to install TMUX
 install_package() {
   if command_exists tmux; then
-    echo "TMUX is already installed."
+    log "TMUX is already installed."
   else
-    echo "Installing TMUX..."
+    log "Installing TMUX..."
     if is_macos; then
-      safe_source "$(dirname "$0")/packages/macos/tmux.sh"
+      unpack_it 'macos/tmux'
     elif is_termux; then
-      safe_source "$(dirname "$0")/packages/termux/tmux.sh"
+      unpack_it 'termux/tmux'
     elif is_wsl; then
-      safe_source "$(dirname "$0")/packages/wsl/tmux.sh"
+      unpack_it 'wsl/tmux'
     elif is_linux; then
-      safe_source "$(dirname "$0")/packages/debian/tmux.sh"
+      unpack_it 'debian/tmux'
     fi
   fi
 }
 
 prepare_package() {
-  mkdir -p $POTIONS_HOME/tmux/plugins
+  ensure_directory "$POTIONS_HOME/tmux/plugins"
 }
 
 configure_package() {

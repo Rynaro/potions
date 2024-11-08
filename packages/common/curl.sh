@@ -5,17 +5,17 @@ source "$(dirname "$0")/packages/accessories.sh"
 # Function to install curl
 install_package() {
   if command_exists curl; then
-    echo "curl is already installed."
+    log "curl is already installed."
   else
-    echo "Installing curl..."
+    log "Installing curl..."
     if is_macos; then
-      safe_source "$(dirname "$0")/packages/macos/curl.sh"
+      unpack_it 'macos/curl'
     elif is_termux; then
-      safe_source "$(dirname "$0")/packages/termux/curl.sh"
+      unpack_it 'termux/curl'
     elif is_wsl; then
-      safe_source "$(dirname "$0")/packages/wsl/curl.sh"
+      unpack_it 'wsl/curl'
     elif is_linux; then
-      safe_source "$(dirname "$0")/packages/debian/curl.sh"
+      unpack_it 'debian/curl'
     fi
   fi
 }
