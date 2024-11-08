@@ -7,14 +7,14 @@ POTIONS_HOME="$USER_HOME_FOLDER/.potions"
 ZDOTDIR=$POTIONS_HOME
 
 update_repositories() {
-  echo "Updating repositories..."
+  log "Updating repositories..."
   if is_macos; then
     brew update
   elif is_termux; then
     pkg update
   elif is_wsl || is_linux; then
     if is_apt_package_manager; then
-      echo "If you do not need sudo for any reason, modify this script!"
+      log "If you do not need sudo for any reason, modify this script!"
       sudo apt-get update
     else
       exit_with_message "No supported package manager have been found! Consider move to another environment supported! Or create a patch! :)"
@@ -83,46 +83,44 @@ is_apt_package_manager() {
 
 # Function to check and create directory
 ensure_directory() {
-    local dir="$1"
-    if [ -d "$dir" ]; then
-        log "Directory '$dir' already exists."
+  local dir="$1"
+  if [ -d "$dir" ]; then
+    log "Directory '$dir' already exists."
+  else
+    log "Directory '$dir' does not exist. Creating..."
+    mkdir -p "$dir"
+    if [ $? -eq 0 ]; then
+      log "Successfully created directory '$dir'."
     else
-        log "Directory '$dir' does not exist. Creating..."
-        mkdir -p "$dir"
-        if [ $? -eq 0 ]; then
-            log "Successfully created directory '$dir'."
-        else
-            log "Error: Failed to create directory '$dir'." >&2
-            exit 1
-        fi
+      exit_with_message "Error: Failed to create directory '$dir'."
     fi
+  fi
 }
 
 ensure_files() {
-    local dir="$1"
-    shift
-    local files=("$@")
+  local dir="$1"
+  shift
+  local files=("$@")
 
-    for file in "${files[@]}"; do
-        local filepath="$dir/$file"
-        if [ -f "$filepath" ]; then
-            echo "File '$filepath' already exists."
-        else
-            echo "File '$filepath' does not exist. Creating..."
-            touch "$filepath"
-            if [ $? -eq 0 ]; then
-                echo "Successfully created file '$filepath'."
-            else
-                echo "Error: Failed to create file '$filepath'." >&2
-                exit 1
-            fi
-        fi
-    done
+  for file in "${files[@]}"; do
+    local filepath="$dir/$file"
+    if [ -f "$filepath" ]; then
+      log "File '$filepath' already exists."
+    else
+      log "File '$filepath' does not exist. Creating..."
+      touch "$filepath"
+      if [ $? -eq 0 ]; then
+        log "Successfully created file '$filepath'."
+      else
+        exit_with_message "Error: Failed to create file '$filepath'."
+      fi
+    fi
+  done
 }
 
 # Beautifully message and go!
 exit_with_message() {
-  echo $1
-  echo "Terminating Potions Routines..."
+  log $1
+  log "Terminating Potions Routines..."
   exit 1
 }

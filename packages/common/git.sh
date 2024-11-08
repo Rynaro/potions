@@ -5,9 +5,9 @@ source "$(dirname "$0")/packages/accessories.sh"
 # Function to install Git
 install_package() {
   if command_exists git; then
-    echo "Git is already installed."
+    log "Git is already installed."
   else
-    echo "Installing Git..."
+    log "Installing Git..."
     if is_macos; then
       safe_source "$(dirname "$0")/packages/macos/git.sh"
     elif is_termux; then

@@ -5,17 +5,17 @@ source "$(dirname "$0")/packages/accessories.sh"
 # Function to install Zsh
 install_package() {
   if command_exists zsh; then
-    echo "Zsh is already installed."
+    log "Zsh is already installed."
   else
-    echo "Installing Zsh..."
+    log "Installing Zsh..."
     if is_macos; then
-      safe_source "$(dirname "$0")/packages/macos/zsh.sh"
+      unpack_it 'macos/zsh'
     elif is_termux; then
-      safe_source "$(dirname "$0")/packages/termux/zsh.sh"
+      unpack_it 'termux/zsh'
     elif is_wsl; then
-      safe_source "$(dirname "$0")/packages/wsl/zsh.sh"
+      unpack_it 'wsl/zsh'
     elif is_linux; then
-      safe_source "$(dirname "$0")/packages/debian/zsh.sh"
+      unpack_it 'debian/zsh'
     fi
   fi
 }
@@ -27,7 +27,9 @@ configure_package() {
     source .zshenv
   fi
 
-  chsh -s zsh
+  if is_termux; then
+    chsh -s zsh
+  fi
 }
 
 install_package
