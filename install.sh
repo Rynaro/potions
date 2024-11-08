@@ -28,7 +28,6 @@ install_packages() {
     'vim-plug'
     'antidote'
     'tmux'
-    'proot-distro'
   )
 
   for pkg in "${packages[@]}"; do
