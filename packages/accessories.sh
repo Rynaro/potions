@@ -34,7 +34,7 @@ log() {
 # Function to source the common holding package
 unpack_it() {
   local package="$1"
-  safe_source "packages/common/$package.sh"
+  safe_source "packages/$package.sh"
 }
 
 # Function to check if a command exists
