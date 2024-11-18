@@ -31,7 +31,7 @@ install_packages() {
   )
 
   for pkg in "${packages[@]}"; do
-    unpack_it "$pkg"
+    unpack_it "common/$pkg"
   done
 }
 
