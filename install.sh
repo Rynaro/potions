@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Source accessories.sh for utility functions
-source "$(dirname "$0")/packages/accessories.sh"
+POTIONS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$POTIONS_ROOT/packages/accessories.sh"
 
 update_potions() {
   log 'Sending Potions files to HOME...'

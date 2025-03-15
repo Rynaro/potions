@@ -1,25 +1,5 @@
 #!/bin/bash
 
-source "$(dirname "$0")/packages/accessories.sh"
-
-# Function to install Git
-install_package() {
-  if command_exists git; then
-    log "Git is already installed."
-  else
-    log "Installing Git..."
-    if is_macos; then
-      safe_source "$(dirname "$0")/packages/macos/git.sh"
-    elif is_termux; then
-      safe_source "$(dirname "$0")/packages/termux/git.sh"
-    elif is_wsl; then
-      safe_source "$(dirname "$0")/packages/wsl/git.sh"
-    elif is_linux; then
-      safe_source "$(dirname "$0")/packages/debian/git.sh"
-    fi
-  fi
-}
-
 configure_package() {
   git config --global alias.ch checkout
   git config --global alias.cm commit
@@ -35,5 +15,5 @@ configure_package() {
   git config --global core.editor vim
 }
 
-install_package
+install_package git
 configure_package

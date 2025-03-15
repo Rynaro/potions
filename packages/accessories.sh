@@ -67,10 +67,59 @@ is_linux() {
   [ $OS_TYPE = "Linux" ]
 }
 
+install_package() {
+  local package=${1:?"Package name is required"}
+  local skip_check=${2:-false}
+
+  # Check if already installed (unless skip_check is true)
+  if [[ "$skip_check" != "true" ]] && command_exists "$package"; then
+    log "$package is already installed."
+    return 0
+  fi
+
+  log "Installing $package..."
+
+  # Determine platform using associative array for cleaner mapping
+  local platform=""
+  if is_macos; then
+    platform="macos"
+  elif is_termux; then
+    platform="termux"
+  elif is_wsl; then
+    platform="wsl"
+  elif is_linux; then
+    platform="debian"
+  fi
+
+  # Validate platform
+  if [ -z "$platform" ]; then
+    exit_with_message "ERROR: Unsupported platform detected."
+  fi
+
+  # Check if installation script exists
+  local script_path="$(dirname "$0")/packages/$platform/$package.sh"
+  if [ ! -f "$script_path" ]; then
+    log "WARNING: Installation script for $package not found at $script_path"
+    return 1
+  fi
+
+  # Source the installation script
+  safe_source "$script_path"
+
+  # Verify installation (unless skip_check is true)
+  if [[ "$skip_check" != "true" ]] && ! command_exists "$package"; then
+    log "WARNING: $package installation may have failed. Command not found."
+    return 1
+  fi
+
+  log "$package installation completed."
+  return 0
+}
+
 get_user_home_folder() {
   local home_folder=${HOME:-$(getent passwd "$USER" | cut -d: -f6)}
   if [[ -z home_folder ]]; then
-    exit_with_message "No home folder found for this user, consider add a HOME varible to your environment!"
+    exit_with_message "No home folder found for this user, consider add a HOME variable to your environment!"
   fi
 
   echo $home_folder
