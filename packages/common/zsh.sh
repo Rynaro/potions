@@ -16,6 +16,8 @@ if [ "$SHELL" != "$(command -v zsh)" ]; then
     chsh -s zsh
   elif is_macos || is_linux; then
     log "Changing default shell to Zsh..."
-    chsh -s "$(command -v zsh)" || { log "Failed to change shell automatically. Please run: chsh -s $(command -v zsh)" }
+    chsh -s "$(command -v zsh)" || {
+      log "Failed to change shell automatically. Please run: chsh -s $(command -v zsh)"
+    }
   fi
 fi
