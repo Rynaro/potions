@@ -1,109 +1,82 @@
 <p align="center"><img src="https://github.com/user-attachments/assets/8d81012c-41d8-4db9-b801-db40ef52be0b" height="200" /></p>
 
-# Potions
+# 🧪 Potions
 
-Turn a fresh installation of macOS, WSL, or Termux into a fully-configured, beautiful, and modern development environment by running a single command. That's the one-line pitch for Potions. No need to write bespoke configs for every essential tool just to get started or to be up on all the latest command-line tools. Potions is an opinionated take on what your development setup can be at its best.
+**One command. Powerful dev environment. Any platform.**
 
-## Features
+Potions transforms your fresh macOS, WSL, or Termux installation into a fully-configured development environment in minutes. Stop wasting time with tedious configuration - start coding faster!
 
-- Installs and configures essential tools:
-  - Git
-  - Zsh
-  - curl
-  - OpenVPN
-  - Neovim
-  - Proot-Distro (with Debian)
-- Environment-specific installations for macOS, WSL, and Termux.
-- Configures Zsh as the default shell.
-- Sets up custom Zsh configurations and aliases.
+## ✨ Features
 
-## Installation
+- **Cross-Platform**: Works on macOS, WSL (Windows), and Termux (Android)
+- **Pre-configured Tools**: Zsh, Git, NeoVim, Tmux, and more
+- **Modern Terminal**: Beautiful prompt with Git integration
+- **Plugin System**: Extend functionality with custom plugins
+- **Fast Setup**: Just one command to get started
 
-1. Clone the Repository:
-    ```sh
-    git clone https://github.com/Rynaro/potions.git
-    cd potions
-    ```
+## 🚀 Quick Start
 
-2. Ensure Scripts are Executable:
-    ```sh
-    chmod +x install.sh
-    chmod +x packages/common/*.sh
-    chmod +x packages/macos/*.sh
-    chmod +x packages/wsl/*.sh
-    chmod +x packages/termux/*.sh
-    ```
+```bash
+# Clone the repo
+git clone https://github.com/Rynaro/potions.git
 
-3. Run the Installation Script:
-    ```sh
-    ./install.sh
-    ```
-    The script will detect your environment (macOS, WSL, or Termux) and proceed with the appropriate installations and configurations.
+# Enter directory
+cd potions
 
-## Plugin Management System
+# Make scripts executable (Optional)
+chmod +x install.sh
+chmod +x packages/*/*/*.sh
 
-### Introduction
-
-The plugin management system allows users to create, install, and manage plugins efficiently. The system is structured to enable easy scaffolding and integration of plugins into the Potions ecosystem.
-
-### Plugin Installation
-
-1. Run the plugin management script:
-    ```sh
-    ./plugins.sh install
-    ```
-
-### Creating a Plugin
-
-To create a new plugin, run:
-```sh
-./plugins.sh create <plugin_name>
-```
-This command scaffolds a new plugin structure under the `plugins` directory.
-
-### Plugin Structure
-
-A plugin consists of the following components:
-
-- `install.sh`: Script to handle the installation process.
-- `packages`: Directory for package-specific scripts.
-- `utilities.sh`: Utility functions for common tasks.
-
-### Managing Plugins
-
-- **Install Plugins**:
-    ```sh
-    ./plugins.sh install
-    ```
-    This command reads `plugins.txt` and installs the listed plugins.
-
-- **Obtain Plugins**:
-    The `obtain.sh` script clones repositories specified in `plugins.txt`.
-
-### Utilities
-
-The `utilities.sh` script includes functions to check the environment, update repositories, and safely source other scripts.
-
-### Example
-
-To scaffold a plugin named `example_plugin`:
-```sh
-./plugins.sh create example_plugin
+# Run installer
+./install.sh
 ```
 
-### Example `plugins.txt`
+After installation, restart your terminal or type `zsh` to begin using your new environment!
 
-Create a `plugins.txt` file in the root directory with the following content to include the `Rynaro/mini-rails` plugin:
-```txt
-Rynaro/mini-rails
+## 🔌 Plugin System
+
+Potions includes a plugin system to extend functionality:
+
+### Install Plugins
+```bash
+# Create a plugins.txt file with your desired plugins
+echo "Rynaro/mini-rails" > plugins.txt
+
+# Install plugins
+./plugins.sh install
 ```
 
-Check my personal plugins file! [Rynaro's plugins.txt](https://gist.github.com/Rynaro/589a00e84682b873d2d644ae34858077)
+### Create Your Own Plugin
+```bash
+# Scaffold a new plugin
+./plugins.sh create my_awesome_plugin
+```
 
-## Contributing to the Documentation
+## 🛠️ What's Included
 
-Please help us improve Potions' documentation here in this repository!
+- **Zsh**: Modern shell with autosuggestions and syntax highlighting
+- **Git**: Pre-configured with useful aliases
+- **NeoVim**: Powerful editor with modern plugins
+- **Tmux**: Terminal multiplexer with VSCode-like keybindings
+- **Development Tools**: curl, wget, OpenVPN, and more
 
-## License
+## 📝 Configuration
+
+All configurations are stored in `~/.potions`:
+- `.zshrc`: Main Zsh configuration
+- `.zsh_aliases`: Custom command aliases
+- `nvim/init.vim`: NeoVim configuration
+- `tmux/tmux.conf`: Tmux configuration
+- `sources/{linux|wsl|termux|macos}.sh`: Your customized source files per OS
+
+## 🤝 Contributing
+
+Contributions are welcome! Help improve Potions by:
+- Submitting bug reports and feature requests
+- Improving documentation
+- Adding support for new platforms
+- Creating new plugins
+
+## 📜 License
 
 Potions is released under the MIT License.
