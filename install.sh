@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Source accessories.sh for utility functions
-source "$(dirname "$0")/packages/accessories.sh"
+POTIONS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$POTIONS_ROOT/packages/accessories.sh"
 
 update_potions() {
   log 'Sending Potions files to HOME...'
@@ -24,10 +25,10 @@ install_packages() {
     'git'
     'openvpn'
     'zsh'
-    'neovim'
-    'vim-plug'
     'antidote'
     'tmux'
+    'neovim'
+    'vim-plug'
   )
 
   for pkg in "${packages[@]}"; do
@@ -43,6 +44,36 @@ else
   prepare_system
   log 'Installing Packages...'
   install_packages
-fi
 
-log 'Setup completed!'
+  log 'Installation completed!'
+  # Create a script that properly sets up the Potions environment
+  POTIONS_SETUP="$HOME/.potions/activate.sh"
+  cat > "$POTIONS_SETUP" << 'EOF'
+#!/bin/bash
+# Potions activation script
+
+# Set Zsh directory
+export ZDOTDIR="$HOME/.potions"
+
+# Display welcome message
+echo "🧪 Potions has been installed successfully!"
+echo "Your development environment is now ready."
+echo ""
+echo "This terminal session is still using your original shell."
+echo "You can either:"
+echo "  1. Close this terminal and open a new one (recommended)"
+echo "  2. Type 'zsh' to switch to Zsh with Potions now"
+echo ""
+echo "All new terminal sessions will automatically use Potions."
+EOF
+
+  chmod +x "$POTIONS_SETUP"
+
+  log "To complete setup, I recommend closing this terminal and opening a new one."
+  log "This will start a fresh session with your Potions environment."
+  log ""
+  log "If you want to explore Potions now, simply type 'zsh' to start a new shell session."
+
+  # Source the activation script for immediate information
+  source "$POTIONS_SETUP"
+fi

@@ -1,36 +1,23 @@
 #!/bin/bash
 
-source "$(dirname "$0")/packages/accessories.sh"
+install_package zsh
 
-# Function to install Zsh
-install_package() {
-  if command_exists zsh; then
-    log "Zsh is already installed."
-  else
-    log "Installing Zsh..."
-    if is_macos; then
-      unpack_it 'macos/zsh'
-    elif is_termux; then
-      unpack_it 'termux/zsh'
-    elif is_wsl; then
-      unpack_it 'wsl/zsh'
-    elif is_linux; then
-      unpack_it 'debian/zsh'
-    fi
-  fi
-}
+if [ -f ".zshenv" ]; then
+  cp ".zshenv" "$HOME/"
+  log "Copied .zshenv to $HOME"
+else
+  log "ERROR: .zshenv not found in current directory"
+  return 1
+fi
 
-configure_package() {
-  # Change the default shell to Zsh
-  if [ "$SHELL" != "$(command -v zsh)" ]; then
-    cp .zshenv $USER_HOME_FOLDER
-    source .zshenv
-  fi
-
+# Change the default shell to Zsh
+if [ "$SHELL" != "$(command -v zsh)" ]; then
   if is_termux; then
     chsh -s zsh
+  elif is_macos || is_linux; then
+    log "Changing default shell to Zsh..."
+    chsh -s "$(command -v zsh)" || {
+      log "Failed to change shell automatically. Please run: chsh -s $(command -v zsh)"
+    }
   fi
-}
-
-install_package
-configure_package
+fi

@@ -1,10 +1,4 @@
 #!/bin/bash
 
-source "$(dirname "$0")/../packages/accessories.sh"
+sudo apt install -y wget
 
-# Function to install curl
-install_package() {
-  sudo apt install -y wget
-}
-
-install_package
