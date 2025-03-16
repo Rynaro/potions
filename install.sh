@@ -44,6 +44,27 @@ else
   prepare_system
   log 'Installing Packages...'
   install_packages
-fi
 
-log 'Setup completed!'
+  if command_exists zsh; then
+    # Create a temporary script to be used for the exec command
+    TMP_SCRIPT=$(mktemp)
+    echo "#!/bin/zsh
+    # Source Potions environment
+    source ~/.potions/.zshrc
+
+    # Welcome message
+    echo \"\"
+    echo \"🧪 Welcome to Potions! Your development environment is ready.\"
+    echo \"Type 'exit' to return to your previous shell.\"
+    echo \"\"
+
+    # Start an interactive Zsh session
+    exec zsh -i" > "$TMP_SCRIPT"
+
+    chmod +x "$TMP_SCRIPT"
+
+    exec "$TMP_SCRIPT"
+  else
+    log 'Zsh is not available. Please install Zsh and run: export ZDOTDIR=~/.potions && zsh'
+  fi
+fi
