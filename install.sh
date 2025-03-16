@@ -45,43 +45,35 @@ else
   log 'Installing Packages...'
   install_packages
 
-  if command_exists zsh; then
-    STARTUP_SCRIPT="$HOME/.potions/potions-start.sh"
+  log 'Installation completed!'
+  # Create a script that properly sets up the Potions environment
+  POTIONS_SETUP="$HOME/.potions/activate.sh"
+  cat > "$POTIONS_SETUP" << 'EOF'
+#!/bin/bash
+# Potions activation script
 
-    cat > "$STARTUP_SCRIPT" << 'EOF'
-#!/usr/bin/env bash
+# Set Zsh directory
+export ZDOTDIR="$HOME/.potions"
 
-# Clear the terminal for a fresh start
-clear
-
-# Print welcome message
-echo "🧪 Welcome to Potions! Your development environment is ready."
-echo "This is a one-time initialization of your new environment."
-echo "Future terminal sessions will start directly in Potions."
+# Display welcome message
+echo "🧪 Potions has been installed successfully!"
+echo "Your development environment is now ready."
 echo ""
-echo "Starting Potions environment..."
+echo "This terminal session is still using your original shell."
+echo "You can either:"
+echo "  1. Close this terminal and open a new one (recommended)"
+echo "  2. Type 'zsh' to switch to Zsh with Potions now"
 echo ""
-
-# Start a completely new Zsh process with proper environment
-ZDOTDIR="$HOME/.potions" exec zsh -l
+echo "All new terminal sessions will automatically use Potions."
 EOF
 
-    chmod +x "$STARTUP_SCRIPT"
+  chmod +x "$POTIONS_SETUP"
 
-    # Let the user know what's happening
-    log "To enter your Potions environment, please run:"
-    log "  $STARTUP_SCRIPT"
-    log ""
-    log "After this first launch, new terminal sessions will automatically use Potions."
+  log "To complete setup, I recommend closing this terminal and opening a new one."
+  log "This will start a fresh session with your Potions environment."
+  log ""
+  log "If you want to explore Potions now, simply type 'zsh' to start a new shell session."
 
-    # Option to run it immediately
-    read -p "Would you like to start Potions now? (y/n) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      # Execute in a way that preserves context but doesn't affect the parent script
-      sh "$STARTUP_SCRIPT"
-    fi
-  else
-    log 'Zsh is not available. Please install Zsh and run: export ZDOTDIR=~/.potions && zsh'
-  fi
+  # Source the activation script for immediate information
+  source "$POTIONS_SETUP"
 fi
