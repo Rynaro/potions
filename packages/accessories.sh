@@ -20,7 +20,7 @@ fi
 
 # Environment Variables
 OS_TYPE="$(uname -s)"
-USER_HOME_FOLDER="$(get_user_home_folder)"
+USER_HOME_FOLDER=$HOME
 POTIONS_HOME="$USER_HOME_FOLDER/.potions"
 ZDOTDIR=$POTIONS_HOME
 
@@ -132,15 +132,6 @@ install_package() {
 
   log "$package installation completed."
   return 0
-}
-
-get_user_home_folder() {
-  local home_folder=${HOME:-$(getent passwd "$USER" | cut -d: -f6)}
-  if [[ -z home_folder ]]; then
-    exit_with_message "No home folder found for this user, consider add a HOME variable to your environment!"
-  fi
-
-  echo $home_folder
 }
 
 # Function to check if apt is the package manager

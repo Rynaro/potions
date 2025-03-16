@@ -25,10 +25,10 @@ install_packages() {
     'git'
     'openvpn'
     'zsh'
-    'neovim'
-    'vim-plug'
     'antidote'
     'tmux'
+    'neovim'
+    'vim-plug'
   )
 
   for pkg in "${packages[@]}"; do
