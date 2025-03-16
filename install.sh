@@ -46,24 +46,41 @@ else
   install_packages
 
   if command_exists zsh; then
-    # Create a temporary script to be used for the exec command
-    TMP_SCRIPT=$(mktemp)
-    echo "#!/bin/zsh
-    # Source Potions environment
-    source ~/.potions/.zshrc
+    STARTUP_SCRIPT="$HOME/.potions/potions-start.sh"
 
-    # Welcome message
-    echo \"\"
-    echo \"🧪 Welcome to Potions! Your development environment is ready.\"
-    echo \"Type 'exit' to return to your previous shell.\"
-    echo \"\"
+    cat > "$STARTUP_SCRIPT" << 'EOF'
+#!/usr/bin/env bash
 
-    # Start an interactive Zsh session
-    exec zsh -i" > "$TMP_SCRIPT"
+# Clear the terminal for a fresh start
+clear
 
-    chmod +x "$TMP_SCRIPT"
+# Print welcome message
+echo "🧪 Welcome to Potions! Your development environment is ready."
+echo "This is a one-time initialization of your new environment."
+echo "Future terminal sessions will start directly in Potions."
+echo ""
+echo "Starting Potions environment..."
+echo ""
 
-    exec "$TMP_SCRIPT"
+# Start a completely new Zsh process with proper environment
+ZDOTDIR="$HOME/.potions" exec zsh -l
+EOF
+
+    chmod +x "$STARTUP_SCRIPT"
+
+    # Let the user know what's happening
+    log "To enter your Potions environment, please run:"
+    log "  $STARTUP_SCRIPT"
+    log ""
+    log "After this first launch, new terminal sessions will automatically use Potions."
+
+    # Option to run it immediately
+    read -p "Would you like to start Potions now? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      # Execute in a way that preserves context but doesn't affect the parent script
+      bash "$STARTUP_SCRIPT"
+    fi
   else
     log 'Zsh is not available. Please install Zsh and run: export ZDOTDIR=~/.potions && zsh'
   fi
