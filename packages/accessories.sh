@@ -1,5 +1,23 @@
 #!/bin/bash
 
+# Guard against multiple inclusion
+if [ -n "$ACCESSORIES_SOURCED" ]; then
+  return 0
+fi
+export ACCESSORIES_SOURCED=1
+
+# Get the actual script directory regardless of symlinks
+if [ -z "$SCRIPT_DIR" ]; then
+  SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+  export SCRIPT_DIR
+fi
+
+# Define the repository root directory
+if [ -z "$REPO_ROOT" ]; then
+  REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+  export REPO_ROOT
+fi
+
 # Environment Variables
 OS_TYPE="$(uname -s)"
 USER_HOME_FOLDER="$(get_user_home_folder)"
