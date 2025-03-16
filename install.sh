@@ -79,7 +79,7 @@ EOF
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       # Execute in a way that preserves context but doesn't affect the parent script
-      bash "$STARTUP_SCRIPT"
+      sh "$STARTUP_SCRIPT"
     fi
   else
     log 'Zsh is not available. Please install Zsh and run: export ZDOTDIR=~/.potions && zsh'
