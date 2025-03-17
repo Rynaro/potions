@@ -63,31 +63,59 @@ else
   DOWNLOAD_TOOL="curl"
 fi
 
-RELEASE_VERSION="v2.0.0"
-RELEASE_URL="https://github.com/Rynaro/potions/releases/download/$RELEASE_VERSION/potions-$RELEASE_VERSION.tar.gz"
-ARCHIVE_NAME="potions-$RELEASE_VERSION.tar.gz"
-
-echo "📦 Downloading Potions release $RELEASE_VERSION..."
-
-# Download the release archive
-if [ "$DOWNLOAD_TOOL" = "curl" ]; then
-  curl -L "$RELEASE_URL" -o "$TEMP_DIR/$ARCHIVE_NAME"
+# Check for git installation
+if command -v git &> /dev/null; then
+  HAS_GIT=true
 else
-  wget -O "$TEMP_DIR/$ARCHIVE_NAME" "$RELEASE_URL"
+  HAS_GIT=false
 fi
 
-# Create installation directory if it doesn't exist
-mkdir -p "$POTIONS_DIR"
+if [ "$HAS_GIT" = true ]; then
+  echo "📦 Downloading Potions via Git..."
+  git clone --depth=1 https://github.com/Rynaro/potions.git "$TEMP_DIR/potions"
 
-# Extract files
-echo "📂 Extracting files..."
-tar -xzf "$TEMP_DIR/$ARCHIVE_NAME" -C "$TEMP_DIR"
-find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -not -name "$ARCHIVE_NAME" -exec cp -r {} "$POTIONS_DIR" \;
+  # Move files to installation directory
+  mkdir -p "$POTIONS_DIR"
+  cp -r "$TEMP_DIR/potions/"* "$POTIONS_DIR/"
+  cp -r "$TEMP_DIR/potions/."* "$POTIONS_DIR/" 2>/dev/null || true
+else
+  # Fallback to download via archive if git is not available
+  echo "📦 Downloading Potions zip archive..."
+  ARCHIVE_URL="https://github.com/Rynaro/potions/archive/refs/heads/main.zip"
+  ARCHIVE_PATH="$TEMP_DIR/potions.zip"
 
-# Copy hidden files (if any)
-find "$TEMP_DIR" -name ".*" -not -path "$TEMP_DIR" -exec cp -r {} "$POTIONS_DIR" 2>/dev/null \; || true
+  if [ "$DOWNLOAD_TOOL" = "curl" ]; then
+    curl -L "$ARCHIVE_URL" -o "$ARCHIVE_PATH"
+  else
+    wget -O "$ARCHIVE_PATH" "$ARCHIVE_URL"
+  fi
+
+  # Check for unzip
+  if ! command -v unzip &> /dev/null; then
+    echo "Installing unzip..."
+    if [ "$OS_NAME" = "macOS" ]; then
+      brew install unzip
+    elif [ "$OS_NAME" = "Termux" ]; then
+      pkg install -y unzip
+    else
+      sudo apt-get update
+      sudo apt-get install -y unzip
+    fi
+  fi
+
+  # Extract files
+  echo "📂 Extracting files..."
+  mkdir -p "$TEMP_DIR/extract"
+  unzip -q "$ARCHIVE_PATH" -d "$TEMP_DIR/extract"
+
+  # Create installation directory and copy files
+  mkdir -p "$POTIONS_DIR"
+  cp -r "$TEMP_DIR/extract/"*/* "$POTIONS_DIR/"
+  cp -r "$TEMP_DIR/extract/"*/.* "$POTIONS_DIR/" 2>/dev/null || true
+fi
 
 echo "🔧 Installing..."
 cd "$POTIONS_DIR"
 chmod +x install.sh
 ./install.sh
+

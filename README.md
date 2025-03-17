@@ -18,6 +18,8 @@ Potions transforms your fresh macOS, WSL, or Termux installation into a fully-co
 
 ### One-Line Installation (Recommended)
 
+The one-line installer will help you install essential packages (git, curl, unzip) from your operating system's official repositories if they're not already present on your system.
+
 Using curl:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash
