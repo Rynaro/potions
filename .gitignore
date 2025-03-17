@@ -13,6 +13,7 @@
 # Allow the Installer and Env
 !.zshenv
 !install.sh
+!drink.sh
 
 # Allow Installer packs
 !packages
