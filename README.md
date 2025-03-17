@@ -16,6 +16,20 @@ Potions transforms your fresh macOS, WSL, or Termux installation into a fully-co
 
 ## 🚀 Quick Start
 
+### One-Line Installation (Recommended)
+
+Using curl:
+```bash
+curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash
+```
+
+Using wget:
+```bash
+wget -O- https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash
+```
+
+### Manual Installation
+
 ```bash
 # Clone the repo
 git clone https://github.com/Rynaro/potions.git
