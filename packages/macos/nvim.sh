@@ -4,10 +4,48 @@ NEOVIM_INSTALLATION_FOLDER=$USER_HOME_FOLDER/.neovim
 
 brew install ninja cmake gettext curl ripgrep
 
-git clone https://github.com/neovim/neovim $NEOVIM_INSTALLATION_FOLDER/.neovim
-cd $NEOVIM_INSTALLATION_FOLDER
-git checkout stable
-rm -r build/  # clear the CMake cache
-sudo make install
+# Save current directory
+local original_dir="$(pwd)"
 
-cd $USER_HOME_FOLDER
+# Clone repository if it doesn't exist
+if [ ! -d "$NEOVIM_INSTALLATION_FOLDER" ]; then
+  git clone https://github.com/neovim/neovim "$NEOVIM_INSTALLATION_FOLDER" || {
+    log "ERROR: Failed to clone NeoVim repository"
+    return 1
+  }
+fi
+
+# Enter repository directory
+cd "$NEOVIM_INSTALLATION_FOLDER" || {
+  log "ERROR: Failed to change to NeoVim directory"
+  return 1
+}
+
+# Checkout stable branch
+git checkout stable || {
+  log "ERROR: Failed to checkout stable branch"
+  cd "$original_dir"
+  return 1
+}
+
+# Remove build directory if it exists
+if [ -d "build" ]; then
+  rm -rf build/ || log "Warning: Failed to remove build directory, continuing anyway"
+fi
+
+# Install NeoVim
+make CMAKE_BUILD_TYPE=Release || {
+  log "ERROR: Failed to build NeoVim"
+  cd "$original_dir"
+  return 1
+}
+
+sudo make install || {
+  log "ERROR: Failed to install NeoVim"
+  cd "$original_dir"
+  return 1
+}
+
+# Return to original directory
+cd "$original_dir"
+log "NeoVim installation completed successfully"
