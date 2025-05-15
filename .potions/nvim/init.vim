@@ -24,7 +24,7 @@ Plug 'nvim-tree/nvim-web-devicons'
 Plug 'lewis6991/gitsigns.nvim'
 Plug 'romgrk/barbar.nvim'
 Plug 'nvim-lualine/lualine.nvim'
-Plug 'arcticicestudio/nord-vim'
+Plug 'Rynaro/alchemists-orchid'
 
 Plug 'mg979/vim-visual-multi', {'branch': 'master'} " Multiple cursors on editor
 Plug 'lukas-reineke/indent-blankline.nvim' " Context Indent Lines
@@ -39,7 +39,7 @@ set expandtab
 set guicursor=n-v-c:block,r-cr:hor20,o:hor50
 
 " Set colorscheme
-colorscheme nord
+colorscheme alchemists-orchid
 " Force custom visual mode selection colors
 highlight Visual ctermfg=White ctermbg=DarkGrey guifg=White guibg=DarkGrey
 
