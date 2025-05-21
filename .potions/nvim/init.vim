@@ -24,7 +24,7 @@ Plug 'nvim-tree/nvim-web-devicons'
 Plug 'lewis6991/gitsigns.nvim'
 Plug 'romgrk/barbar.nvim'
 Plug 'nvim-lualine/lualine.nvim'
-Plug 'Rynaro/alchemists-orchid'
+Plug 'Rynaro/alchemists-orchid.nvim'
 
 Plug 'mg979/vim-visual-multi', {'branch': 'master'} " Multiple cursors on editor
 Plug 'lukas-reineke/indent-blankline.nvim' " Context Indent Lines
