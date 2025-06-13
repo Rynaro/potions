@@ -7,6 +7,9 @@ source "$POTIONS_ROOT/packages/accessories.sh"
 update_potions() {
   log 'Sending Potions files to HOME...'
   cp -r .potions ~/
+  cp -r packages "$HOME/.potions/"
+  cp -r plugins "$HOME/.potions/"
+  cp plugins.sh "$HOME/.potions/"
 }
 
 prepare_system() {

@@ -1,8 +1,10 @@
 #!/bin/bash
 
-PLUGINS_DIR="plugins"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGINS_DIR="$SCRIPT_DIR"
+PLUGINS_FILE="$(dirname "$SCRIPT_DIR")/plugins.txt"
 
-source "$(dirname "$0")/packages/accessories.sh"
+source "$(dirname "$SCRIPT_DIR")/packages/accessories.sh"
 
 # Main function to manage plugins
 manage_plugins() {
@@ -11,13 +13,13 @@ manage_plugins() {
 
   case $action in
     install)
-      safe_source "$(dirname "$0")/plugins/obtain.sh"
-      safe_source "$(dirname "$0")/plugins/install.sh"
+      safe_source "$SCRIPT_DIR/obtain.sh"
+      safe_source "$SCRIPT_DIR/install.sh"
       obtain_plugins
       install_plugins
       ;;
     create)
-      safe_source "$(dirname "$0")/plugins/generators.sh"
+      safe_source "$SCRIPT_DIR/generators.sh"
       manage_plugins create $plugin_name
       ;;
     *)

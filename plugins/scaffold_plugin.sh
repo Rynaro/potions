@@ -1,6 +1,7 @@
 #!/bin/bash
 
-PLUGINS_DIR="plugins"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGINS_DIR="${PLUGINS_DIR:-$SCRIPT_DIR}"
 
 # Function to create a new plugin scaffold
 create_plugin() {
@@ -16,13 +17,13 @@ create_plugin() {
   mkdir -p "$plugin_dir/packages"
 
   # Create the blank install.sh script
-  cat plugins/templates/install.sh > "$plugin_dir/install.sh"
+  cat "$SCRIPT_DIR/templates/install.sh" > "$plugin_dir/install.sh"
 
   # Create utilities.sh
-  cat plugins/utilities.sh > "$plugin_dir/utilities.sh"
+  cat "$SCRIPT_DIR/utilities.sh" > "$plugin_dir/utilities.sh"
 
   # Create a blank package1.sh script
-  cat plugins/templates/package1.sh > "$plugin_dir/packages/package1.sh"
+  cat "$SCRIPT_DIR/templates/package1.sh" > "$plugin_dir/packages/package1.sh"
 
   # Make the scripts executable
   chmod +x "$plugin_dir/install.sh"

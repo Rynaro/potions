@@ -51,21 +51,22 @@ After installation, restart your terminal or type `zsh` to begin using your new 
 
 ## 🔌 Plugin System
 
-Potions includes a plugin system to extend functionality:
+Potions includes a plugin system to extend functionality. After running the
+installer, plugin management tools are placed inside `~/.potions`:
 
 ### Install Plugins
 ```bash
 # Create a plugins.txt file with your desired plugins
-echo "Rynaro/mini-rails" > plugins.txt
+echo "Rynaro/mini-rails" > ~/.potions/plugins.txt
 
 # Install plugins
-./plugins.sh install
+~/.potions/plugins.sh install
 ```
 
 ### Create Your Own Plugin
 ```bash
 # Scaffold a new plugin
-./plugins.sh create my_awesome_plugin
+~/.potions/plugins.sh create my_awesome_plugin
 ```
 
 ## 🛠️ What's Included

@@ -1,7 +1,8 @@
 #!/bin/bash
 
-PLUGINS_DIR="plugins"
-PLUGINS_FILE="plugins.txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGINS_DIR="${PLUGINS_DIR:-$SCRIPT_DIR}"
+PLUGINS_FILE="${PLUGINS_FILE:-$(dirname "$SCRIPT_DIR")/plugins.txt}"
 
 # Function to parse plugins.txt and clone repositories
 obtain_plugins() {

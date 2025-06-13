@@ -1,6 +1,7 @@
 #!/bin/bash
 
-source "$(dirname "$0")/packages/accessories.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$(dirname "$SCRIPT_DIR")/packages/accessories.sh"
 
 # Function to scaffold a new plugin
 scaffold_plugin() {
@@ -11,7 +12,7 @@ scaffold_plugin() {
     exit 1
   fi
 
-  safe_source "$(dirname "$0")/plugins/scaffold_plugin.sh"
+  safe_source "$SCRIPT_DIR/scaffold_plugin.sh"
   create_plugin $plugin_name
 }
 

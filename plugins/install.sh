@@ -1,6 +1,9 @@
 #!/bin/bash
 
-source "$(dirname "$0")/packages/accessories.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$(dirname "$SCRIPT_DIR")/packages/accessories.sh"
+
+: "${PLUGINS_DIR:=$SCRIPT_DIR}"
 
 # Function to install plugins
 install_plugins() {
