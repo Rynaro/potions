@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PLUGINS_DIR="plugins"
+PLUGINS_DIR="downloaded-plugins"
 PLUGINS_FILE="plugins.txt"
 
 # Function to parse plugins.txt and clone repositories

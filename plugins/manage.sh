@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PLUGINS_DIR="plugins"
+PLUGINS_DIR="downloaded-plugins"
 
 # Determine the script's directory for reliable sourcing
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

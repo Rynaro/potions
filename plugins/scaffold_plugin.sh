@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PLUGINS_DIR="plugins"
+PLUGINS_DIR="downloaded-plugins"
 
 # Function to create a new plugin scaffold
 create_plugin() {

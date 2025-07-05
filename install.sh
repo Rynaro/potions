@@ -12,6 +12,11 @@ update_potions() {
   log 'Setting up plugin management in Potions environment...'
   cp plugins.sh ~/.potions/
   cp -r plugins ~/.potions/
+  
+  # Copy plugins.txt if it exists for plugin installation
+  if [ -f "plugins.txt" ]; then
+    cp plugins.txt ~/.potions/
+  fi
 }
 
 prepare_system() {
