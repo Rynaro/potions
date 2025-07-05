@@ -34,7 +34,7 @@ command_exists() {
 
 # Function to safely source a script if it exists
 safe_source() {
-  [ -f "$PLUGIN_RELATIVE_FOLDER/$1" ] && source "$PLUGIN_RELATIVE_FOLDER/$1"
+  [ -f "$1" ] && source "$1"
 }
 
 # Function to check if the environment is Termux

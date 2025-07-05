@@ -1,6 +1,8 @@
 #!/bin/bash
 
-source "$(dirname "$0")/packages/accessories.sh"
+# Determine the script's directory for reliable sourcing
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utilities.sh"
 
 # Function to install plugins
 install_plugins() {

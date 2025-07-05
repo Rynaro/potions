@@ -7,6 +7,11 @@ source "$POTIONS_ROOT/packages/accessories.sh"
 update_potions() {
   log 'Sending Potions files to HOME...'
   cp -r .potions ~/
+  
+  # Copy plugin management files to ~/.potions for user accessibility
+  log 'Setting up plugin management in Potions environment...'
+  cp plugins.sh ~/.potions/
+  cp -r plugins ~/.potions/
 }
 
 prepare_system() {

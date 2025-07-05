@@ -11,3 +11,6 @@ alias tmux='tmux -f ~/.potions/tmux/tmux.conf'
 alias be='bundle exec'
 alias dc='docker-compose'
 alias vim='nvim'
+
+# Potions Plugin Management
+alias potions-plugin='~/.potions/plugins.sh'
