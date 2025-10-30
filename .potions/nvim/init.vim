@@ -38,6 +38,9 @@ set shiftwidth=2
 set expandtab
 set guicursor=n-v-c:block,r-cr:hor20,o:hor50
 
+" Set leader key to space (more ergonomic than backslash)
+let mapleader = " "
+
 " Set colorscheme
 colorscheme alchemists-orchid
 " Force custom visual mode selection colors
@@ -77,21 +80,21 @@ nnoremap <silent> <leader>yr :let @+=expand('%')<CR>
 " Key mapping to copy the opened file absolute path
 nnoremap <silent> <leader>ya :let @+=expand('%:p')<CR>
 
-" Move to the beginning of the line Ctrl+Alt+Left
-nnoremap <S-A-Left> ^
-inoremap <S-A-Left> <C-o>^
-vnoremap <S-A-Left> ^
+" Move to the beginning of the line (macOS-friendly: Ctrl+A)
+nnoremap <C-a> ^
+inoremap <C-a> <C-o>^
+vnoremap <C-a> ^
 
-" Move to the end of the line Ctrl+Alt+Right
-nnoremap <S-A-Right> $
-inoremap <S-A-Right> <C-o>$
-vnoremap <S-A-Right> $
+" Move to the end of the line (macOS-friendly: Ctrl+E)
+nnoremap <C-e> $
+inoremap <C-e> <C-o>$
+vnoremap <C-e> $
 
-" Moving to the Previous Paragraph (Ctrl+Alt+Up)
-nnoremap <C-A-Up> {
+" Moving to the Previous Paragraph (Ctrl+{)
+nnoremap <C-{> {
 
-" Moving to the Next Paragraph (Ctrl+Alt+Down)
-nnoremap <C-A-Down> }
+" Moving to the Next Paragraph (Ctrl+})
+nnoremap <C-}> }
 
 " Keybindings for large line movements and navigation
 nnoremap <C-u> 10k
@@ -99,42 +102,64 @@ nnoremap <C-d> 10j
 nnoremap <silent> <leader>gg gg
 nnoremap <silent> <leader>G G
 
+" Better search highlighting
+set hlsearch
+set incsearch
+nnoremap <silent> <leader><space> :noh<CR>  " Clear search highlight
+nnoremap <leader>/ *  " Search for word under cursor
+
 " Keybindings for copy, cut, and paste
 vnoremap <silent> <C-c> "+y
 vnoremap <silent> <C-x> "+d
 nnoremap <silent> <C-v> "+p
 inoremap <silent> <C-v> <C-r>+
 
-" Keybindings for moving lines up and down
-nnoremap <A-k> :m .-2<CR>==
-nnoremap <A-j> :m .+1<CR>==
-xnoremap <A-k> :m '<-2<CR>gv=gv
-xnoremap <A-j> :m '>+1<CR>gv=gv
+" Keybindings for moving lines up and down (macOS-friendly: Ctrl+Shift+Arrow)
+nnoremap <C-S-Up> :m .-2<CR>==
+nnoremap <C-S-Down> :m .+1<CR>==
+xnoremap <C-S-Up> :m '<-2<CR>gv=gv
+xnoremap <C-S-Down> :m '>+1<CR>gv=gv
+" Alternative: Ctrl+k/j for moving lines (more reliable on macOS)
+nnoremap <C-k> :m .-2<CR>==
+nnoremap <C-j> :m .+1<CR>==
+xnoremap <C-k> :m '<-2<CR>gv=gv
+xnoremap <C-j> :m '>+1<CR>gv=gv
 
 " Key mapping for select all file content while in Visual Mode
 nnoremap <leader>a ggVG
 
+" Quick save (Ctrl+S - works with stty -ixon in terminal)
+nnoremap <C-s> :w<CR>
+inoremap <C-s> <C-o>:w<CR>
+vnoremap <C-s> <Esc>:w<CR>
+
+" Quick quit (without saving)
+nnoremap <leader>q :q<CR>
+nnoremap <leader>Q :q!<CR>
+nnoremap <leader>w :w<CR>
+nnoremap <leader>wq :wq<CR>
+
 " Key mapping to move tab back in insert mode with Shift+Tab
 inoremap <S-Tab> <C-d>
 
-" Barbar keybindings for buffer management
-nnoremap <silent> <A-,> :BufferPrevious<CR>
-nnoremap <silent> <A-.> :BufferNext<CR>
-nnoremap <silent> <A-<> :BufferMovePrevious<CR>
-nnoremap <silent> <A->> :BufferMoveNext<CR>
-nnoremap <silent> <A-1> :BufferGoto 1<CR>
-nnoremap <silent> <A-2> :BufferGoto 2<CR>
-nnoremap <silent> <A-3> :BufferGoto 3<CR>
-nnoremap <silent> <A-4> :BufferGoto 4<CR>
-nnoremap <silent> <A-5> :BufferGoto 5<CR>
-nnoremap <silent> <A-6> :BufferGoto 6<CR>
-nnoremap <silent> <A-7> :BufferGoto 7<CR>
-nnoremap <silent> <A-8> :BufferGoto 8<CR>
-nnoremap <silent> <A-9> :BufferGoto 9<CR>
-nnoremap <silent> <A-0> :BufferLast<CR>
-nnoremap <silent> <A-p> :BufferPin<CR>
-nnoremap <silent> <A-c> :BufferClose<CR>
-nnoremap <silent> <A-s-c> :BufferRestore<CR>
+" Barbar keybindings for buffer management (macOS-friendly: Ctrl+Shift based)
+nnoremap <silent> <C-S-h> :BufferPrevious<CR>
+nnoremap <silent> <C-S-l> :BufferNext<CR>
+nnoremap <silent> <C-S-H> :BufferMovePrevious<CR>
+nnoremap <silent> <C-S-L> :BufferMoveNext<CR>
+nnoremap <silent> <leader>1 :BufferGoto 1<CR>
+nnoremap <silent> <leader>2 :BufferGoto 2<CR>
+nnoremap <silent> <leader>3 :BufferGoto 3<CR>
+nnoremap <silent> <leader>4 :BufferGoto 4<CR>
+nnoremap <silent> <leader>5 :BufferGoto 5<CR>
+nnoremap <silent> <leader>6 :BufferGoto 6<CR>
+nnoremap <silent> <leader>7 :BufferGoto 7<CR>
+nnoremap <silent> <leader>8 :BufferGoto 8<CR>
+nnoremap <silent> <leader>9 :BufferGoto 9<CR>
+nnoremap <silent> <leader>0 :BufferLast<CR>
+nnoremap <silent> <leader>bp :BufferPin<CR>
+nnoremap <silent> <leader>bc :BufferClose<CR>
+nnoremap <silent> <leader>br :BufferRestore<CR>
 nnoremap <silent> <C-p> :BufferPick<CR>
 nnoremap <silent> <C-x> :BufferPickDelete<CR>
 nnoremap <silent> <Space>bb :BufferOrderByBufferNumber<CR>
@@ -143,15 +168,15 @@ nnoremap <silent> <Space>bd :BufferOrderByDirectory<CR>
 nnoremap <silent> <Space>bl :BufferOrderByLanguage<CR>
 nnoremap <silent> <Space>bw :BufferOrderByWindowNumber<CR>
 
-" vim-visual-multi keybindings for VSCode-like multi-cursor editing
+" vim-visual-multi keybindings for VSCode-like multi-cursor editing (macOS-friendly)
 let g:VM_maps = {}
 let g:VM_maps['Find Under']         = '<C-d>'  " Start multi-cursor (similar to VSCode's Ctrl+D)
 let g:VM_maps['Find Subword Under'] = '<C-d>'  " Start multi-cursor (similar to VSCode's Ctrl+D)
-let g:VM_maps['Select All']         = '<C-S-L>'  " Select all occurrences (similar to VSCode's Ctrl+Shift+L)
+let g:VM_maps['Select All']         = '<C-S-l>'  " Select all occurrences (similar to VSCode's Ctrl+Shift+L)
 let g:VM_maps['Skip Region']        = '<C-x>'  " Skip current occurrence
 let g:VM_maps['Remove Region']      = '<C-S-k>'  " Remove current cursor (similar to VSCode's Ctrl+U)
-let g:VM_maps['Add Cursor Down']    = '<A-Down>'  " Add cursor down (similar to VSCode's Alt+Down)
-let g:VM_maps['Add Cursor Up']      = '<A-Up>'    " Add cursor up (similar to VSCode's Alt+Up)
+let g:VM_maps['Add Cursor Down']    = '<C-S-Down>'  " Add cursor down (macOS-friendly alternative)
+let g:VM_maps['Add Cursor Up']      = '<C-S-Up>'    " Add cursor up (macOS-friendly alternative)
 
 " Telescope configuration and keybindings
 lua << EOF
@@ -161,6 +186,10 @@ vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
 vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
 vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
+vim.keymap.set('n', '<leader>fs', builtin.git_status, {})
+vim.keymap.set('n', '<leader>fc', builtin.git_commits, {})
+vim.keymap.set('n', '<leader>fr', builtin.lsp_references, {})
+vim.keymap.set('n', '<leader>fd', builtin.lsp_definitions, {})
 
 require('telescope').setup{
   defaults = {

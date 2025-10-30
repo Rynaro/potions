@@ -72,9 +72,10 @@ echo "Rynaro/mini-rails" > plugins.txt
 
 - **Zsh**: Modern shell with autosuggestions and syntax highlighting
 - **Git**: Pre-configured with useful aliases
-- **NeoVim**: Powerful editor with modern plugins
-- **Tmux**: Terminal multiplexer with VSCode-like keybindings
+- **NeoVim**: Powerful editor with modern plugins and macOS-friendly keybindings
+- **Tmux**: Terminal multiplexer with VSCode-like keybindings, optimized for macOS
 - **Development Tools**: curl, wget, OpenVPN, and more
+- **📚 Complete Cheatsheet**: See [CHEATSHEET.md](CHEATSHEET.md) for all keybindings
 
 ## 📝 Configuration
 
@@ -84,6 +85,14 @@ All configurations are stored in `~/.potions`:
 - `nvim/init.vim`: NeoVim configuration
 - `tmux/tmux.conf`: Tmux configuration
 - `sources/{linux|wsl|termux|macos}.sh`: Your customized source files per OS
+
+## 📚 Documentation
+
+- **[CHEATSHEET.md](CHEATSHEET.md)**: Complete reference guide for all keybindings and shortcuts
+  - Tmux keybindings and shortcuts
+  - Neovim commands and navigation
+  - macOS-optimized workflows
+  - Quick tips and best practices
 
 ## 🤝 Contributing
 
