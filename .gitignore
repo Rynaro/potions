@@ -1,8 +1,9 @@
 # Ignore everything by default
 *
 
-# Allow README.md
+# Allow essential docs
 !README.md
+!CHEATSHEET.md
 
 # Assets
 !assets
