@@ -33,6 +33,9 @@ fi
 export PATH="$HOME/.neovim/bin:$PATH"
 export EDITOR=nvim
 
+# Potions CLI
+export PATH="$POTIONS_HOME/bin:$PATH"
+
 # Git Prompt configuration
 # Wrap git_super_status in error handling to prevent prompt rendering issues
 PROMPT='%F{cyan}%n%f%F{magenta}@%f%F{red}%m%f:%b$(git_super_status 2>/dev/null || echo "") %~ %(#.#.$) '
