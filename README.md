@@ -49,6 +49,36 @@ chmod +x packages/*/*/*.sh
 
 After installation, restart your terminal or type `zsh` to begin using your new environment!
 
+## 🧪 Testing the Installation Interface
+
+Want to see the beautiful installation animations without modifying your system? Use test mode!
+
+### Test Mode Options
+
+```bash
+# Test the installer
+./install.sh --test
+
+# Test the one-line installer (includes download animations)
+./drink.sh --test
+
+# Test only dotfiles update
+./install.sh --only-dotfiles --test
+```
+
+Test mode will:
+- ✅ Show all animations and beautiful UI
+- ✅ Simulate the entire installation process
+- ✅ Use a temporary directory (no changes to your system)
+- ✅ Display the test directory location for inspection
+- ⚠️ **Not modify your actual Potions installation**
+
+After testing, you can clean up the test files:
+```bash
+# The test directory path will be shown at the end of the test run
+rm -rf /tmp/tmp.XXXXXXXXXX  # Replace with actual path shown
+```
+
 ## 🔄 Upgrading Potions
 
 Keep your Potions installation up to date with a single command:
