@@ -81,7 +81,7 @@ git pull origin main
 
 The upgrade script safely updates your Potions installation while:
 - ✅ **Creating automatic backups** in `~/.potions/backups/` (keeps last 5 backups)
-- ✅ **Preserving user customizations** in `.zsh_aliases` and `sources/*.sh` files
+- ✅ **Preserving user customizations** in `.zsh_aliases`, `.zsh_secure_aliases`, and `sources/*.sh` files
 - ✅ **Updating configuration files** with the latest improvements
 - ✅ **Storing repository** in `~/.potions/.repo` for faster future upgrades
 - ✅ **Providing rollback instructions** if something goes wrong
@@ -92,7 +92,7 @@ All upgrade-related files are consolidated in `~/.potions` to keep your HOME dir
 
 After upgrading, restart your terminal or run `exec zsh` to apply changes.
 
-**Note**: Custom additions to `.zsh_aliases` are automatically merged. For `sources/*.sh` files, your originals are backed up with a `.backup` extension for manual review.
+**Note**: Custom additions to `.zsh_aliases` and `.zsh_secure_aliases` are automatically merged. For `sources/*.sh` files, your originals are backed up with a `.backup` extension for manual review.
 
 ## 🔌 Plugin System
 

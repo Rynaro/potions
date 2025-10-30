@@ -161,6 +161,7 @@ preserve_user_files() {
   local repo_dir="$1"
   local preserved_files=(
     ".zsh_aliases"
+    ".zsh_secure_aliases"
     "sources/macos.sh"
     "sources/linux.sh"
     "sources/wsl.sh"
@@ -179,9 +180,9 @@ preserve_user_files() {
         # Backup user's original file
         cp "$user_file" "$POTIONS_HOME/$file.backup"
         
-        # For .zsh_aliases, try to preserve user additions
+        # For .zsh_aliases and .zsh_secure_aliases, try to preserve user additions
         # Strategy: Append user lines that don't exist in new file
-        if [ "$file" = ".zsh_aliases" ]; then
+        if [ "$file" = ".zsh_aliases" ] || [ "$file" = ".zsh_secure_aliases" ]; then
           # Create merged version: new content + user additions
           cp "$new_file" "$user_file"
           
@@ -239,6 +240,7 @@ update_dotfiles() {
   local repo_dir="$1"
   local preserved_files=(
     ".zsh_aliases"
+    ".zsh_secure_aliases"
     "sources/macos.sh"
     "sources/linux.sh"
     "sources/wsl.sh"
