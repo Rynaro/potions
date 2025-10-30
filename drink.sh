@@ -74,7 +74,10 @@ if [ "$HAS_GIT" = true ]; then
   echo "📦 Downloading Potions via Git..."
   git clone --depth=1 https://github.com/Rynaro/potions.git "$TEMP_DIR/potions"
 
-  # Move files to installation directory
+  # Move files to installation directory (temporary staging area)
+  # Note: Entire repo is copied here temporarily, but only .potions directory
+  # is deployed to user's home during install.sh execution. AI agent docs
+  # (AGENT.md, .cursorrules, etc.) remain git-only and are never deployed.
   mkdir -p "$POTIONS_DIR"
   cp -r "$TEMP_DIR/potions/"* "$POTIONS_DIR/"
   cp -r "$TEMP_DIR/potions/."* "$POTIONS_DIR/" 2>/dev/null || true
@@ -108,7 +111,10 @@ else
   mkdir -p "$TEMP_DIR/extract"
   unzip -q "$ARCHIVE_PATH" -d "$TEMP_DIR/extract"
 
-  # Create installation directory and copy files
+  # Create installation directory and copy files (temporary staging area)
+  # Note: Entire repo is copied here temporarily, but only .potions directory
+  # is deployed to user's home during install.sh execution. AI agent docs
+  # (AGENT.md, .cursorrules, etc.) remain git-only and are never deployed.
   mkdir -p "$POTIONS_DIR"
   cp -r "$TEMP_DIR/extract/"*/* "$POTIONS_DIR/"
   cp -r "$TEMP_DIR/extract/"*/.* "$POTIONS_DIR/" 2>/dev/null || true

@@ -8,7 +8,7 @@
 
 set -eo pipefail
 
-# Colors for output
+# Colors for output (Oh My Zsh style)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -446,6 +446,8 @@ update_dotfiles() {
   done
   
   # Copy files, excluding preserved ones
+  # Note: Only files from .potions directory are copied - AI agent docs (AGENT.md, .cursorrules, etc.)
+  # in repo root are git-only and never deployed to user installations
   find "$repo_dir/.potions" -type f | while read -r file; do
     rel_file="${file#$repo_dir/.potions/}"
     
