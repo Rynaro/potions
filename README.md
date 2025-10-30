@@ -4,153 +4,82 @@
 
 **One command. Powerful dev environment. Any platform.**
 
-Potions transforms your fresh macOS, WSL, or Termux installation into a fully-configured development environment in minutes. Stop wasting time with tedious configuration - start coding faster!
+Potions transforms your fresh macOS, WSL, or Termux installation into a fully-configured development environment in minutes.
 
 ## ✨ Features
 
-- **Cross-Platform**: Works on macOS, WSL (Windows), and Termux (Android)
+- **Cross-Platform**: macOS, WSL (Windows), Termux (Android), Debian/Linux
 - **Pre-configured Tools**: Zsh, Git, NeoVim, Tmux, and more
+- **Professional CLI**: Manage your installation with `potions` commands
 - **Modern Terminal**: Beautiful prompt with Git integration
 - **Plugin System**: Extend functionality with custom plugins
-- **Fast Setup**: Just one command to get started
+- **Fast Setup**: One command to get started
 
 ## 🚀 Quick Start
 
-### One-Line Installation (Recommended)
+### One-Line Installation
 
-The one-line installer will help you install essential packages (git, curl, unzip) from your operating system's official repositories if they're not already present on your system.
-
-Using curl:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash
 ```
 
-Using wget:
-```bash
-wget -O- https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash
-```
-
-### Manual Installation
-
-```bash
-# Clone the repo
-git clone https://github.com/Rynaro/potions.git
-
-# Enter directory
-cd potions
-
-# Make scripts executable (Optional)
-chmod +x install.sh
-chmod +x packages/*/*/*.sh
-
-# Run installer
-./install.sh
-```
-
 After installation, restart your terminal or type `zsh` to begin using your new environment!
 
-## 🧪 Testing the Installation Interface
+## 💻 CLI Commands
 
-Want to see the beautiful installation animations without modifying your system? Use test mode!
-
-### Test Mode Options
+Potions includes a professional CLI for managing your installation:
 
 ```bash
-# Test the installer
-./install.sh --test
-
-# Test the one-line installer (includes download animations)
-./drink.sh --test
-
-# Test only dotfiles update
-./install.sh --only-dotfiles --test
+potions upgrade          # Upgrade to latest version
+potions update           # Check for updates
+potions version          # Show current version
+potions status           # Show installation status
+potions info             # Show system information
+potions doctor           # Run health check
+potions help             # Show help message
 ```
 
-Test mode will:
-- ✅ Show all animations and beautiful UI
-- ✅ Simulate the entire installation process
-- ✅ Use a temporary directory (no changes to your system)
-- ✅ Display the test directory location for inspection
-- ⚠️ **Not modify your actual Potions installation**
+### Examples
 
-After testing, you can clean up the test files:
 ```bash
-# The test directory path will be shown at the end of the test run
-rm -rf /tmp/tmp.XXXXXXXXXX  # Replace with actual path shown
+# Check if updates are available
+potions update
+
+# Upgrade to latest version
+potions upgrade
+
+# Check installation health
+potions doctor
 ```
 
-## 🔄 Upgrading Potions
+## 🔄 Upgrading
 
-Keep your Potions installation up to date with a single command:
-
-### One-Line Upgrade
+### Using CLI (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash
+potions upgrade
 ```
 
 ### Manual Upgrade
 
-If you installed Potions manually by cloning the repository:
-
 ```bash
-cd ~/.potions/.repo  # repository is stored here
-git pull origin main
-cd ~
 curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash
 ```
 
-Or if you're in the repository directory:
-
-```bash
-git pull origin main
-./upgrade.sh
-```
-
-### What the Upgrader Does
-
-The upgrade script safely updates your Potions installation while:
-- ✅ **Creating automatic backups** in `~/.potions/backups/` (keeps last 5 backups)
-- ✅ **Preserving user customizations** in `.zsh_aliases`, `.zsh_secure_aliases`, and `sources/*.sh` files
-- ✅ **Updating configuration files** with the latest improvements
-- ✅ **Storing repository** in `~/.potions/.repo` for faster future upgrades
-- ✅ **Providing rollback instructions** if something goes wrong
-
-All upgrade-related files are consolidated in `~/.potions` to keep your HOME directory clean:
-- `~/.potions/.repo` - Git repository for upgrades
-- `~/.potions/backups/` - Backup directories
+The upgrade script:
+- ✅ Creates automatic backups in `~/.potions/backups/` (keeps last 5)
+- ✅ Preserves user customizations in `.zsh_aliases` and `sources/*.sh`
+- ✅ Updates configuration files with latest improvements
 
 After upgrading, restart your terminal or run `exec zsh` to apply changes.
-
-**Note**: Custom additions to `.zsh_aliases` and `.zsh_secure_aliases` are automatically merged. For `sources/*.sh` files, your originals are backed up with a `.backup` extension for manual review.
-
-## 🔌 Plugin System
-
-Potions includes a plugin system to extend functionality:
-
-### Install Plugins
-```bash
-# Create a plugins.txt file with your desired plugins
-echo "Rynaro/mini-rails" > plugins.txt
-
-# Install plugins
-./plugins.sh install
-```
-
-### Create Your Own Plugin
-```bash
-# Scaffold a new plugin
-./plugins.sh create my_awesome_plugin
-```
 
 ## 🛠️ What's Included
 
 - **Zsh**: Modern shell with autosuggestions and syntax highlighting
 - **Git**: Pre-configured with useful aliases
-- **NeoVim**: Powerful editor with modern plugins and macOS-friendly keybindings
-- **Tmux**: Terminal multiplexer with VSCode-like keybindings, optimized for macOS
+- **NeoVim**: Powerful editor with modern plugins
+- **Tmux**: Terminal multiplexer with VSCode-like keybindings
 - **Development Tools**: curl, wget, OpenVPN, and more
-- **📚 Complete Cheatsheet**: See [CHEATSHEET.md](CHEATSHEET.md) for all keybindings
 
 ## 📝 Configuration
 
@@ -159,24 +88,36 @@ All configurations are stored in `~/.potions`:
 - `.zsh_aliases`: Custom command aliases
 - `nvim/init.vim`: NeoVim configuration
 - `tmux/tmux.conf`: Tmux configuration
-- `sources/{linux|wsl|termux|macos}.sh`: Your customized source files per OS
+- `sources/{linux|wsl|termux|macos}.sh`: Platform-specific customizations
+
+## 🔌 Plugin System
+
+```bash
+# Install plugins
+echo "Rynaro/mini-rails" > plugins.txt
+./plugins.sh install
+
+# Create your own plugin
+./plugins.sh create my_awesome_plugin
+```
+
+## 🧪 Test Mode
+
+Test the installation interface without modifying your system:
+
+```bash
+./install.sh --test
+./drink.sh --test
+```
 
 ## 📚 Documentation
 
-- **[CHEATSHEET.md](CHEATSHEET.md)**: Complete reference guide for all keybindings and shortcuts
-  - Tmux keybindings and shortcuts
-  - Neovim commands and navigation
-  - macOS-optimized workflows
-  - Quick tips and best practices
+- **[CHEATSHEET.md](CHEATSHEET.md)**: Complete reference for keybindings and shortcuts
 
 ## 🤝 Contributing
 
-Contributions are welcome! Help improve Potions by:
-- Submitting bug reports and feature requests
-- Improving documentation
-- Adding support for new platforms
-- Creating new plugins
+Contributions welcome! Help improve Potions by submitting bug reports, improving documentation, adding platform support, or creating plugins.
 
 ## 📜 License
 
-Potions is released under the MIT License.
+MIT License

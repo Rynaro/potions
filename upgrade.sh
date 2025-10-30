@@ -604,6 +604,15 @@ update_dotfiles() {
   done
   
   log_success "Dotfiles updated"
+  
+  # Update Potions CLI if available
+  if [ -f "$repo_dir/.potions/bin/potions" ]; then
+    log_info "Updating Potions CLI..."
+    mkdir -p "$POTIONS_HOME/bin"
+    cp "$repo_dir/.potions/bin/potions" "$POTIONS_HOME/bin/potions"
+    chmod +x "$POTIONS_HOME/bin/potions"
+    log_success "Potions CLI updated"
+  fi
 }
 
 # Clean up old backups (keep last 5 backups)

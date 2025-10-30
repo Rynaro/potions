@@ -1,0 +1,621 @@
+#!/bin/bash
+
+# potions - Potions CLI Command-Line Interface
+# Author: Henrique A. Lavezzo (Rynaro)
+#
+# Professional CLI for managing Potions installation
+
+set -eo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+# Check if terminal supports colors
+if [ -t 1 ]; then
+  HAS_COLOR=true
+else
+  HAS_COLOR=false
+fi
+
+# Disable colors if NO_COLOR is set
+if [ -n "${NO_COLOR:-}" ]; then
+  HAS_COLOR=false
+fi
+
+# Configuration
+POTIONS_HOME="${POTIONS_HOME:-$HOME/.potions}"
+POTIONS_REPO_URL="https://github.com/Rynaro/potions.git"
+POTIONS_REPO_BRANCH="main"
+POTIONS_REPO_DIR="$POTIONS_HOME/.repo"
+POTIONS_BACKUPS_DIR="$POTIONS_HOME/backups"
+
+# Get script directory (for finding upgrade.sh when running from repo)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd 2>/dev/null || echo "")"
+
+# Platform detection functions
+is_macos() {
+  [ "$(uname -s)" = "Darwin" ]
+}
+
+is_termux() {
+  [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/termux-info" ]
+}
+
+is_wsl() {
+  grep -qi microsoft /proc/version 2>/dev/null || false
+}
+
+is_linux() {
+  [ "$(uname -s)" = "Linux" ]
+}
+
+# Logging functions
+log_info() {
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${CYAN}${BOLD}⟹${NC} ${WHITE}$1${NC}" >&2
+  else
+    echo "==> $1" >&2
+  fi
+}
+
+log_success() {
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${GREEN}${BOLD}✓${NC} ${GREEN}$1${NC}" >&2
+  else
+    echo "[OK] $1" >&2
+  fi
+}
+
+log_warning() {
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${YELLOW}${BOLD}⚠${NC} ${YELLOW}$1${NC}" >&2
+  else
+    echo "[WARN] $1" >&2
+  fi
+}
+
+log_error() {
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${RED}${BOLD}✗${NC} ${RED}$1${NC}" >&2
+  else
+    echo "[ERROR] $1" >&2
+  fi
+}
+
+# Get version from file
+get_version() {
+  local version_file=""
+  # Try installed location first
+  if [ -f "$POTIONS_HOME/.version" ]; then
+    version_file="$POTIONS_HOME/.version"
+  # Try repo root (if running from repo)
+  elif [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.version" ]; then
+    version_file="$REPO_ROOT/.version"
+  # Try repo directory
+  elif [ -f "$POTIONS_REPO_DIR/.version" ]; then
+    version_file="$POTIONS_REPO_DIR/.version"
+  fi
+  
+  if [ -n "$version_file" ] && [ -f "$version_file" ]; then
+    cat "$version_file" | tr -d '[:space:]'
+  else
+    echo "unknown"
+  fi
+}
+
+# Read version from file (with fallback)
+read_version() {
+  local version_file="$1"
+  if [ -f "$version_file" ]; then
+    cat "$version_file" | tr -d '[:space:]'
+  else
+    echo "0.0.0"
+  fi
+}
+
+# Compare version strings (returns 0 if v1 < v2, 1 if v1 >= v2)
+version_compare() {
+  local v1="$1"
+  local v2="$2"
+  
+  # Use awk for version comparison
+  awk -v v1="$v1" -v v2="$v2" 'BEGIN {
+    split(v1, a, ".")
+    split(v2, b, ".")
+    for (i=1; i<=3; i++) {
+      a[i] = a[i] ? a[i] : 0
+      b[i] = b[i] ? b[i] : 0
+      if (a[i] < b[i]) { exit 0 }
+      if (a[i] > b[i]) { exit 1 }
+    }
+    exit 1
+  }' 2>/dev/null || return 1
+}
+
+# Check if Potions is installed
+check_installed() {
+  if [ ! -d "$POTIONS_HOME" ]; then
+    log_error "Potions is not installed."
+    echo ""
+    echo "Install Potions with:"
+    echo "  curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash"
+    exit 1
+  fi
+}
+
+# Command: version / versions
+cmd_version() {
+  local current_version=$(get_version)
+  
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${MAGENTA}${BOLD}Potions${NC} version ${CYAN}${BOLD}v${current_version}${NC}"
+  else
+    echo "Potions version v${current_version}"
+  fi
+  
+  # Also show git info if available
+  if [ -d "$POTIONS_REPO_DIR/.git" ]; then
+    cd "$POTIONS_REPO_DIR"
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+      local git_hash=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+      local git_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+      if [ "$HAS_COLOR" = true ]; then
+        echo -e "${CYAN}Git: ${git_branch}@${git_hash}${NC}"
+      else
+        echo "Git: ${git_branch}@${git_hash}"
+      fi
+    fi
+  fi
+}
+
+# Command: update (check for updates)
+cmd_update() {
+  check_installed
+  
+  log_info "Checking for updates..."
+  
+  local current_version=$(read_version "$POTIONS_HOME/.version")
+  local remote_version=""
+  
+  # Try to get remote version
+  TEMP_DIR=$(mktemp -d)
+  trap "rm -rf $TEMP_DIR" EXIT
+  
+  if command -v git &> /dev/null; then
+    # Clone or update repo to check version
+    if [ -d "$POTIONS_REPO_DIR/.git" ]; then
+      cd "$POTIONS_REPO_DIR"
+      git fetch origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1 || true
+      git checkout "$POTIONS_REPO_BRANCH" > /dev/null 2>&1 || true
+      if [ -f "$POTIONS_REPO_DIR/.version" ]; then
+        remote_version=$(read_version "$POTIONS_REPO_DIR/.version")
+      fi
+    else
+      # Try to clone just to check version
+      if git clone --depth=1 --branch "$POTIONS_REPO_BRANCH" "$POTIONS_REPO_URL" "$TEMP_DIR/potions" > /dev/null 2>&1; then
+        if [ -f "$TEMP_DIR/potions/.version" ]; then
+          remote_version=$(read_version "$TEMP_DIR/potions/.version")
+        fi
+      fi
+    fi
+  fi
+  
+  if [ -z "$remote_version" ]; then
+    # Fallback: try to fetch version via curl/wget
+    if command -v curl &> /dev/null; then
+      remote_version=$(curl -fsSL "https://raw.githubusercontent.com/Rynaro/potions/$POTIONS_REPO_BRANCH/.version" 2>/dev/null | tr -d '[:space:]' || echo "")
+    elif command -v wget &> /dev/null; then
+      remote_version=$(wget -qO- "https://raw.githubusercontent.com/Rynaro/potions/$POTIONS_REPO_BRANCH/.version" 2>/dev/null | tr -d '[:space:]' || echo "")
+    fi
+  fi
+  
+  if [ -z "$remote_version" ]; then
+    log_error "Could not check for updates. Check your internet connection."
+    exit 1
+  fi
+  
+  echo ""
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Current version:${NC} ${CYAN}${BOLD}v${current_version}${NC}"
+    echo -e "${WHITE}Remote version:${NC}  ${CYAN}${BOLD}v${remote_version}${NC}"
+  else
+    echo "Current version: v${current_version}"
+    echo "Remote version:  v${remote_version}"
+  fi
+  echo ""
+  
+  if version_compare "$current_version" "$remote_version"; then
+    log_warning "Update available!"
+    echo ""
+    echo "Run 'potions upgrade' to update to v${remote_version}"
+  else
+    log_success "You are running the latest version (v${current_version})"
+  fi
+}
+
+# Command: upgrade
+cmd_upgrade() {
+  check_installed
+  
+  # Find upgrade.sh script
+  local upgrade_script=""
+  
+  # Try repo root first (if running from development)
+  if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/upgrade.sh" ]; then
+    upgrade_script="$REPO_ROOT/upgrade.sh"
+  # Try installed location
+  elif [ -f "$POTIONS_REPO_DIR/upgrade.sh" ]; then
+    upgrade_script="$POTIONS_REPO_DIR/upgrade.sh"
+  # Try downloading upgrade.sh
+  else
+    log_info "Downloading upgrade script..."
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf $TEMP_DIR" EXIT
+    
+    if command -v curl &> /dev/null; then
+      if curl -fsSL "https://raw.githubusercontent.com/Rynaro/potions/$POTIONS_REPO_BRANCH/upgrade.sh" -o "$TEMP_DIR/upgrade.sh"; then
+        upgrade_script="$TEMP_DIR/upgrade.sh"
+        chmod +x "$upgrade_script"
+      fi
+    elif command -v wget &> /dev/null; then
+      if wget -qO- "https://raw.githubusercontent.com/Rynaro/potions/$POTIONS_REPO_BRANCH/upgrade.sh" -o "$TEMP_DIR/upgrade.sh"; then
+        upgrade_script="$TEMP_DIR/upgrade.sh"
+        chmod +x "$upgrade_script"
+      fi
+    fi
+  fi
+  
+  if [ -z "$upgrade_script" ] || [ ! -f "$upgrade_script" ]; then
+    log_error "Could not find upgrade script."
+    log_info "Please run the upgrade manually:"
+    echo "  curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash"
+    exit 1
+  fi
+  
+  # Execute upgrade script
+  exec "$upgrade_script" "$@"
+}
+
+# Command: status
+cmd_status() {
+  check_installed
+  
+  local current_version=$(get_version)
+  
+  echo ""
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}${BOLD}  Potions Installation Status${NC}"
+    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  else
+    echo "=========================================="
+    echo "  Potions Installation Status"
+    echo "=========================================="
+  fi
+  echo ""
+  
+  # Version
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Version:${NC} ${CYAN}${BOLD}v${current_version}${NC}"
+  else
+    echo "Version: v${current_version}"
+  fi
+  
+  # Installation directory
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Installation:${NC} ${CYAN}${POTIONS_HOME}${NC}"
+  else
+    echo "Installation: ${POTIONS_HOME}"
+  fi
+  
+  # Check repository
+  if [ -d "$POTIONS_REPO_DIR/.git" ]; then
+    if [ "$HAS_COLOR" = true ]; then
+      echo -e "${WHITE}Repository:${NC} ${GREEN}✓${NC} Available"
+    else
+      echo "Repository: [OK] Available"
+    fi
+  else
+    if [ "$HAS_COLOR" = true ]; then
+      echo -e "${WHITE}Repository:${NC} ${YELLOW}⚠${NC} Not found (will be cloned on upgrade)"
+    else
+      echo "Repository: [WARN] Not found (will be cloned on upgrade)"
+    fi
+  fi
+  
+  # Check backups
+  local backup_count=0
+  if [ -d "$POTIONS_BACKUPS_DIR" ]; then
+    backup_count=$(find "$POTIONS_BACKUPS_DIR" -maxdepth 1 -type d -name "backup-*" 2>/dev/null | wc -l | tr -d ' ')
+  fi
+  
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Backups:${NC} ${CYAN}${backup_count}${NC} backup(s) available"
+  else
+    echo "Backups: ${backup_count} backup(s) available"
+  fi
+  
+  # Check key files
+  echo ""
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Configuration Files:${NC}"
+  else
+    echo "Configuration Files:"
+  fi
+  
+  local files=(
+    ".zshrc"
+    ".zsh_aliases"
+    "tmux/tmux.conf"
+    "nvim/init.vim"
+  )
+  
+  for file in "${files[@]}"; do
+    if [ -f "$POTIONS_HOME/$file" ]; then
+      if [ "$HAS_COLOR" = true ]; then
+        echo -e "  ${GREEN}✓${NC} $file"
+      else
+        echo "  [OK] $file"
+      fi
+    else
+      if [ "$HAS_COLOR" = true ]; then
+        echo -e "  ${RED}✗${NC} $file ${YELLOW}(missing)${NC}"
+      else
+        echo "  [MISSING] $file"
+      fi
+    fi
+  done
+  
+  echo ""
+}
+
+# Command: info
+cmd_info() {
+  check_installed
+  
+  echo ""
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}${BOLD}  Potions System Information${NC}"
+    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  else
+    echo "=========================================="
+    echo "  Potions System Information"
+    echo "=========================================="
+  fi
+  echo ""
+  
+  # Version
+  local current_version=$(get_version)
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Potions Version:${NC} ${CYAN}${BOLD}v${current_version}${NC}"
+  else
+    echo "Potions Version: v${current_version}"
+  fi
+  
+  # Platform
+  local platform=""
+  if is_macos; then
+    platform="macOS $(sw_vers -productVersion 2>/dev/null || echo "")"
+  elif is_termux; then
+    platform="Termux"
+  elif is_wsl; then
+    platform="WSL (Windows Subsystem for Linux)"
+  elif is_linux; then
+    platform="Linux"
+    if [ -f /etc/os-release ]; then
+      local os_name=$(grep "^NAME=" /etc/os-release | cut -d'"' -f2 2>/dev/null || echo "")
+      local os_version=$(grep "^VERSION=" /etc/os-release | cut -d'"' -f2 2>/dev/null || echo "")
+      if [ -n "$os_name" ]; then
+        platform="$platform ($os_name"
+        [ -n "$os_version" ] && platform="$platform $os_version"
+        platform="$platform)"
+      fi
+    fi
+  else
+    platform="Unknown ($(uname -s))"
+  fi
+  
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Platform:${NC} ${CYAN}${platform}${NC}"
+  else
+    echo "Platform: ${platform}"
+  fi
+  
+  # Shell
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Shell:${NC} ${CYAN}${SHELL:-unknown}${NC}"
+  else
+    echo "Shell: ${SHELL:-unknown}"
+  fi
+  
+  # Installation directory
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Installation:${NC} ${CYAN}${POTIONS_HOME}${NC}"
+  else
+    echo "Installation: ${POTIONS_HOME}"
+  fi
+  
+  # Repository URL
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${WHITE}Repository:${NC} ${CYAN}${POTIONS_REPO_URL}${NC}"
+  else
+    echo "Repository: ${POTIONS_REPO_URL}"
+  fi
+  
+  echo ""
+}
+
+# Command: doctor (health check)
+cmd_doctor() {
+  check_installed
+  
+  echo ""
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}${BOLD}  Potions Health Check${NC}"
+    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  else
+    echo "=========================================="
+    echo "  Potions Health Check"
+    echo "=========================================="
+  fi
+  echo ""
+  
+  local issues=0
+  
+  # Check installation directory
+  if [ ! -d "$POTIONS_HOME" ]; then
+    log_error "Installation directory missing: $POTIONS_HOME"
+    ((issues++))
+  else
+    log_success "Installation directory exists"
+  fi
+  
+  # Check version file
+  if [ ! -f "$POTIONS_HOME/.version" ]; then
+    log_warning "Version file missing"
+    ((issues++))
+  else
+    log_success "Version file found"
+  fi
+  
+  # Check essential files
+  local essential_files=(
+    ".zshrc"
+    ".zsh_aliases"
+  )
+  
+  for file in "${essential_files[@]}"; do
+    if [ ! -f "$POTIONS_HOME/$file" ]; then
+      log_warning "Missing essential file: $file"
+      ((issues++))
+    fi
+  done
+  
+  # Check if git is available (needed for upgrades)
+  if ! command -v git &> /dev/null; then
+    log_warning "Git not found (required for upgrades)"
+    ((issues++))
+  else
+    log_success "Git available"
+  fi
+  
+  # Check if repository exists and is valid
+  if [ -d "$POTIONS_REPO_DIR" ]; then
+    if [ -d "$POTIONS_REPO_DIR/.git" ]; then
+      log_success "Repository directory exists and is valid"
+    else
+      log_warning "Repository directory exists but is not a valid git repository"
+      ((issues++))
+    fi
+  else
+    log_info "Repository directory not found (will be created on upgrade)"
+  fi
+  
+  # Check PATH
+  if [[ ":$PATH:" != *":$POTIONS_HOME/bin:"* ]]; then
+    log_warning "Potions bin directory not in PATH"
+    log_info "Add this to your shell config:"
+    echo "  export PATH=\"\$HOME/.potions/bin:\$PATH\""
+    ((issues++))
+  else
+    log_success "Potions bin directory in PATH"
+  fi
+  
+  echo ""
+  if [ $issues -eq 0 ]; then
+    if [ "$HAS_COLOR" = true ]; then
+      log_success "All checks passed! Your Potions installation is healthy."
+    else
+      echo "[OK] All checks passed! Your Potions installation is healthy."
+    fi
+  else
+    if [ "$HAS_COLOR" = true ]; then
+      log_warning "Found $issues issue(s). Please review the warnings above."
+    else
+      echo "[WARN] Found $issues issue(s). Please review the warnings above."
+    fi
+    exit 1
+  fi
+  echo ""
+}
+
+# Command: help
+cmd_help() {
+  cat << EOF
+${BOLD}Potions CLI${NC} - Professional command-line interface for Potions
+
+${BOLD}USAGE:${NC}
+    potions <command> [options]
+
+${BOLD}COMMANDS:${NC}
+    ${CYAN}upgrade${NC}           Upgrade Potions to the latest version
+    ${CYAN}update${NC}            Check if updates are available
+    ${CYAN}version${NC}           Show current Potions version
+    ${CYAN}versions${NC}          Alias for 'version'
+    ${CYAN}status${NC}            Show installation status
+    ${CYAN}info${NC}              Show system information
+    ${CYAN}doctor${NC}            Run health check on installation
+    ${CYAN}help${NC}              Show this help message
+
+${BOLD}EXAMPLES:${NC}
+    potions upgrade              # Upgrade to latest version
+    potions update               # Check for updates
+    potions version              # Show version
+    potions status               # Show installation status
+    potions doctor               # Run health check
+
+${BOLD}For more information, visit:${NC}
+    https://github.com/Rynaro/potions
+
+EOF
+}
+
+# Main command router
+main() {
+  local command="${1:-help}"
+  
+  case "$command" in
+    upgrade)
+      shift
+      cmd_upgrade "$@"
+      ;;
+    update)
+      cmd_update
+      ;;
+    version|versions)
+      cmd_version
+      ;;
+    status)
+      cmd_status
+      ;;
+    info)
+      cmd_info
+      ;;
+    doctor)
+      cmd_doctor
+      ;;
+    help|--help|-h)
+      cmd_help
+      ;;
+    *)
+      log_error "Unknown command: $command"
+      echo ""
+      cmd_help
+      exit 1
+      ;;
+  esac
+}
+
+# Run main function
+main "$@"

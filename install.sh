@@ -440,10 +440,24 @@ echo "  2. Type 'zsh' to switch to Zsh with Potions now"
 echo ""
 echo "All new terminal sessions will automatically use Potions."
 EOF
-    fi
+      fi
 
     chmod +x "$POTIONS_SETUP"
     log_success "Activation script created"
+
+    # Install Potions CLI
+    log_info "Installing Potions CLI..."
+    POTIONS_BIN_DIR="$POTIONS_HOME/bin"
+    mkdir -p "$POTIONS_BIN_DIR"
+    
+    # Copy CLI script from repo if available, otherwise create it
+    if [ -f "$POTIONS_ROOT/.potions/bin/potions" ]; then
+      cp "$POTIONS_ROOT/.potions/bin/potions" "$POTIONS_BIN_DIR/potions"
+      chmod +x "$POTIONS_BIN_DIR/potions"
+      log_success "Potions CLI installed"
+    else
+      log_warning "CLI script not found in repo, skipping CLI installation"
+    fi
 
     # Success message
     echo ""
@@ -456,6 +470,11 @@ EOF
       echo -e "  ${CYAN}⟹${NC} Close this terminal and open a new one (recommended)"
       echo -e "  ${CYAN}⟹${NC} Or type ${BOLD}exec zsh${NC} to start using Potions now"
       echo ""
+      echo -e "${WHITE}CLI Commands:${NC}"
+      echo -e "  ${CYAN}⟹${NC} Run ${BOLD}potions help${NC} to see available commands"
+      echo -e "  ${CYAN}⟹${NC} Run ${BOLD}potions upgrade${NC} to upgrade Potions"
+      echo -e "  ${CYAN}⟹${NC} Run ${BOLD}potions version${NC} to check version"
+      echo ""
       echo -e "${YELLOW}Tip:${NC} All new terminal sessions will automatically use Potions!"
       echo ""
     else
@@ -466,6 +485,11 @@ EOF
       echo "Next steps:"
       echo "  - Close this terminal and open a new one (recommended)"
       echo "  - Or type 'exec zsh' to start using Potions now"
+      echo ""
+      echo "CLI Commands:"
+      echo "  - Run 'potions help' to see available commands"
+      echo "  - Run 'potions upgrade' to upgrade Potions"
+      echo "  - Run 'potions version' to check version"
       echo ""
       echo "Tip: All new terminal sessions will automatically use Potions!"
       echo ""
