@@ -40,6 +40,30 @@ POTIONS_BACKUPS_DIR="$POTIONS_HOME/backups"
 BACKUP_DIR="$POTIONS_BACKUPS_DIR/backup-$(date +%Y%m%d-%H%M%S)"
 TEMP_DIR=$(mktemp -d)
 
+# Get current script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Get version from .version file (check repo root or installed location)
+get_version() {
+  local version_file=""
+  # Try repo root first (if running from repo)
+  if [ -f "$SCRIPT_DIR/.version" ]; then
+    version_file="$SCRIPT_DIR/.version"
+  # Try installed location
+  elif [ -f "$POTIONS_HOME/.version" ]; then
+    version_file="$POTIONS_HOME/.version"
+  # Try repo directory
+  elif [ -f "$POTIONS_REPO_DIR/.version" ]; then
+    version_file="$POTIONS_REPO_DIR/.version"
+  fi
+  
+  if [ -n "$version_file" ] && [ -f "$version_file" ]; then
+    cat "$version_file" | tr -d '[:space:]'
+  else
+    echo ""
+  fi
+}
+
 # Cleanup function
 cleanup() {
   if [ -d "$TEMP_DIR" ]; then
@@ -131,13 +155,24 @@ print_header() {
     echo "   ██║     ╚██████╔╝   ██║   ██║╚██████╔╝██║ ╚████║███████║" >&2
     echo "   ╚═╝      ╚═════╝    ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝" >&2
     echo -e "${NC}" >&2
-    echo -e "${CYAN}${BOLD}                    Upgrading Potions${NC}" >&2
-    echo -e "${CYAN}              Your powerful dev environment${NC}" >&2
+    local version=$(get_version)
+    if [ -n "$version" ]; then
+      echo -e "${CYAN}${BOLD}                    Upgrading Potions${NC}" >&2
+      echo -e "${CYAN}              Your powerful dev environment${NC}" >&2
+      echo -e "${CYAN}                         v${version}${NC}" >&2
+    else
+      echo -e "${CYAN}${BOLD}                    Upgrading Potions${NC}" >&2
+      echo -e "${CYAN}              Your powerful dev environment${NC}" >&2
+    fi
     echo "" >&2
   else
     echo "" >&2
+    local version=$(get_version)
     echo "==========================================" >&2
     echo "          POTIONS UPGRADER" >&2
+    if [ -n "$version" ]; then
+      echo "                  v${version}" >&2
+    fi
     echo "==========================================" >&2
     echo "" >&2
   fi

@@ -28,6 +28,24 @@ if [ -n "${NO_COLOR:-}" ]; then
   HAS_COLOR=false
 fi
 
+# Get version from .version file (works after download or from remote)
+get_version() {
+  local version_file=""
+  # Try temp download location
+  if [ -n "${TEMP_DIR:-}" ] && [ -f "$TEMP_DIR/potions/.version" ]; then
+    version_file="$TEMP_DIR/potions/.version"
+  # Try installation directory
+  elif [ -n "${POTIONS_DIR:-}" ] && [ -f "$POTIONS_DIR/.version" ]; then
+    version_file="$POTIONS_DIR/.version"
+  fi
+  
+  if [ -n "$version_file" ] && [ -f "$version_file" ]; then
+    cat "$version_file" | tr -d '[:space:]'
+  else
+    echo ""
+  fi
+}
+
 # Print header banner
 print_header() {
   if [ "$HAS_COLOR" = true ]; then
@@ -40,13 +58,24 @@ print_header() {
     echo "   ██║     ╚██████╔╝   ██║   ██║╚██████╔╝██║ ╚████║███████║"
     echo "   ╚═╝      ╚═════╝    ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝"
     echo -e "${NC}"
-    echo -e "${CYAN}${BOLD}           Welcome to Potions Installer${NC}"
-    echo -e "${CYAN}              Your powerful dev environment${NC}"
+    local version=$(get_version)
+    if [ -n "$version" ]; then
+      echo -e "${CYAN}${BOLD}           Welcome to Potions Installer${NC}"
+      echo -e "${CYAN}              Your powerful dev environment${NC}"
+      echo -e "${CYAN}                         v${version}${NC}"
+    else
+      echo -e "${CYAN}${BOLD}           Welcome to Potions Installer${NC}"
+      echo -e "${CYAN}              Your powerful dev environment${NC}"
+    fi
     echo ""
   else
     echo ""
+    local version=$(get_version)
     echo "=========================================="
     echo "      POTIONS ONE-LINE INSTALLER"
+    if [ -n "$version" ]; then
+      echo "                  v${version}"
+    fi
     echo "=========================================="
     echo ""
   fi
@@ -263,6 +292,14 @@ else
     cp -r "$TEMP_DIR/extract/"*/.* "$POTIONS_DIR/" 2>/dev/null || true
   fi
   log_success "Potions downloaded"
+  
+  # Display version after download
+  if [ -f "$POTIONS_DIR/.version" ]; then
+    local version=$(cat "$POTIONS_DIR/.version" | tr -d '[:space:]')
+    if [ -n "$version" ]; then
+      log_info "Potions version: ${BOLD}v${version}${NC}"
+    fi
+  fi
 fi
 
 echo ""
