@@ -179,6 +179,11 @@ update_potions() {
     return 1
   fi
   
+  # Copy version file if it exists
+  if [ -f ".version" ]; then
+    cp ".version" "$check_dir/.version" 2>/dev/null || true
+  fi
+  
   log_success "Potions files installed"
 }
 
