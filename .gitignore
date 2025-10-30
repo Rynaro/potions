@@ -18,6 +18,7 @@
 !.zshenv
 !install.sh
 !drink.sh
+!upgrade.sh
 
 # Allow Installer packs
 !packages
