@@ -1,0 +1,259 @@
+name: Version and Checksum Validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.sh'
+      - '.version'
+      - '.checksums'
+      - '.potions/**'
+      - 'packages/**'
+      - 'plugins/**'
+
+jobs:
+  validate-version-checksum:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need previous commit for comparison
+
+      - name: Setup Bash
+        run: |
+          echo "Bash version: $(bash --version)"
+
+      - name: Read current version
+        id: current_version
+        run: |
+          if [ -f .version ]; then
+            CURRENT_VERSION=$(cat .version | tr -d '[:space:]')
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "Current version: $CURRENT_VERSION"
+          else
+            echo "ERROR: .version file not found"
+            exit 1
+          fi
+
+      - name: Read previous version
+        id: previous_version
+        run: |
+          git checkout HEAD~1 .version 2>/dev/null || echo "0.0.0" > /tmp/prev_version
+          if [ -f .version ]; then
+            PREVIOUS_VERSION=$(cat .version | tr -d '[:space:]')
+            echo "$PREVIOUS_VERSION" > /tmp/prev_version
+          fi
+          git checkout HEAD .version 2>/dev/null || true
+          
+          if [ -f /tmp/prev_version ]; then
+            PREVIOUS_VERSION=$(cat /tmp/prev_version | tr -d '[:space:]')
+            echo "version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+            echo "Previous version: $PREVIOUS_VERSION"
+          else
+            echo "version=0.0.0" >> $GITHUB_OUTPUT
+            echo "Previous version: 0.0.0 (first commit or version file didn't exist)"
+          fi
+
+      - name: Calculate current checksums
+        id: current_checksums
+        run: |
+          if [ ! -f .checksums ]; then
+            echo "ERROR: .checksums file not found"
+            exit 1
+          fi
+          
+          # Calculate checksums for all files listed in .checksums
+          TMP_CHECKSUMS=$(mktemp)
+          while IFS=' ' read -r file expected_checksum; do
+            # Skip empty lines and comments
+            [[ -z "$file" || "$file" =~ ^# ]] && continue
+            
+            if [ -f "$file" ]; then
+              CHECKSUM=$(sha256sum "$file" | awk '{print $1}')
+              echo "$file $CHECKSUM" >> "$TMP_CHECKSUMS"
+            else
+              echo "WARNING: File not found: $file" >&2
+            fi
+          done < .checksums
+          
+          # Store checksums for comparison
+          mv "$TMP_CHECKSUMS" /tmp/current_checksums.txt
+          echo "Current checksums calculated"
+
+      - name: Get previous checksums
+        id: previous_checksums
+        run: |
+          git checkout HEAD~1 .checksums 2>/dev/null || echo "" > /tmp/prev_checksums.txt
+          if [ -f .checksums ]; then
+            cp .checksums /tmp/prev_checksums.txt
+          fi
+          git checkout HEAD .checksums 2>/dev/null || true
+          
+          if [ -f /tmp/prev_checksums.txt ] && [ -s /tmp/prev_checksums.txt ]; then
+            echo "Previous checksums retrieved"
+          else
+            echo "No previous checksums found (first commit or checksums file didn't exist)"
+            echo "" > /tmp/prev_checksums.txt
+          fi
+
+      - name: Compare checksums
+        id: compare_checksums
+        run: |
+          CHANGED_FILES=0
+          CHANGED_FILES_LIST=""
+          
+          # Read current checksums
+          declare -A CURRENT_HASHES
+          while IFS=' ' read -r file checksum; do
+            [[ -z "$file" || "$file" =~ ^# ]] && continue
+            CURRENT_HASHES["$file"]="$checksum"
+          done < /tmp/current_checksums.txt
+          
+          # Compare with previous checksums
+          if [ -f /tmp/prev_checksums.txt ] && [ -s /tmp/prev_checksums.txt ]; then
+            while IFS=' ' read -r file checksum; do
+              [[ -z "$file" || "$file" =~ ^# ]] && continue
+              
+              if [ -n "${CURRENT_HASHES[$file]:-}" ]; then
+                if [ "${CURRENT_HASHES[$file]}" != "$checksum" ]; then
+                  CHANGED_FILES=$((CHANGED_FILES + 1))
+                  CHANGED_FILES_LIST="$CHANGED_FILES_LIST  - $file"$'\n'
+                  echo "Changed: $file (was: ${checksum:0:16}..., now: ${CURRENT_HASHES[$file]:0:16}...)"
+                fi
+              fi
+            done < /tmp/prev_checksums.txt
+          else
+            # First commit or no previous checksums - assume all files are new/changed
+            CHANGED_FILES=${#CURRENT_HASHES[@]}
+            echo "No previous checksums to compare (first commit)"
+          fi
+          
+          echo "changed_count=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES_LIST" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Files with changed checksums: $CHANGED_FILES"
+
+      - name: Validate version change
+        run: |
+          CURRENT_VERSION="${{ steps.current_version.outputs.version }}"
+          PREVIOUS_VERSION="${{ steps.previous_version.outputs.version }}"
+          CHANGED_COUNT="${{ steps.compare_checksums.outputs.changed_count }}"
+          CHANGED_FILES="${{ steps.compare_checksums.outputs.changed_files }}"
+          
+          echo "=========================================="
+          echo "Version Validation"
+          echo "=========================================="
+          echo "Previous version: $PREVIOUS_VERSION"
+          echo "Current version:  $CURRENT_VERSION"
+          echo "Files with changed checksums: $CHANGED_COUNT"
+          echo ""
+          
+          # Compare versions using semantic versioning
+          if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+            if [ "$CHANGED_COUNT" -gt 0 ]; then
+              echo "❌ ERROR: Version has not changed ($CURRENT_VERSION) but code has changed!"
+              echo ""
+              echo "Changed files:"
+              echo "$CHANGED_FILES"
+              echo ""
+              echo "When code changes, the version MUST be incremented."
+              echo "Please update .version file before pushing to main."
+              exit 1
+            else
+              echo "✅ OK: Version unchanged and no code changes detected"
+            fi
+          else
+            echo "✅ OK: Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+            
+            # If version changed but no checksums changed, warn (but don't fail)
+            if [ "$CHANGED_COUNT" -eq 0 ]; then
+              echo "⚠️  WARNING: Version changed but no checksums changed. Is this intentional?"
+            fi
+          fi
+
+      - name: Generate checksums script
+        run: |
+          cat > /tmp/generate_checksums.sh << 'EOF'
+          #!/bin/bash
+          # Generate checksums for critical files
+          
+          CHECKSUMS_FILE=".checksums"
+          CRITICAL_FILES=(
+            "drink.sh"
+            "install.sh"
+            "upgrade.sh"
+            "plugins.sh"
+            ".version"
+            ".potions/.zshrc"
+            ".potions/bin/potions"
+          )
+          
+          # Calculate and write checksums
+          > "$CHECKSUMS_FILE"
+          for file in "${CRITICAL_FILES[@]}"; do
+            if [ -f "$file" ]; then
+              if command -v sha256sum &> /dev/null; then
+                CHECKSUM=$(sha256sum "$file" | awk '{print $1}')
+              elif command -v shasum &> /dev/null; then
+                CHECKSUM=$(shasum -a 256 "$file" | awk '{print $1}')
+              else
+                echo "ERROR: No checksum tool found (sha256sum or shasum)"
+                exit 1
+              fi
+              echo "$file $CHECKSUM" >> "$CHECKSUMS_FILE"
+            else
+              echo "WARNING: File not found: $file" >&2
+            fi
+          done
+          
+          # Sort for consistency
+          sort -o "$CHECKSUMS_FILE" "$CHECKSUMS_FILE"
+          echo "Generated checksums file:"
+          cat "$CHECKSUMS_FILE"
+          EOF
+          chmod +x /tmp/generate_checksums.sh
+
+      - name: Verify checksums file is up to date
+        if: steps.current_version.outputs.version != steps.previous_version.outputs.version
+        run: |
+          echo "Version changed - verifying checksums file is up to date..."
+          
+          # Generate expected checksums
+          /tmp/generate_checksums.sh
+          EXPECTED_CHECKSUMS=$(cat .checksums)
+          
+          # Restore original checksums file
+          git checkout HEAD .checksums 2>/dev/null || true
+          
+          # Compare
+          if [ -f .checksums ]; then
+            if diff -q .checksums <(echo "$EXPECTED_CHECKSUMS") > /dev/null 2>&1; then
+              echo "✅ Checksums file is up to date"
+            else
+              echo "❌ ERROR: Checksums file is outdated and does not match calculated checksums!"
+              echo ""
+              echo "Expected checksums:"
+              echo "$EXPECTED_CHECKSUMS"
+              echo ""
+              echo "Current checksums file:"
+              cat .checksums || echo "(file not found)"
+              echo ""
+              echo "When the version changes, the .checksums file MUST be updated."
+              echo "Run: ./scripts/generate-checksums.sh"
+              echo "Then commit the updated .checksums file along with your version change."
+              exit 1
+            fi
+          else
+            echo "❌ ERROR: .checksums file not found. It must be created with the calculated checksums."
+            echo ""
+            echo "Expected checksums:"
+            echo "$EXPECTED_CHECKSUMS"
+            echo ""
+            echo "Run: ./scripts/generate-checksums.sh"
+            echo "Then commit the .checksums file along with your version change."
+            exit 1
+          fi

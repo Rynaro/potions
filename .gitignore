@@ -19,6 +19,8 @@
 !install.sh
 !drink.sh
 !upgrade.sh
+!.version
+!.checksums
 
 # Allow Installer packs
 !packages
@@ -93,6 +95,17 @@
 # Local tools and scripts
 !bin
 !bin/
+
+# Development scripts
+!scripts
+!scripts/
+!scripts/*.sh
+
+# GitHub Actions workflows
+!.github
+!.github/
+!.github/workflows
+!.github/workflows/*.yml
 
 # Screen and tmux configuration files
 !.screenrc
