@@ -153,6 +153,109 @@ check_potions_installed() {
   log_success "Potions installation detected at $POTIONS_HOME"
 }
 
+# Read version from file
+read_version() {
+  local version_file="$1"
+  if [ -f "$version_file" ]; then
+    cat "$version_file" | tr -d '[:space:]'
+  else
+    echo "0.0.0"
+  fi
+}
+
+# Compare version strings (returns 0 if v1 < v2, 1 if v1 >= v2)
+version_compare() {
+  local v1="$1"
+  local v2="$2"
+  
+  # Use awk for version comparison
+  local result=$(awk -v v1="$v1" -v v2="$v2" 'BEGIN {
+    split(v1, a, ".")
+    split(v2, b, ".")
+    for (i=1; i<=3; i++) {
+      a[i] = a[i] ? a[i] : 0
+      b[i] = b[i] ? b[i] : 0
+      if (a[i] < b[i]) { exit 0 }
+      if (a[i] > b[i]) { exit 1 }
+    }
+    exit 1
+  }')
+  
+  return $result
+}
+
+# Verify checksums of critical files
+verify_checksums() {
+  local repo_dir="$1"
+  local checksums_file="$repo_dir/.checksums"
+  
+  if [ ! -f "$checksums_file" ]; then
+    log_warning "Checksums file not found, skipping verification"
+    return 0
+  fi
+  
+  log_info "Verifying file integrity..."
+  local failed=0
+  
+  while IFS=' ' read -r file expected_checksum; do
+    # Skip empty lines and comments
+    [[ -z "$file" || "$file" =~ ^# ]] && continue
+    
+    local file_path="$repo_dir/$file"
+    if [ ! -f "$file_path" ]; then
+      log_warning "File not found: $file"
+      failed=1
+      continue
+    fi
+    
+    # Calculate SHA256 checksum
+    local actual_checksum=""
+    if command -v shasum &> /dev/null; then
+      actual_checksum=$(shasum -a 256 "$file_path" | awk '{print $1}')
+    elif command -v sha256sum &> /dev/null; then
+      actual_checksum=$(sha256sum "$file_path" | awk '{print $1}')
+    else
+      log_warning "No checksum tool found, skipping verification"
+      return 0
+    fi
+    
+    if [ "$actual_checksum" != "$expected_checksum" ]; then
+      log_error "Checksum mismatch for $file"
+      log_error "  Expected: $expected_checksum"
+      log_error "  Got:      $actual_checksum"
+      failed=1
+    fi
+  done < "$checksums_file"
+  
+  if [ $failed -eq 1 ]; then
+    log_error "Checksum verification failed! Installation may be compromised."
+    return 1
+  fi
+  
+  log_success "All checksums verified"
+  return 0
+}
+
+# Check if upgrade is needed
+check_upgrade_needed() {
+  local repo_dir="$1"
+  local remote_version_file="$repo_dir/.version"
+  local local_version_file="$POTIONS_HOME/.version"
+  
+  local remote_version=$(read_version "$remote_version_file")
+  local local_version=$(read_version "$local_version_file")
+  
+  log_info "Current version: $local_version"
+  log_info "Remote version:  $remote_version"
+  
+  if version_compare "$local_version" "$remote_version"; then
+    return 0  # Upgrade needed
+  else
+    log_success "Already at latest version ($local_version)"
+    return 1  # No upgrade needed
+  fi
+}
+
 # Create backup of current installation
 create_backup() {
   log_step "Creating backup"
@@ -511,8 +614,37 @@ main() {
     exit 1
   fi
   
+  # Verify checksums before proceeding
+  if ! verify_checksums "$repo_dir"; then
+    log_error "Checksum verification failed. Aborting upgrade for security."
+    exit 1
+  fi
+  
+  # Check if upgrade is needed
+  if ! check_upgrade_needed "$repo_dir"; then
+    echo ""
+    if [ "$HAS_COLOR" = true ]; then
+      echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+      echo -e "${GREEN}${BOLD}  ✓ No upgrade needed - already up to date!${NC}"
+      echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+      echo ""
+    else
+      echo "=========================================="
+      echo "  No upgrade needed - already up to date!"
+      echo "=========================================="
+      echo ""
+    fi
+    exit 0
+  fi
+  
   # Update dotfiles
   update_dotfiles "$repo_dir"
+  
+  # Update version file
+  if [ -f "$repo_dir/.version" ]; then
+    cp "$repo_dir/.version" "$POTIONS_HOME/.version"
+    log_success "Version updated"
+  fi
   
   # Clean up old backups
   cleanup_old_backups
