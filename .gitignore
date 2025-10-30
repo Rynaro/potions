@@ -61,6 +61,11 @@
 !.potions/tmux
 !.potions/tmux/tmux.conf
 
+# Allow Potions CLI
+!.potions/bin
+!.potions/bin/
+!.potions/bin/potions
+
 # Git configuration files
 !.gitconfig
 !.gitignore
