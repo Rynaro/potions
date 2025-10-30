@@ -49,6 +49,51 @@ chmod +x packages/*/*/*.sh
 
 After installation, restart your terminal or type `zsh` to begin using your new environment!
 
+## 🔄 Upgrading Potions
+
+Keep your Potions installation up to date with a single command:
+
+### One-Line Upgrade
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash
+```
+
+### Manual Upgrade
+
+If you installed Potions manually by cloning the repository:
+
+```bash
+cd ~/.potions/.repo  # repository is stored here
+git pull origin main
+cd ~
+curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash
+```
+
+Or if you're in the repository directory:
+
+```bash
+git pull origin main
+./upgrade.sh
+```
+
+### What the Upgrader Does
+
+The upgrade script safely updates your Potions installation while:
+- ✅ **Creating automatic backups** in `~/.potions/backups/` (keeps last 5 backups)
+- ✅ **Preserving user customizations** in `.zsh_aliases` and `sources/*.sh` files
+- ✅ **Updating configuration files** with the latest improvements
+- ✅ **Storing repository** in `~/.potions/.repo` for faster future upgrades
+- ✅ **Providing rollback instructions** if something goes wrong
+
+All upgrade-related files are consolidated in `~/.potions` to keep your HOME directory clean:
+- `~/.potions/.repo` - Git repository for upgrades
+- `~/.potions/backups/` - Backup directories
+
+After upgrading, restart your terminal or run `exec zsh` to apply changes.
+
+**Note**: Custom additions to `.zsh_aliases` are automatically merged. For `sources/*.sh` files, your originals are backed up with a `.backup` extension for manual review.
+
 ## 🔌 Plugin System
 
 Potions includes a plugin system to extend functionality:
