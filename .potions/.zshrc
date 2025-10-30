@@ -34,7 +34,8 @@ export PATH="$HOME/.neovim/bin:$PATH"
 export EDITOR=nvim
 
 # Git Prompt configuration
-PROMPT='%F{cyan}%n%f%F{magenta}@%f%F{red}%m%f:%b$(git_super_status) %~ %(#.#.$) '
+# Wrap git_super_status in error handling to prevent prompt rendering issues
+PROMPT='%F{cyan}%n%f%F{magenta}@%f%F{red}%m%f:%b$(git_super_status 2>/dev/null || echo "") %~ %(#.#.$) '
 
 if is_macos; then
   # macOS-specific configurations
@@ -84,6 +85,18 @@ setopt EXTENDED_HISTORY
 setopt APPEND_HISTORY
 setopt HIST_IGNORE_SPACE
 setopt HIST_REDUCE_BLANKS
+
+# Fix prompt rendering after CTRL+C (SIGINT)
+# Reset terminal state and refresh prompt after interrupt
+TRAPINT() {
+    # Reset terminal to known good state
+    [[ -t 0 ]] && stty sane 2>/dev/null
+    # Force prompt refresh if in interactive mode
+    if [[ -o interactive ]]; then
+        zle && { zle .reset-prompt 2>/dev/null || true }
+    fi
+    return 128
+}
 
 if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
   TMUX_PROFILE_NAME="potions-$$+"
