@@ -24,6 +24,15 @@ USER_HOME_FOLDER=$HOME
 POTIONS_HOME="$USER_HOME_FOLDER/.potions"
 ZDOTDIR=$POTIONS_HOME
 
+# Files excluded from installation/upgrade (git-only, never deployed to user systems)
+# These are development/agent documentation files that should only exist in git repos
+EXCLUDED_AGENT_FILES=(
+  "AGENT.md"
+  "AGENT_QUICK_REF.md"
+  ".cursorrules"
+  ".cursor"
+)
+
 update_repositories() {
   log "Updating repositories..."
   if is_macos; then

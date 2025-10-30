@@ -6,6 +6,8 @@ source "$POTIONS_ROOT/packages/accessories.sh"
 
 update_potions() {
   log 'Sending Potions files to HOME...'
+  # Only copy .potions directory - excludes AI agent docs (AGENT.md, .cursorrules, etc.)
+  # These files are git-only and should not be deployed to user installations
   cp -r .potions ~/
 }
 
