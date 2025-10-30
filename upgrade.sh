@@ -13,7 +13,23 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
+
+# Check if terminal supports colors
+if [ -t 1 ]; then
+  HAS_COLOR=true
+else
+  HAS_COLOR=false
+fi
+
+# Disable colors if NO_COLOR is set
+if [ -n "${NO_COLOR:-}" ]; then
+  HAS_COLOR=false
+fi
 
 # Configuration
 POTIONS_REPO_URL="https://github.com/Rynaro/potions.git"
@@ -33,25 +49,98 @@ cleanup() {
 
 trap cleanup EXIT
 
-# Logging functions
+# Logging functions with Oh My Zsh style (output to stderr so stdout can be captured)
 log_info() {
-  echo -e "${BLUE}ℹ${NC} $1"
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${CYAN}${BOLD}⟹${NC} ${WHITE}$1${NC}" >&2
+  else
+    echo "==> $1" >&2
+  fi
 }
 
 log_success() {
-  echo -e "${GREEN}✓${NC} $1"
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${GREEN}${BOLD}✓${NC} ${GREEN}$1${NC}" >&2
+  else
+    echo "[OK] $1" >&2
+  fi
 }
 
 log_warning() {
-  echo -e "${YELLOW}⚠${NC} $1"
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${YELLOW}${BOLD}⚠${NC} ${YELLOW}$1${NC}" >&2
+  else
+    echo "[WARN] $1" >&2
+  fi
 }
 
 log_error() {
-  echo -e "${RED}✗${NC} $1"
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${RED}${BOLD}✗${NC} ${RED}$1${NC}" >&2
+  else
+    echo "[ERROR] $1" >&2
+  fi
 }
 
 log_step() {
-  echo -e "\n${BLUE}▶${NC} $1"
+  if [ "$HAS_COLOR" = true ]; then
+    echo "" >&2
+    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}" >&2
+    echo -e "${BLUE}${BOLD}  $1${NC}" >&2
+    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}" >&2
+  else
+    echo "" >&2
+    echo "========================================" >&2
+    echo "  $1" >&2
+    echo "========================================" >&2
+  fi
+}
+
+# Spinner function for long operations
+spinner() {
+  local pid=$1
+  local message="${2:-Processing...}"
+  local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+  
+  if [ "$HAS_COLOR" = false ]; then
+    wait $pid
+    return $?
+  fi
+  
+  printf "${CYAN}${BOLD}⟹${NC} ${WHITE}${message}${NC} " >&2
+  while kill -0 $pid 2>/dev/null; do
+    for i in $(seq 0 $((${#spinstr}-1))); do
+      printf "\b${spinstr:$i:1}" >&2
+      sleep 0.1
+    done
+  done
+  printf "\b${GREEN}${BOLD}✓${NC}\n" >&2
+  wait $pid
+  return $?
+}
+
+# Print header banner
+print_header() {
+  if [ "$HAS_COLOR" = true ]; then
+    echo "" >&2
+    echo -e "${MAGENTA}${BOLD}" >&2
+    echo "   ██████╗  ██████╗ ████████╗██╗ ██████╗ ███╗   ██╗███████╗" >&2
+    echo "   ██╔══██╗██╔═══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║██╔════╝" >&2
+    echo "   ██████╔╝██║   ██║   ██║   ██║██║   ██║██╔██╗ ██║███████╗" >&2
+    echo "   ██╔═══╝ ██║   ██║   ██║   ██║██║   ██║██║╚██╗██║╚════██║" >&2
+    echo "   ██║     ╚██████╔╝   ██║   ██║╚██████╔╝██║ ╚████║███████║" >&2
+    echo "   ╚═╝      ╚═════╝    ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝" >&2
+    echo -e "${NC}" >&2
+    echo -e "${CYAN}${BOLD}                    Upgrading Potions${NC}" >&2
+    echo -e "${CYAN}              Your powerful dev environment${NC}" >&2
+    echo "" >&2
+  else
+    echo "" >&2
+    echo "==========================================" >&2
+    echo "          POTIONS UPGRADER" >&2
+    echo "==========================================" >&2
+    echo "" >&2
+  fi
 }
 
 # Check if Potions is installed
@@ -66,22 +155,43 @@ check_potions_installed() {
 
 # Create backup of current installation
 create_backup() {
-  log_step "Creating backup..."
+  log_step "Creating backup"
+  
   mkdir -p "$BACKUP_DIR"
   
   # Backup entire .potions directory (excluding repo and backups directories to avoid recursion)
   if [ -d "$POTIONS_HOME" ]; then
+    log_info "Backing up configuration files..."
+    
     # Use rsync if available for better exclusion control
     if command -v rsync &> /dev/null; then
-      rsync -av --exclude='.repo' --exclude='backups' "$POTIONS_HOME/" "$BACKUP_DIR/"
+      if [ "$HAS_COLOR" = true ]; then
+        rsync -av --exclude='.repo' --exclude='backups' "$POTIONS_HOME/" "$BACKUP_DIR/" > /dev/null 2>&1 &
+        spinner $! "Copying files"
+      else
+        rsync -av --exclude='.repo' --exclude='backups' "$POTIONS_HOME/" "$BACKUP_DIR/" > /dev/null 2>&1
+        echo "[OK] Backup created"
+      fi
     else
       # Fallback: copy manually excluding .repo and backups
-      find "$POTIONS_HOME" -mindepth 1 -maxdepth 1 \
-        -not -name '.repo' \
-        -not -name 'backups' \
-        -exec cp -r {} "$BACKUP_DIR/" \;
+      if [ "$HAS_COLOR" = true ]; then
+        (
+          find "$POTIONS_HOME" -mindepth 1 -maxdepth 1 \
+            -not -name '.repo' \
+            -not -name 'backups' \
+            -exec cp -r {} "$BACKUP_DIR/" \; 2>/dev/null
+        ) &
+        spinner $! "Copying files"
+      else
+        find "$POTIONS_HOME" -mindepth 1 -maxdepth 1 \
+          -not -name '.repo' \
+          -not -name 'backups' \
+          -exec cp -r {} "$BACKUP_DIR/" \; 2>/dev/null
+        echo "[OK] Backup created"
+      fi
     fi
-    log_success "Backup created at $BACKUP_DIR"
+    
+    log_success "Backup created at ${BACKUP_DIR#$HOME/}"
   else
     log_warning "No existing installation found to backup"
   fi
@@ -89,61 +199,129 @@ create_backup() {
 
 # Detect and prepare repository location
 prepare_repository() {
-  log_step "Preparing repository..."
+  log_step "Preparing repository"
   
   local repo_dir=""
   
   # Strategy 1: Use .potions/.repo if it exists and is a git repo
   if [ -d "$POTIONS_REPO_DIR" ] && [ -d "$POTIONS_REPO_DIR/.git" ]; then
     repo_dir="$POTIONS_REPO_DIR"
-    log_info "Found existing repository at $repo_dir"
+    log_info "Found existing repository"
     cd "$repo_dir"
     
     # Update the repository
     if git rev-parse --git-dir > /dev/null 2>&1; then
-      log_info "Updating repository..."
-      git fetch origin "$POTIONS_REPO_BRANCH" || log_warning "Failed to fetch updates"
-      git checkout "$POTIONS_REPO_BRANCH" || true
-      git pull origin "$POTIONS_REPO_BRANCH" || log_warning "Failed to pull updates"
+      log_info "Fetching latest changes..."
+      if [ "$HAS_COLOR" = true ]; then
+        (git fetch origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1) &
+        spinner $! "Fetching updates"
+      else
+        git fetch origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1 || log_warning "Failed to fetch updates"
+      fi
+      
+      log_info "Updating to latest version..."
+      git checkout "$POTIONS_REPO_BRANCH" > /dev/null 2>&1 || true
+      if [ "$HAS_COLOR" = true ]; then
+        (git pull origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1) &
+        spinner $! "Applying updates"
+      else
+        git pull origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1 || log_warning "Failed to pull updates"
+      fi
       log_success "Repository updated"
     fi
   # Strategy 2: Check if current directory is potions repo (for manual upgrades)
   elif [ -d ".git" ] && [ -f "install.sh" ] && [ -d ".potions" ]; then
     repo_dir="$(pwd)"
-    log_info "Using current directory as repository: $repo_dir"
+    log_info "Using current directory as repository"
     cd "$repo_dir"
     
     # Update if it's a git repo
     if git rev-parse --git-dir > /dev/null 2>&1; then
-      log_info "Updating repository..."
-      git fetch origin "$POTIONS_REPO_BRANCH" || log_warning "Failed to fetch updates"
-      git checkout "$POTIONS_REPO_BRANCH" || true
-      git pull origin "$POTIONS_REPO_BRANCH" || log_warning "Failed to pull updates"
+      log_info "Fetching latest changes..."
+      if [ "$HAS_COLOR" = true ]; then
+        (git fetch origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1) &
+        spinner $! "Fetching updates"
+      else
+        git fetch origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1 || log_warning "Failed to fetch updates"
+      fi
+      
+      log_info "Updating to latest version..."
+      git checkout "$POTIONS_REPO_BRANCH" > /dev/null 2>&1 || true
+      if [ "$HAS_COLOR" = true ]; then
+        (git pull origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1) &
+        spinner $! "Applying updates"
+      else
+        git pull origin "$POTIONS_REPO_BRANCH" > /dev/null 2>&1 || log_warning "Failed to pull updates"
+      fi
       log_success "Repository updated"
     fi
   # Strategy 3: Clone fresh copy to .potions/.repo
   else
-    log_info "Cloning repository to $POTIONS_REPO_DIR..."
-    mkdir -p "$POTIONS_REPO_DIR"
+    log_info "Cloning fresh repository..."
     
     if command -v git &> /dev/null; then
       # Clone to temp first, then move to final location
       local temp_repo="$TEMP_DIR/potions"
-      git clone --depth=1 --branch "$POTIONS_REPO_BRANCH" "$POTIONS_REPO_URL" "$temp_repo"
       
-      # Move to final location (preserve existing .repo if it exists but isn't a git repo)
-      if [ -d "$POTIONS_REPO_DIR" ] && [ ! -d "$POTIONS_REPO_DIR/.git" ]; then
-        rm -rf "$POTIONS_REPO_DIR"
+      # Remove existing .repo if it's not a valid git repo
+      if [ -d "$POTIONS_REPO_DIR" ]; then
+        if [ ! -d "$POTIONS_REPO_DIR/.git" ]; then
+          log_info "Cleaning up existing directory"
+          rm -rf "$POTIONS_REPO_DIR"
+        fi
       fi
-      mv "$temp_repo" "$POTIONS_REPO_DIR"
+      
+      # Ensure parent directory exists
+      mkdir -p "$(dirname "$POTIONS_REPO_DIR")"
+      
+      # Clone to temp location with spinner
+      log_info "Downloading repository..."
+      if [ "$HAS_COLOR" = true ]; then
+        (git clone --depth=1 --branch "$POTIONS_REPO_BRANCH" "$POTIONS_REPO_URL" "$temp_repo" > /dev/null 2>&1) &
+        if ! spinner $! "Downloading Potions"; then
+          log_error "Failed to clone repository"
+          return 1
+        fi
+      else
+        if ! git clone --depth=1 --branch "$POTIONS_REPO_BRANCH" "$POTIONS_REPO_URL" "$temp_repo" > /dev/null 2>&1; then
+          log_error "Failed to clone repository"
+          return 1
+        fi
+      fi
+      
+      # Move temp repo to final location
+      log_info "Installing repository..."
+      if ! mv "$temp_repo" "$POTIONS_REPO_DIR" 2>/dev/null; then
+        log_error "Failed to move repository to final location"
+        return 1
+      fi
+      
       repo_dir="$POTIONS_REPO_DIR"
-      log_success "Repository cloned"
+      
+      # Verify the repo was moved successfully
+      if [ ! -d "$repo_dir" ] || [ ! -d "$repo_dir/.git" ]; then
+        log_error "Repository verification failed"
+        return 1
+      fi
+      
+      log_success "Repository ready"
     else
       log_error "Git is not installed. Cannot upgrade without git."
       log_info "You can manually install git or re-run the installer:"
       echo "  curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash"
       exit 1
     fi
+  fi
+  
+  # Verify repo_dir is set and valid before proceeding
+  if [ -z "$repo_dir" ]; then
+    log_error "Repository directory is not set"
+    return 1
+  fi
+  
+  if [ ! -d "$repo_dir" ] || [ ! -d "$repo_dir/.git" ]; then
+    log_error "Repository directory is invalid: $repo_dir"
+    return 1
   fi
   
   # Make install.sh executable
@@ -156,7 +334,7 @@ prepare_repository() {
 
 # Preserve user customizations
 preserve_user_files() {
-  log_step "Preserving user customizations..."
+  log_info "Preserving user customizations..."
   
   local repo_dir="$1"
   local preserved_files=(
@@ -235,7 +413,7 @@ preserve_user_files() {
 
 # Update dotfiles
 update_dotfiles() {
-  log_step "Updating configuration files..."
+  log_step "Updating configuration files"
   
   local repo_dir="$1"
   local preserved_files=(
@@ -311,11 +489,10 @@ cleanup_old_backups() {
 
 # Main upgrade function
 main() {
-  echo "🧪 Potions Upgrader"
-  echo "==================="
-  echo ""
+  print_header
   
   # Check if Potions is installed
+  log_info "Checking installation..."
   check_potions_installed
   
   # Create backup
@@ -323,9 +500,12 @@ main() {
   
   # Prepare repository
   repo_dir=$(prepare_repository)
+  local prepare_exit_code=$?
   
-  if [ -z "$repo_dir" ] || [ ! -d "$repo_dir" ]; then
+  if [ $prepare_exit_code -ne 0 ] || [ -z "$repo_dir" ] || [ ! -d "$repo_dir" ]; then
     log_error "Failed to prepare repository"
+    log_info "Exit code: $prepare_exit_code"
+    log_info "Repository directory: ${repo_dir:-'(empty)'}"
     exit 1
   fi
   
@@ -337,15 +517,35 @@ main() {
   
   # Success message
   echo ""
-  log_success "Potions has been upgraded successfully!"
-  echo ""
-  log_info "Backup location: $BACKUP_DIR"
-  log_info "If something went wrong, you can restore from backup:"
-  echo "  cp -r $BACKUP_DIR/* $POTIONS_HOME/"
-  echo ""
-  log_info "Review any .backup files in $POTIONS_HOME for customizations"
-  log_info "Restart your terminal or run 'exec zsh' to apply changes"
-  echo ""
+  if [ "$HAS_COLOR" = true ]; then
+    echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}${BOLD}  ✓ Upgrade completed successfully!${NC}"
+    echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    log_info "Backup saved at: ${CYAN}${BACKUP_DIR#$HOME/~}${NC}"
+    echo ""
+    echo -e "${WHITE}Next steps:${NC}"
+    echo -e "  ${CYAN}⟹${NC} Restart your terminal or run ${BOLD}exec zsh${NC}"
+    echo -e "  ${CYAN}⟹${NC} Review .backup files in ${CYAN}~/.potions${NC} if needed"
+    echo ""
+    echo -e "${YELLOW}Tip:${NC} If something went wrong, restore from backup:"
+    echo -e "  ${CYAN}cp -r ${BACKUP_DIR#$HOME/~}/* ~/.potions/${NC}"
+    echo ""
+  else
+    echo "========================================"
+    echo "  Upgrade completed successfully!"
+    echo "========================================"
+    echo ""
+    echo "Backup saved at: ${BACKUP_DIR#$HOME/~}"
+    echo ""
+    echo "Next steps:"
+    echo "  - Restart your terminal or run 'exec zsh'"
+    echo "  - Review .backup files in ~/.potions if needed"
+    echo ""
+    echo "Tip: If something went wrong, restore from backup:"
+    echo "  cp -r ${BACKUP_DIR#$HOME/~}/* ~/.potions/"
+    echo ""
+  fi
 }
 
 # Run main function
