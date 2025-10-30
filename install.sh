@@ -34,6 +34,24 @@ fi
 POTIONS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$POTIONS_ROOT/packages/accessories.sh"
 
+# Get version from .version file
+get_version() {
+  local version_file=""
+  # Try repo root first (if running from repo)
+  if [ -f "$POTIONS_ROOT/.version" ]; then
+    version_file="$POTIONS_ROOT/.version"
+  # Try installed location
+  elif [ -f "$POTIONS_HOME/.version" ]; then
+    version_file="$POTIONS_HOME/.version"
+  fi
+  
+  if [ -n "$version_file" ] && [ -f "$version_file" ]; then
+    cat "$version_file" | tr -d '[:space:]'
+  else
+    echo ""
+  fi
+}
+
 # Logging functions with Oh My Zsh style (output to stderr so stdout can be captured)
 log_info() {
   if [ "$HAS_COLOR" = true ]; then
@@ -116,13 +134,24 @@ print_header() {
     echo "   ██║     ╚██████╔╝   ██║   ██║╚██████╔╝██║ ╚████║███████║" >&2
     echo "   ╚═╝      ╚═════╝    ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝" >&2
     echo -e "${NC}" >&2
-    echo -e "${CYAN}${BOLD}                 Installing Potions${NC}" >&2
-    echo -e "${CYAN}              Your powerful dev environment${NC}" >&2
+    local version=$(get_version)
+    if [ -n "$version" ]; then
+      echo -e "${CYAN}${BOLD}                 Installing Potions${NC}" >&2
+      echo -e "${CYAN}              Your powerful dev environment${NC}" >&2
+      echo -e "${CYAN}                         v${version}${NC}" >&2
+    else
+      echo -e "${CYAN}${BOLD}                 Installing Potions${NC}" >&2
+      echo -e "${CYAN}              Your powerful dev environment${NC}" >&2
+    fi
     echo "" >&2
   else
     echo "" >&2
+    local version=$(get_version)
     echo "==========================================" >&2
     echo "         POTIONS INSTALLER" >&2
+    if [ -n "$version" ]; then
+      echo "                  v${version}" >&2
+    fi
     echo "==========================================" >&2
     echo "" >&2
   fi
@@ -177,6 +206,11 @@ update_potions() {
   if [ ! -d "$check_dir" ]; then
     log_error "Failed to copy Potions files"
     return 1
+  fi
+  
+  # Copy version file if it exists
+  if [ -f ".version" ]; then
+    cp ".version" "$check_dir/.version" 2>/dev/null || true
   fi
   
   log_success "Potions files installed"
