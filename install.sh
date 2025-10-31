@@ -271,6 +271,7 @@ install_packages() {
     'tmux'
     'neovim'
     'vim-plug'
+    'vim-ai-modes'
   )
 
   local installed_count=0

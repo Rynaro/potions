@@ -81,6 +81,38 @@ After upgrading, restart your terminal or run `exec zsh` to apply changes.
 - **Tmux**: Terminal multiplexer with VSCode-like keybindings
 - **Development Tools**: curl, wget, OpenVPN, and more
 
+## 🤖 Vim AI Modes
+
+Potions includes wrapper scripts that create a VSCode + Cursor-like experience by opening vim/neovim with an AI assistant sidepanel in tmux:
+
+```bash
+# Open vim with Cursor AI assistant in sidepanel
+vim-cursor file.txt
+
+# Open vim with GitHub Copilot CLI in sidepanel
+vim-copilot file.txt
+```
+
+### Features
+
+- **30% Sidepanel**: Automatically creates a tmux split with the AI assistant CLI
+- **Vim Behavior Preserved**: All vim arguments work normally (files, line numbers, etc.)
+- **Automatic Fallback**: If tmux or AI CLI is not available, opens vim normally
+- **Session Management**: Each mode creates its own tmux session
+
+### Customization
+
+Edit the scripts in `~/.potions/bin/` to customize:
+- `SIDE_PANEL_WIDTH`: Change the sidepanel width percentage
+- `AI_CMD`: Change the AI assistant command (e.g., `cursor-agent`, `github-copilot-cli`)
+
+### Requirements
+
+- `tmux` must be installed (included in Potions)
+- AI CLI tool must be installed:
+  - For `vim-cursor`: Install `cursor-agent` CLI
+  - For `vim-copilot`: Install `github-copilot-cli`
+
 ## 📝 Configuration
 
 All configurations are stored in `~/.potions`:
