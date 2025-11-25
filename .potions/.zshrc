@@ -119,7 +119,10 @@ TRAPINT() {
     return 128
 }
 
-if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+# Auto-start tmux only if not already in tmux and not in an AI code editor terminal
+# AI code editors (VSCode, Cursor, etc.) should not auto-start tmux to avoid
+# terminal output capture issues
+if command -v tmux &> /dev/null && [ -z "$TMUX" ] && ! is_ai_code_editor; then
   TMUX_PROFILE_NAME="potions-$$+"
   tmux -f $POTIONS_HOME/tmux/tmux.conf new-session -s "$TMUX_PROFILE_NAME"
 fi
