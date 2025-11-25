@@ -18,6 +18,24 @@ is_macos() {
   [ "$(uname -s)" = "Darwin" ]
 }
 
+# Function to check if running in an AI code editor terminal (VSCode, Cursor, etc.)
+# These terminals should not auto-start tmux to avoid terminal output capture issues
+is_ai_code_editor() {
+  # Check for VSCode environment variables
+  if [ -n "$VSCODE_INJECTION" ] || [ -n "$VSCODE_PID" ] || [ "$TERM_PROGRAM" = "vscode" ]; then
+    return 0
+  fi
+  # Check for Cursor environment variables
+  if [ -n "$CURSOR_TERMINAL" ] || [ "$TERM_PROGRAM" = "cursor" ]; then
+    return 0
+  fi
+  # Check for other common AI editor indicators
+  if [ -n "$INTELLIJ_TERMINAL" ] || [ "$TERM_PROGRAM" = "jetbrains" ]; then
+    return 0
+  fi
+  return 1
+}
+
 # Function to safely source a file if it exists
 safe_source() {
   [ -f "$1" ] && source "$1"
@@ -101,7 +119,10 @@ TRAPINT() {
     return 128
 }
 
-if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+# Auto-start tmux only if not already in tmux and not in an AI code editor terminal
+# AI code editors (VSCode, Cursor, etc.) should not auto-start tmux to avoid
+# terminal output capture issues
+if command -v tmux &> /dev/null && [ -z "$TMUX" ] && ! is_ai_code_editor; then
   TMUX_PROFILE_NAME="potions-$$+"
   tmux -f $POTIONS_HOME/tmux/tmux.conf new-session -s "$TMUX_PROFILE_NAME"
 fi
