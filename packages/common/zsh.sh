@@ -16,8 +16,15 @@ if [ "$SHELL" != "$(command -v zsh)" ]; then
     chsh -s zsh
   elif is_macos || is_linux; then
     log "Changing default shell to Zsh..."
-    chsh -s "$(command -v zsh)" || {
-      log "Failed to change shell automatically. Please run: chsh -s $(command -v zsh)"
-    }
+    # Redirect stdin from /dev/tty to allow password prompt in non-interactive contexts
+    if [ -r /dev/tty ]; then
+      chsh -s "$(command -v zsh)" < /dev/tty || {
+        log "Failed to change shell automatically. Please run: chsh -s $(command -v zsh)"
+      }
+    else
+      chsh -s "$(command -v zsh)" || {
+        log "Failed to change shell automatically. Please run: chsh -s $(command -v zsh)"
+      }
+    fi
   fi
 fi
