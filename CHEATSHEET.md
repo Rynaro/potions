@@ -42,10 +42,12 @@ Quick reference guide for all keybindings and shortcuts in Potions development e
 | `Ctrl+a s` or `Ctrl+a w` | List and switch windows |
 | `Ctrl+Tab` | Next window (no prefix needed) |
 | `Ctrl+Shift+Tab` | Previous window (no prefix needed) |
-| `Ctrl+n` | Next window (alternative) |
-| `Ctrl+p` | Previous window (alternative) |
+| `Ctrl+a n` | Next window (with prefix) |
+| `Ctrl+a p` | Previous window (with prefix) |
 | `Ctrl+a R` | Rename current window |
 | `Ctrl+a ,` | Rename window (with prompt) |
+
+> **Note**: `Ctrl+n` and `Ctrl+p` without prefix were removed to avoid conflicts with shell history and Neovim.
 
 ### Pane Management
 | Keybinding | Action |
@@ -56,8 +58,8 @@ Quick reference guide for all keybindings and shortcuts in Potions development e
 | `Ctrl+a x` | Close current pane |
 | `Ctrl+a B` | Break pane into new window |
 | `Ctrl+a J` | Join pane from another window |
-| `Ctrl+a C-a-h` | Swap pane up |
-| `Ctrl+a C-a-l` | Swap pane down |
+| `Ctrl+a <` | Swap pane up |
+| `Ctrl+a >` | Swap pane down |
 
 ### Pane Resizing
 | Keybinding | Action |
@@ -167,11 +169,11 @@ Quick reference guide for all keybindings and shortcuts in Potions development e
 | `Ctrl+Shift+L` | Move buffer right |
 | `Space 1-9` | Go to buffer number |
 | `Space 0` | Go to last buffer |
-| `Space bp` | Pin buffer |
+| `Space bp` | Pick buffer (buffer picker) |
+| `Space bx` | Pick and delete buffer |
+| `Space bi` | Pin buffer |
 | `Space bc` | Close buffer |
 | `Space br` | Restore buffer |
-| `Ctrl+p` | Pick buffer |
-| `Ctrl+x` | Pick and delete buffer |
 | `Space bb` | Order by buffer number |
 | `Space bn` | Order by name |
 | `Space bd` | Order by directory |
@@ -181,12 +183,14 @@ Quick reference guide for all keybindings and shortcuts in Potions development e
 ### Multi-Cursor Editing (VSCode-like)
 | Keybinding | Action |
 |------------|--------|
-| `Ctrl+d` | Find/select next occurrence |
+| `Space d` | Find/select next occurrence |
 | `Ctrl+Shift+l` | Select all occurrences |
-| `Ctrl+x` | Skip current occurrence |
+| `Space x` | Skip current occurrence |
 | `Ctrl+Shift+k` | Remove current cursor |
 | `Ctrl+Shift+Down` | Add cursor below |
 | `Ctrl+Shift+Up` | Add cursor above |
+
+> **Note**: Multi-cursor start changed from `Ctrl+d` to `Space d` to avoid conflict with scroll.
 
 ### Treesitter Navigation
 | Keybinding | Action |
@@ -294,6 +298,41 @@ When you're stuck or need quick actions:
 - `Ctrl+c` - Cancel current operation
 - `gg` - Go to top of file
 - `G` - Go to bottom of file
+
+---
+
+## If a Keybinding Doesn't Work
+
+### Check Terminal Support
+
+Some key combinations require terminal configuration:
+
+| Key | Issue | Solution |
+|-----|-------|----------|
+| `Ctrl+Tab` | Not sent by terminal | Use `Ctrl+a n` instead, or configure terminal |
+| `Ctrl+Arrow` | Wrong sequence | Try `Alt+f`/`Alt+b` for word navigation |
+| `Ctrl+Shift+*` | Intercepted by OS | Check System Preferences / terminal settings |
+
+### Terminal-Specific Notes
+
+**iTerm2**: Best compatibility. Configure Left Option as "Esc+" for Alt combinations.
+
+**Terminal.app**: Limited key support. Use `Ctrl+a n`/`Ctrl+a p` for window navigation.
+
+**VS Code/Cursor**: Some keys intercepted by editor. Check keyboard shortcuts settings.
+
+### Debug Key Sequences
+
+```bash
+# See what escape sequence your terminal sends
+cat -v
+# Press your key combination, then Ctrl+C
+```
+
+### More Help
+
+- See [KEYMAPS.md](.potions/KEYMAPS.md) for complete keymap reference
+- See [Terminal Setup](.potions/terminal-setup/TERMINAL_SETUP.md) for terminal configuration
 
 ---
 
