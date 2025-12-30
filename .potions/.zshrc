@@ -1,5 +1,19 @@
 POTIONS_HOME="$HOME/.potions"
 
+# Migration detection - check if legacy config needs migration
+# Only show once per session
+if [ -z "$POTIONS_MIGRATION_CHECKED" ]; then
+  export POTIONS_MIGRATION_CHECKED=1
+  if [ -f "$POTIONS_HOME/.zsh_aliases" ] && [ ! -f "$POTIONS_HOME/config/aliases.zsh" ]; then
+    echo ""
+    echo "⚠️  Potions v2.5.0: Legacy configuration detected"
+    echo "   Run 'migrate.sh' from the Potions repo to migrate to the new structure."
+    echo "   Or run: curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/migrate.sh | bash"
+    echo "   See MIGRATION.md for details."
+    echo ""
+  fi
+fi
+
 is_linux() {
   [ "$(uname -s)" = "Linux" ]
 }
@@ -78,14 +92,68 @@ fi
 # Initialize command completion
 autoload -Uz compinit && compinit
 
+# Legacy aliases (for backwards compatibility)
 safe_source "$POTIONS_HOME/.zsh_aliases"
 safe_source "$POTIONS_HOME/.zsh_secure_aliases"
 
+# User customizations - these files are preserved on upgrade
+# Create these files to add your own configurations
+
+# Main user aliases and functions
+safe_source "$POTIONS_HOME/config/aliases.zsh"
+
+# Sensitive/private aliases (not in version control)
+safe_source "$POTIONS_HOME/config/secure.zsh"
+
+# Machine-local configuration (not synced)
+safe_source "$POTIONS_HOME/config/local.zsh"
+
+# Platform-specific user configurations
+if is_macos; then
+  safe_source "$POTIONS_HOME/config/macos.zsh"
+elif is_linux && ! is_wsl && ! is_termux; then
+  safe_source "$POTIONS_HOME/config/linux.zsh"
+elif is_wsl; then
+  safe_source "$POTIONS_HOME/config/wsl.zsh"
+elif is_termux; then
+  safe_source "$POTIONS_HOME/config/termux.zsh"
+fi
+
 # Enable word navigation with Ctrl + arrow keys
-bindkey "^[[1;5C" forward-word  # Ctrl + Right Arrow
-bindkey "^[[1;5D" backward-word # Ctrl + Left Arrow
-bindkey "^[[5C" forward-word    # Alternative sequence for Ctrl + Right Arrow
-bindkey "^[[5D" backward-word   # Alternative sequence for Ctrl + Left Arrow
+# Terminal-specific key bindings for maximum compatibility
+case "$TERM_PROGRAM" in
+  iTerm.app)
+    # iTerm2 sends these sequences for Ctrl+Arrow
+    bindkey "^[[1;5C" forward-word  # Ctrl + Right Arrow
+    bindkey "^[[1;5D" backward-word # Ctrl + Left Arrow
+    ;;
+  Apple_Terminal)
+    # Terminal.app uses Alt+f/Alt+b for word navigation
+    bindkey "^[f" forward-word  # Alt+f (Option+f)
+    bindkey "^[b" backward-word # Alt+b (Option+b)
+    # Also try standard sequences as fallback
+    bindkey "^[[1;5C" forward-word
+    bindkey "^[[1;5D" backward-word
+    ;;
+  vscode|cursor)
+    # VS Code and Cursor terminals
+    bindkey "^[[1;5C" forward-word
+    bindkey "^[[1;5D" backward-word
+    ;;
+  *)
+    # Default: bind all common sequences for maximum compatibility
+    bindkey "^[[1;5C" forward-word  # Standard Ctrl + Right Arrow
+    bindkey "^[[1;5D" backward-word # Standard Ctrl + Left Arrow
+    bindkey "^[[5C" forward-word    # Alternative (tmux)
+    bindkey "^[[5D" backward-word   # Alternative (tmux)
+    bindkey "^[f" forward-word      # Alt+f fallback
+    bindkey "^[b" backward-word     # Alt+b fallback
+    ;;
+esac
+
+# Common bindings that work across all terminals
+bindkey "^[[5C" forward-word    # Alternative sequence (tmux passthrough)
+bindkey "^[[5D" backward-word   # Alternative sequence (tmux passthrough)
 
 # History settings
 HISTFILE=$POTIONS_HOME/.zsh_history   # Where to save the command history
