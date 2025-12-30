@@ -7,6 +7,11 @@
 
 set -eo pipefail
 
+# Enable verbose mode when DEBUG is set
+if [ "${DEBUG:-}" = "1" ]; then
+  set -x
+fi
+
 # Colors for output (Oh My Zsh style)
 RED='\033[0;31m'
 GREEN='\033[0;32m'

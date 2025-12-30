@@ -71,7 +71,10 @@ command_exists() {
 
 # Function to safely source a script if it exists
 safe_source() {
-  [ -f "$1" ] && source "$1"
+  if [ -f "$1" ]; then
+    source "$1"
+  fi
+  return 0
 }
 
 # Function to check if the environment is Termux
