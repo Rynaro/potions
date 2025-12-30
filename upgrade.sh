@@ -473,9 +473,20 @@ prepare_repository() {
 # Preserve user customizations
 preserve_user_files() {
   log_info "Preserving user customizations..."
-  
+
   local repo_dir="$1"
   local preserved_files=(
+    # New config structure (v2.5.0+)
+    "config/aliases.zsh"
+    "config/secure.zsh"
+    "config/local.zsh"
+    "config/macos.zsh"
+    "config/linux.zsh"
+    "config/wsl.zsh"
+    "config/termux.zsh"
+    "nvim/user.vim"
+    "tmux/user.conf"
+    # Legacy files (for backwards compatibility)
     ".zsh_aliases"
     ".zsh_secure_aliases"
     "sources/macos.sh"
@@ -552,9 +563,20 @@ preserve_user_files() {
 # Update dotfiles
 update_dotfiles() {
   log_step "Updating configuration files"
-  
+
   local repo_dir="$1"
   local preserved_files=(
+    # New config structure (v2.5.0+)
+    "config/aliases.zsh"
+    "config/secure.zsh"
+    "config/local.zsh"
+    "config/macos.zsh"
+    "config/linux.zsh"
+    "config/wsl.zsh"
+    "config/termux.zsh"
+    "nvim/user.vim"
+    "tmux/user.conf"
+    # Legacy files (for backwards compatibility)
     ".zsh_aliases"
     ".zsh_secure_aliases"
     "sources/macos.sh"
