@@ -260,17 +260,59 @@ prepare_system() {
   update_potions
 }
 
+preflight_checks() {
+  log_step "Running pre-flight checks"
+
+  # Check for required permissions
+  if [ ! -w "$HOME" ]; then
+    log_error "Cannot write to home directory"
+    exit 1
+  fi
+
+  # Check for conflicting installations
+  if [ -f "$HOME/.zshrc" ] && [ ! -L "$HOME/.zshrc" ]; then
+    log_warning "Existing .zshrc found - Potions uses ZDOTDIR instead"
+  fi
+
+  # Check for existing Potions installation
+  if [ -d "$POTIONS_HOME" ]; then
+    log_info "Existing Potions installation detected"
+  fi
+
+  # Check network connectivity for package downloads
+  if command_exists curl; then
+    if ! curl -s --connect-timeout 5 https://github.com > /dev/null 2>&1; then
+      log_warning "Cannot reach github.com - some installations may fail"
+    fi
+  elif command_exists wget; then
+    if ! wget -q --timeout=5 -O /dev/null https://github.com 2>&1; then
+      log_warning "Cannot reach github.com - some installations may fail"
+    fi
+  fi
+
+  log_success "Pre-flight checks passed"
+}
+
 install_packages() {
+  # Package order is important:
+  # 1. curl/wget - basic tools, no deps
+  # 2. git - required for antidote, vim-plug
+  # 3. zsh - required before antidote (needs ZDOTDIR)
+  # 4. antidote - needs git
+  # 5. tmux - no deps
+  # 6. neovim - no deps but needed before vim-plug
+  # 7. vim-plug - needs neovim and curl
+  # 8. openvpn - optional, at end
   local packages=(
     'curl'
     'wget'
     'git'
-    'openvpn'
     'zsh'
     'antidote'
     'tmux'
     'neovim'
     'vim-plug'
+    'openvpn'
   )
 
   local installed_count=0
@@ -288,7 +330,7 @@ install_packages() {
         # Simulate installation with delay (0.8-1.5 seconds)
         # Use simple variation: 0.8 + (package_index % 7) * 0.1
         local delay_multiplier=$((installed_count % 7))
-        local delay=$(awk "BEGIN {printf \"%.1f\", 0.8 + $delay_multiplier * 0.1}")
+        local delay=$(LC_NUMERIC=C awk "BEGIN {printf \"%.1f\", 0.8 + $delay_multiplier * 0.1}")
         (sleep $delay) &
         spinner $! "Installing $pkg"
         log_success "$pkg installed"
@@ -308,7 +350,7 @@ install_packages() {
       if [ "$TEST_MODE" = true ]; then
         # Simulate installation with delay
         local delay_multiplier=$((installed_count % 7))
-        local delay=$(awk "BEGIN {printf \"%.1f\", 0.8 + $delay_multiplier * 0.1}")
+        local delay=$(LC_NUMERIC=C awk "BEGIN {printf \"%.1f\", 0.8 + $delay_multiplier * 0.1}")
         sleep $delay
       else
         unpack_it "common/$pkg"
@@ -389,6 +431,8 @@ EOF
       echo ""
     fi
   else
+    preflight_checks
+
     log_step "Preparing System"
     prepare_system
     
