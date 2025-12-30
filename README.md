@@ -12,6 +12,7 @@ Potions transforms your fresh macOS, WSL, or Termux installation into a fully-co
 - **Pre-configured Tools**: Zsh, Git, NeoVim, Tmux, and more
 - **Professional CLI**: Manage your installation with `potions` commands
 - **Modern Terminal**: Beautiful prompt with Git integration
+- **User Customization**: Preserved settings that survive upgrades
 - **Plugin System**: Extend functionality with custom plugins
 - **Fast Setup**: One command to get started
 
@@ -84,11 +85,25 @@ After upgrading, restart your terminal or run `exec zsh` to apply changes.
 ## 📝 Configuration
 
 All configurations are stored in `~/.potions`:
+
+### Managed Files (Do Not Edit)
 - `.zshrc`: Main Zsh configuration
-- `.zsh_aliases`: Custom command aliases
 - `nvim/init.vim`: NeoVim configuration
 - `tmux/tmux.conf`: Tmux configuration
-- `sources/{linux|wsl|termux|macos}.sh`: Platform-specific customizations
+
+### User Customization (Preserved on Upgrade)
+- `config/aliases.zsh`: Your custom aliases and functions
+- `config/secure.zsh`: Private/sensitive configurations (gitignored)
+- `config/local.zsh`: Machine-specific settings
+- `config/{macos|linux|wsl|termux}.zsh`: Platform-specific customizations
+- `nvim/user.vim`: Your Neovim extensions
+- `tmux/user.conf`: Your Tmux extensions
+
+### Legacy Files (Still Supported)
+- `.zsh_aliases`: Legacy aliases (use `config/aliases.zsh` instead)
+- `sources/*.sh`: Legacy platform configs (use `config/*.zsh` instead)
+
+Run `./migrate.sh` to migrate from legacy to new structure.
 
 ## 🔌 Plugin System
 
@@ -113,6 +128,33 @@ Test the installation interface without modifying your system:
 ## 📚 Documentation
 
 - **[CHEATSHEET.md](CHEATSHEET.md)**: Complete reference for keybindings and shortcuts
+- **[KEYMAPS.md](.potions/KEYMAPS.md)**: Unified keymap reference across all tools
+- **[Terminal Setup](.potions/terminal-setup/TERMINAL_SETUP.md)**: Configure your terminal for optimal compatibility
+
+## 🔧 Troubleshooting
+
+### Terminal Key Bindings Not Working
+
+Some terminals require configuration for certain key combinations. See the [Terminal Setup Guide](.potions/terminal-setup/TERMINAL_SETUP.md) for:
+- iTerm2 configuration
+- Alacritty settings
+- Terminal.app workarounds
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| Ctrl+Tab not working | Configure terminal or use `Ctrl+a n` / `Ctrl+a p` |
+| Word navigation broken | Check terminal key mappings, try Alt+f/Alt+b |
+| Ctrl+S freezes terminal | Potions should disable this; if not, run `stty -ixon` |
+
+### Uninstalling
+
+To remove Potions while preserving your customizations:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/uninstall.sh | bash
+```
 
 ## 🤝 Contributing
 
