@@ -332,11 +332,8 @@ install_packages() {
     
     if [ "$HAS_COLOR" = true ]; then
       if [ "$TEST_MODE" = true ]; then
-        # Simulate installation with delay (0.8-1.5 seconds)
-        # Use simple variation: 0.8 + (package_index % 7) * 0.1
-        local delay_multiplier=$((installed_count % 7))
-        local delay=$(LC_NUMERIC=C awk "BEGIN {printf \"%.1f\", 0.8 + $delay_multiplier * 0.1}")
-        (sleep $delay) &
+        # Simulate installation with delay (1 second)
+        (sleep 1) &
         spinner $! "Installing $pkg"
         log_success "$pkg installed"
         ((installed_count++))
@@ -354,9 +351,7 @@ install_packages() {
     else
       if [ "$TEST_MODE" = true ]; then
         # Simulate installation with delay
-        local delay_multiplier=$((installed_count % 7))
-        local delay=$(LC_NUMERIC=C awk "BEGIN {printf \"%.1f\", 0.8 + $delay_multiplier * 0.1}")
-        sleep $delay
+        sleep 1
       else
         unpack_it "common/$pkg"
       fi
