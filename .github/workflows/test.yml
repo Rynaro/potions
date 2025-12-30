@@ -15,21 +15,25 @@ jobs:
 
       - name: Validate Bash Syntax
         run: |
+          set -e
           echo "Validating Bash syntax..."
+
+          # Core scripts
           for script in install.sh upgrade.sh uninstall.sh migrate.sh drink.sh test.sh packages/accessories.sh; do
             if [ -f "$script" ]; then
               echo "Checking $script..."
               bash -n "$script"
+            else
+              echo "SKIP: $script does not exist"
             fi
           done
 
-          # Check all package scripts
-          for script in packages/common/*.sh packages/macos/*.sh packages/debian/*.sh packages/wsl/*.sh packages/termux/*.sh; do
-            if [ -f "$script" ]; then
-              echo "Checking $script..."
-              bash -n "$script"
-            fi
+          # Check all package scripts using find to avoid glob issues
+          find packages -name "*.sh" -type f | while read -r script; do
+            echo "Checking $script..."
+            bash -n "$script"
           done
+
           echo "All syntax checks passed!"
 
       - name: Validate Vim syntax
