@@ -2,12 +2,18 @@
 
 install_package zsh
 
-if [ -f ".zshenv" ]; then
+# Copy .zshenv from repo to home directory
+# Use REPO_ROOT for absolute path resolution
+if [ -f "$REPO_ROOT/.zshenv" ]; then
+  cp "$REPO_ROOT/.zshenv" "$HOME/"
+  log "Copied .zshenv to $HOME"
+elif [ -f ".zshenv" ]; then
+  # Fallback to current directory (for backwards compatibility)
   cp ".zshenv" "$HOME/"
   log "Copied .zshenv to $HOME"
 else
-  log "ERROR: .zshenv not found in current directory"
-  return 1
+  log "WARNING: .zshenv not found, creating default"
+  echo 'export ZDOTDIR=~/.potions' > "$HOME/.zshenv"
 fi
 
 # Change the default shell to Zsh
