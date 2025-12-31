@@ -1,0 +1,18 @@
+# Alacritty Configuration for Potions
+# Copy this file to ~/.config/alacritty/alacritty.toml
+# or merge these settings into your existing configuration
+
+[keyboard]
+bindings = [
+  # Tmux window navigation
+  { key = "Tab", mods = "Control", chars = "\u001b[27;5;9~" },
+  { key = "Tab", mods = "Control|Shift", chars = "\u001b[27;6;9~" },
+
+  # Word navigation (Ctrl+Arrow)
+  { key = "Right", mods = "Control", chars = "\u001b[1;5C" },
+  { key = "Left", mods = "Control", chars = "\u001b[1;5D" },
+
+  # Alt+Arrow for word navigation (alternative)
+  { key = "Right", mods = "Alt", chars = "\u001bf" },
+  { key = "Left", mods = "Alt", chars = "\u001bb" },
+]

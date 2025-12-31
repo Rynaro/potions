@@ -157,26 +157,29 @@ nnoremap <silent> <leader>7 :BufferGoto 7<CR>
 nnoremap <silent> <leader>8 :BufferGoto 8<CR>
 nnoremap <silent> <leader>9 :BufferGoto 9<CR>
 nnoremap <silent> <leader>0 :BufferLast<CR>
-nnoremap <silent> <leader>bp :BufferPin<CR>
+" Buffer management - using leader keys to avoid conflicts
+nnoremap <silent> <leader>bp :BufferPick<CR>
+nnoremap <silent> <leader>bx :BufferPickDelete<CR>
+nnoremap <silent> <leader>bi :BufferPin<CR>
 nnoremap <silent> <leader>bc :BufferClose<CR>
 nnoremap <silent> <leader>br :BufferRestore<CR>
-nnoremap <silent> <C-p> :BufferPick<CR>
-nnoremap <silent> <C-x> :BufferPickDelete<CR>
 nnoremap <silent> <Space>bb :BufferOrderByBufferNumber<CR>
 nnoremap <silent> <Space>bn :BufferOrderByName<CR>
 nnoremap <silent> <Space>bd :BufferOrderByDirectory<CR>
 nnoremap <silent> <Space>bl :BufferOrderByLanguage<CR>
 nnoremap <silent> <Space>bw :BufferOrderByWindowNumber<CR>
 
-" vim-visual-multi keybindings for VSCode-like multi-cursor editing (macOS-friendly)
+" vim-visual-multi keybindings for VSCode-like multi-cursor editing
+" Using leader-based bindings to avoid conflicts with scroll and buffer commands
+" See KEYMAPS.md for full conflict resolution documentation
 let g:VM_maps = {}
-let g:VM_maps['Find Under']         = '<C-d>'  " Start multi-cursor (similar to VSCode's Ctrl+D)
-let g:VM_maps['Find Subword Under'] = '<C-d>'  " Start multi-cursor (similar to VSCode's Ctrl+D)
-let g:VM_maps['Select All']         = '<C-S-l>'  " Select all occurrences (similar to VSCode's Ctrl+Shift+L)
-let g:VM_maps['Skip Region']        = '<C-x>'  " Skip current occurrence
-let g:VM_maps['Remove Region']      = '<C-S-k>'  " Remove current cursor (similar to VSCode's Ctrl+U)
-let g:VM_maps['Add Cursor Down']    = '<C-S-Down>'  " Add cursor down (macOS-friendly alternative)
-let g:VM_maps['Add Cursor Up']      = '<C-S-Up>'    " Add cursor up (macOS-friendly alternative)
+let g:VM_maps['Find Under']         = '<leader>d'   " Start multi-cursor on word (was Ctrl+D)
+let g:VM_maps['Find Subword Under'] = '<leader>d'   " Start multi-cursor on subword
+let g:VM_maps['Select All']         = '<C-S-l>'     " Select all occurrences
+let g:VM_maps['Skip Region']        = '<leader>x'   " Skip current occurrence (was Ctrl+X)
+let g:VM_maps['Remove Region']      = '<C-S-k>'     " Remove current cursor
+let g:VM_maps['Add Cursor Down']    = '<C-S-Down>'  " Add cursor down
+let g:VM_maps['Add Cursor Up']      = '<C-S-Up>'    " Add cursor up
 
 " Telescope configuration and keybindings
 lua << EOF
@@ -267,3 +270,9 @@ require'nvim-treesitter.configs'.setup {
   },
 }
 EOF
+
+" User customizations - this file is preserved on upgrade
+" Add your personal plugins and settings in ~/.potions/nvim/user.vim
+if filereadable(expand("~/.potions/nvim/user.vim"))
+  source ~/.potions/nvim/user.vim
+endif

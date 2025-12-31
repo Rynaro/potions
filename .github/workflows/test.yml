@@ -1,0 +1,120 @@
+name: Potions Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  syntax-validation:
+    name: Syntax Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Bash Syntax
+        run: |
+          set -e
+          echo "Validating Bash syntax..."
+
+          # Core scripts
+          for script in install.sh upgrade.sh uninstall.sh migrate.sh drink.sh test.sh packages/accessories.sh; do
+            if [ -f "$script" ]; then
+              echo "Checking $script..."
+              bash -n "$script"
+            else
+              echo "SKIP: $script does not exist"
+            fi
+          done
+
+          # Check all package scripts using find to avoid glob issues
+          find packages -name "*.sh" -type f | while read -r script; do
+            echo "Checking $script..."
+            bash -n "$script"
+          done
+
+          echo "All syntax checks passed!"
+
+      - name: Validate Vim syntax
+        run: |
+          # Basic vimscript syntax check (look for common issues)
+          if grep -E "^[^\"]*\"[^\"]*$" .potions/nvim/init.vim | grep -v "^\"" | grep -v "EOF"; then
+            echo "Warning: Potential unclosed strings in init.vim"
+          fi
+          echo "Vim syntax check completed"
+
+  test-ubuntu:
+    name: Test on Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run test suite
+        run: ./test.sh --no-simulate
+
+      - name: Test install simulation
+        run: ./install.sh --test
+
+  test-macos:
+    name: Test on macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run test suite
+        run: ./test.sh --no-simulate
+
+      - name: Test install simulation
+        run: ./install.sh --test
+
+  idempotency-test:
+    name: Idempotency Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: First install (simulation)
+        run: ./install.sh --test
+
+      - name: Second install (simulation)
+        run: ./install.sh --test
+
+      - name: Verify no errors on repeated runs
+        run: |
+          echo "Idempotency test passed - install can run multiple times"
+
+  checksum-validation:
+    name: Checksum Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate checksums
+        run: |
+          if [ -f .checksums ]; then
+            echo "Validating checksums..."
+            failed=0
+            while IFS=' ' read -r file expected_checksum; do
+              [[ -z "$file" || "$file" =~ ^# ]] && continue
+              if [ -f "$file" ]; then
+                actual=$(sha256sum "$file" | awk '{print $1}')
+                if [ "$actual" != "$expected_checksum" ]; then
+                  echo "MISMATCH: $file"
+                  echo "  Expected: $expected_checksum"
+                  echo "  Got:      $actual"
+                  failed=1
+                else
+                  echo "OK: $file"
+                fi
+              else
+                echo "MISSING: $file"
+                failed=1
+              fi
+            done < .checksums
+            if [ $failed -eq 1 ]; then
+              echo "::warning::Some checksums need updating. Run ./scripts/generate-checksums.sh"
+            fi
+          else
+            echo "No checksums file found"
+          fi

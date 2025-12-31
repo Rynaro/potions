@@ -4,6 +4,7 @@
 # Allow essential docs
 !README.md
 !CHEATSHEET.md
+!MIGRATION.md
 !AGENT.md
 !AGENT_QUICK_REF.md
 !.cursorrules
@@ -19,6 +20,9 @@
 !install.sh
 !drink.sh
 !upgrade.sh
+!uninstall.sh
+!migrate.sh
+!test.sh
 !.version
 !.checksums
 
@@ -55,13 +59,30 @@
 !.potions/.zsh/contrib
 !.potions/.zsh/contrib/*
 
+# Allow Potions documentation
+!.potions/KEYMAPS.md
+
+# Allow user config directory
+!.potions/config
+!.potions/config/
+!.potions/config/*.zsh
+
+# Allow terminal setup guides
+!.potions/terminal-setup
+!.potions/terminal-setup/
+!.potions/terminal-setup/*
+
 # Allow NVim config files
 !.potions/nvim
+!.potions/nvim/
 !.potions/nvim/init.vim
+!.potions/nvim/user.vim
 
 # Allow TMUX config files
 !.potions/tmux
+!.potions/tmux/
 !.potions/tmux/tmux.conf
+!.potions/tmux/user.conf
 
 # Allow Potions CLI
 !.potions/bin
