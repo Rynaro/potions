@@ -7,9 +7,7 @@ if [ -z "$POTIONS_MIGRATION_CHECKED" ]; then
   if [ -f "$POTIONS_HOME/.zsh_aliases" ] && [ ! -f "$POTIONS_HOME/config/aliases.zsh" ]; then
     echo ""
     echo "⚠️  Potions v2.5.0: Legacy configuration detected"
-    echo "   Run 'migrate.sh' from the Potions repo to migrate to the new structure."
-    echo "   Or run: curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/migrate.sh | bash"
-    echo "   See MIGRATION.md for details."
+    echo "   Run: curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/migrate.sh | bash"
     echo ""
   fi
 fi

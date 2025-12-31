@@ -322,13 +322,14 @@ test_documentation() {
   log_step "Documentation Tests"
 
   assert_file_exists "$SCRIPT_DIR/README.md" "README.md exists"
-  assert_file_exists "$SCRIPT_DIR/CHEATSHEET.md" "CHEATSHEET.md exists"
+  assert_file_exists "$SCRIPT_DIR/AGENTS.md" "AGENTS.md exists"
 
   # Check README mentions new config structure
   assert_file_contains "$SCRIPT_DIR/README.md" "config/aliases.zsh" "README.md documents new config structure"
 
-  # Check CHEATSHEET has keymap changes
-  assert_file_contains "$SCRIPT_DIR/CHEATSHEET.md" "Space d" "CHEATSHEET.md has updated multi-cursor keybinding"
+  # Check AGENTS.md has key sections
+  assert_file_contains "$SCRIPT_DIR/AGENTS.md" "Security-First" "AGENTS.md has security section"
+  assert_file_contains "$SCRIPT_DIR/AGENTS.md" "Idempotency" "AGENTS.md documents idempotency"
 }
 
 test_platform_detection() {

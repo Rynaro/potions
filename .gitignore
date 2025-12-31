@@ -3,11 +3,7 @@
 
 # Allow essential docs
 !README.md
-!CHEATSHEET.md
-!MIGRATION.md
-!AGENT.md
-!AGENT_QUICK_REF.md
-!.cursorrules
+!AGENTS.md
 
 # Assets
 !assets
@@ -94,10 +90,6 @@
 !.gitignore
 !.gitexcludes
 
-# Cursor IDE configuration
-!.cursor
-!.cursor/
-!.cursor/**
 
 # Vim configuration files
 !.vim
