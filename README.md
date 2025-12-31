@@ -11,10 +11,8 @@ Potions transforms your fresh macOS, WSL, or Termux installation into a fully-co
 - **Cross-Platform**: macOS, WSL (Windows), Termux (Android), Debian/Linux
 - **Pre-configured Tools**: Zsh, Git, NeoVim, Tmux, and more
 - **Professional CLI**: Manage your installation with `potions` commands
-- **Modern Terminal**: Beautiful prompt with Git integration
-- **User Customization**: Preserved settings that survive upgrades
 - **Plugin System**: Extend functionality with custom plugins
-- **Fast Setup**: One command to get started
+- **User Customization**: Preserved settings that survive upgrades
 
 ## 🚀 Quick Start
 
@@ -25,6 +23,14 @@ curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash
 ```
 
 After installation, restart your terminal or type `zsh` to begin using your new environment!
+
+## 🛠️ What's Installed
+
+- **Zsh**: Modern shell with autosuggestions and syntax highlighting
+- **Git**: Pre-configured with useful aliases
+- **NeoVim**: Powerful editor with modern plugins
+- **Tmux**: Terminal multiplexer with intuitive keybindings
+- **Development Tools**: curl, wget, OpenVPN, and more
 
 ## 💻 CLI Commands
 
@@ -40,70 +46,67 @@ potions doctor           # Run health check
 potions help             # Show help message
 ```
 
-### Examples
-
-```bash
-# Check if updates are available
-potions update
-
-# Upgrade to latest version
-potions upgrade
-
-# Check installation health
-potions doctor
-```
-
-## 🔄 Upgrading
-
-### Using CLI (Recommended)
-
-```bash
-potions upgrade
-```
-
-### Manual Upgrade
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash
-```
-
-The upgrade script:
-- ✅ Creates automatic backups in `~/.potions/backups/` (keeps last 5)
-- ✅ Preserves user customizations in `.zsh_aliases` and `sources/*.sh`
-- ✅ Updates configuration files with latest improvements
-
-After upgrading, restart your terminal or run `exec zsh` to apply changes.
-
-## 🛠️ What's Included
-
-- **Zsh**: Modern shell with autosuggestions and syntax highlighting
-- **Git**: Pre-configured with useful aliases
-- **NeoVim**: Powerful editor with modern plugins
-- **Tmux**: Terminal multiplexer with VSCode-like keybindings
-- **Development Tools**: curl, wget, OpenVPN, and more
-
 ## 📝 Configuration
 
 All configurations are stored in `~/.potions`:
 
 ### Managed Files (Do Not Edit)
-- `.zshrc`: Main Zsh configuration
-- `nvim/init.vim`: NeoVim configuration
-- `tmux/tmux.conf`: Tmux configuration
+
+These files are overwritten on upgrade:
+
+- `.zshrc` - Main Zsh configuration
+- `nvim/init.vim` - NeoVim configuration
+- `tmux/tmux.conf` - Tmux configuration
 
 ### User Customization (Preserved on Upgrade)
-- `config/aliases.zsh`: Your custom aliases and functions
-- `config/secure.zsh`: Private/sensitive configurations (gitignored)
-- `config/local.zsh`: Machine-specific settings
-- `config/{macos|linux|wsl|termux}.zsh`: Platform-specific customizations
-- `nvim/user.vim`: Your Neovim extensions
-- `tmux/user.conf`: Your Tmux extensions
+
+Add your customizations here—they survive upgrades:
+
+| File | Purpose |
+|------|---------|
+| `config/aliases.zsh` | Custom aliases and functions |
+| `config/secure.zsh` | Private configurations (gitignored) |
+| `config/local.zsh` | Machine-specific settings |
+| `config/{macos\|linux\|wsl\|termux}.zsh` | Platform-specific customizations |
+| `nvim/user.vim` | Your Neovim extensions |
+| `tmux/user.conf` | Your Tmux extensions |
 
 ### Legacy Files (Still Supported)
-- `.zsh_aliases`: Legacy aliases (use `config/aliases.zsh` instead)
-- `sources/*.sh`: Legacy platform configs (use `config/*.zsh` instead)
+
+- `.zsh_aliases` - Legacy aliases (use `config/aliases.zsh` instead)
+- `sources/*.sh` - Legacy platform configs (use `config/*.zsh` instead)
 
 Run `./migrate.sh` to migrate from legacy to new structure.
+
+## ⌨️ Keybindings Quick Reference
+
+### Tmux (Prefix: `Ctrl+a`)
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+a c` | New window |
+| `Ctrl+a x` | Kill pane |
+| `Ctrl+a \|` | Split horizontal |
+| `Ctrl+a -` | Split vertical |
+| `Ctrl+a h/j/k/l` | Navigate panes |
+| `Ctrl+a n` | Next window |
+| `Ctrl+a p` | Previous window |
+| `Ctrl+Tab` | Next window (if terminal supports) |
+
+### Neovim (Leader: `Space`)
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+n` | Toggle NERDTree file explorer |
+| `Space ff` | Find files (Telescope) |
+| `Space fg` | Live grep |
+| `Space fb` | Find buffers |
+| `Space 1-9` | Go to buffer N |
+| `Space q` | Quit |
+| `Space w` | Save |
+| `Ctrl+s` | Quick save |
+
+📖 **Full reference**: [`.potions/KEYMAPS.md`](.potions/KEYMAPS.md)
 
 ## 🔌 Plugin System
 
@@ -125,11 +128,26 @@ Test the installation interface without modifying your system:
 ./drink.sh --test
 ```
 
-## 📚 Documentation
+## 🔄 Upgrading
 
-- **[CHEATSHEET.md](CHEATSHEET.md)**: Complete reference for keybindings and shortcuts
-- **[KEYMAPS.md](.potions/KEYMAPS.md)**: Unified keymap reference across all tools
-- **[Terminal Setup](.potions/terminal-setup/TERMINAL_SETUP.md)**: Configure your terminal for optimal compatibility
+### Using CLI (Recommended)
+
+```bash
+potions upgrade
+```
+
+### Manual Upgrade
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash
+```
+
+The upgrade script:
+- ✅ Creates automatic backups in `~/.potions/backups/` (keeps last 5)
+- ✅ Preserves user customizations in `config/*.zsh` and user files
+- ✅ Updates configuration files with latest improvements
+
+After upgrading, restart your terminal or run `exec zsh` to apply changes.
 
 ## 🔧 Troubleshooting
 
@@ -148,7 +166,7 @@ Some terminals require configuration for certain key combinations. See the [Term
 | Word navigation broken | Check terminal key mappings, try Alt+f/Alt+b |
 | Ctrl+S freezes terminal | Potions should disable this; if not, run `stty -ixon` |
 
-### Uninstalling
+## 🗑️ Uninstalling
 
 To remove Potions while preserving your customizations:
 
