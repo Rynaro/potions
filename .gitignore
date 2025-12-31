@@ -3,7 +3,7 @@
 
 # Allow essential docs
 !README.md
-!.cursorrules
+!AGENTS.md
 
 # Assets
 !assets
@@ -90,8 +90,6 @@
 !.gitignore
 !.gitexcludes
 
-# Cursor IDE configuration (directory for IDE settings, may be empty)
-!.cursor/
 
 # Vim configuration files
 !.vim
