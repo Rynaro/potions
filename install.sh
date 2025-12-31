@@ -336,16 +336,18 @@ install_packages() {
         (sleep 1) &
         spinner $! "Installing $pkg"
         log_success "$pkg installed"
-        ((installed_count++))
+        # Note: Use $((var + 1)) instead of ((var++)) to avoid exit code 1
+        # when var=0, which would fail under set -e
+        installed_count=$((installed_count + 1))
       else
         # Allow stderr through for sudo prompts and errors, only suppress stdout
         (unpack_it "common/$pkg" > /dev/null) &
         if spinner $! "Installing $pkg"; then
           log_success "$pkg installed"
-          ((installed_count++))
+          installed_count=$((installed_count + 1))
         else
           log_warning "$pkg installation may have encountered issues"
-          ((installed_count++))
+          installed_count=$((installed_count + 1))
         fi
       fi
     else
@@ -356,7 +358,7 @@ install_packages() {
         unpack_it "common/$pkg"
       fi
       log_success "$pkg installed"
-      ((installed_count++))
+      installed_count=$((installed_count + 1))
     fi
   done
   

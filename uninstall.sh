@@ -152,7 +152,9 @@ backup_customizations() {
       mkdir -p "$dir"
       cp "$POTIONS_HOME/$file" "$BACKUP_DIR/$file"
       log_info "Backed up: $file"
-      ((backed_up++))
+      # Note: Use $((var + 1)) instead of ((var++)) to avoid exit code 1
+      # when var=0, which would fail under set -e
+      backed_up=$((backed_up + 1))
     fi
   done
 

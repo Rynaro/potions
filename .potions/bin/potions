@@ -476,7 +476,9 @@ cmd_doctor() {
   # Check installation directory
   if [ ! -d "$POTIONS_HOME" ]; then
     log_error "Installation directory missing: $POTIONS_HOME"
-    ((issues++))
+    # Note: Use $((var + 1)) instead of ((var++)) to avoid exit code 1
+    # when var=0, which would fail under set -e
+    issues=$((issues + 1))
   else
     log_success "Installation directory exists"
   fi
@@ -484,7 +486,7 @@ cmd_doctor() {
   # Check version file
   if [ ! -f "$POTIONS_HOME/.version" ]; then
     log_warning "Version file missing"
-    ((issues++))
+    issues=$((issues + 1))
   else
     log_success "Version file found"
   fi
@@ -498,14 +500,14 @@ cmd_doctor() {
   for file in "${essential_files[@]}"; do
     if [ ! -f "$POTIONS_HOME/$file" ]; then
       log_warning "Missing essential file: $file"
-      ((issues++))
+      issues=$((issues + 1))
     fi
   done
   
   # Check if git is available (needed for upgrades)
   if ! command -v git &> /dev/null; then
     log_warning "Git not found (required for upgrades)"
-    ((issues++))
+    issues=$((issues + 1))
   else
     log_success "Git available"
   fi
@@ -516,7 +518,7 @@ cmd_doctor() {
       log_success "Repository directory exists and is valid"
     else
       log_warning "Repository directory exists but is not a valid git repository"
-      ((issues++))
+      issues=$((issues + 1))
     fi
   else
     log_info "Repository directory not found (will be created on upgrade)"
@@ -527,7 +529,7 @@ cmd_doctor() {
     log_warning "Potions bin directory not in PATH"
     log_info "Add this to your shell config:"
     echo "  export PATH=\"\$HOME/.potions/bin:\$PATH\""
-    ((issues++))
+    issues=$((issues + 1))
   else
     log_success "Potions bin directory in PATH"
   fi
