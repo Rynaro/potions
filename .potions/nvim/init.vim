@@ -182,93 +182,95 @@ let g:VM_maps['Add Cursor Down']    = '<C-S-Down>'  " Add cursor down
 let g:VM_maps['Add Cursor Up']      = '<C-S-Up>'    " Add cursor up
 
 " Telescope configuration and keybindings
+" Uses pcall to gracefully handle case when plugin isn't installed yet
 lua << EOF
-local builtin = require('telescope.builtin')
+local ok, telescope = pcall(require, 'telescope')
+if ok then
+  local builtin = require('telescope.builtin')
 
-vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
-vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
-vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
-vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
-vim.keymap.set('n', '<leader>fs', builtin.git_status, {})
-vim.keymap.set('n', '<leader>fc', builtin.git_commits, {})
-vim.keymap.set('n', '<leader>fr', builtin.lsp_references, {})
-vim.keymap.set('n', '<leader>fd', builtin.lsp_definitions, {})
+  vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
+  vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
+  vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
+  vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
+  vim.keymap.set('n', '<leader>fs', builtin.git_status, {})
+  vim.keymap.set('n', '<leader>fc', builtin.git_commits, {})
+  vim.keymap.set('n', '<leader>fr', builtin.lsp_references, {})
+  vim.keymap.set('n', '<leader>fd', builtin.lsp_definitions, {})
 
-require('telescope').setup{
-  defaults = {
-    -- Default configuration for Telescope goes here:
-    -- config_key = value,
-  },
-  pickers = {
-    -- Default configuration for builtin pickers goes here:
-    -- picker_name = {
-    --   picker_config_key = value,
-    --   ...
-    -- },
-  },
-  extensions = {
-    -- Your extension configuration goes here:
-    -- extension_name = {
-    --   extension_config_key = value,
-    -- }
-  },
-}
+  telescope.setup{
+    defaults = {},
+    pickers = {},
+    extensions = {},
+  }
+end
 EOF
 
 " Lualine configuration
+" Uses pcall to gracefully handle case when plugin isn't installed yet
 lua << END
-require('lualine').setup()
+local ok, lualine = pcall(require, 'lualine')
+if ok then
+  lualine.setup()
+end
 END
 
 " Indent Blank Line Settings
+" Uses pcall to gracefully handle case when plugin isn't installed yet
 lua << EOF
-require("ibl").setup()
+local ok, ibl = pcall(require, 'ibl')
+if ok then
+  ibl.setup()
+end
 EOF
 
 " Treesitter configuration for better syntax highlighting and navigation
+" Uses pcall to gracefully handle case when plugin isn't installed yet
 lua << EOF
-require'nvim-treesitter.configs'.setup {
-  highlight = {
-    enable = true,
-  },
-  indent = {
-    enable = true,
-  },
-  incremental_selection = {
-    enable = true,
-    keymaps = {
-      init_selection = "gnn",
-      node_incremental = "grn",
-      scope_incremental = "grc",
-      node_decremental = "grm",
-    },
-  },
-  textobjects = {
-    select = {
+local ok, treesitter_configs = pcall(require, 'nvim-treesitter.configs')
+if ok then
+  treesitter_configs.setup {
+    highlight = {
       enable = true,
-      lookahead = true,
+    },
+    indent = {
+      enable = true,
+    },
+    incremental_selection = {
+      enable = true,
       keymaps = {
-        ["af"] = "@function.outer",
-        ["if"] = "@function.inner",
+        init_selection = "gnn",
+        node_incremental = "grn",
+        scope_incremental = "grc",
+        node_decremental = "grm",
       },
     },
-    move = {
+    textobjects = {
+      select = {
+        enable = true,
+        lookahead = true,
+        keymaps = {
+          ["af"] = "@function.outer",
+          ["if"] = "@function.inner",
+        },
+      },
+      move = {
+        enable = true,
+        set_jumps = true,
+        goto_next_start = {
+          ["]m"] = "@function.outer",
+        },
+        goto_previous_start = {
+          ["[m"] = "@function.outer",
+        },
+      },
+    },
+    rainbow = {
       enable = true,
-      set_jumps = true,
-      goto_next_start = {
-        ["]m"] = "@function.outer",
-      },
-      goto_previous_start = {
-        ["[m"] = "@function.outer",
-      },
+      extended_mode = true,
+      max_file_lines = nil,
     },
-  },
-  rainbow = {
-    enable = true,
-    extended_mode = true, -- Highlight also non-parentheses delimiters
-    max_file_lines = nil, -- Do not limit number of lines
-  },
-}
+  }
+end
 EOF
 
 " User customizations - this file is preserved on upgrade
