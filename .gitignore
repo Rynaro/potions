@@ -43,6 +43,13 @@
 !plugins/*.sh
 !plugins/templates/
 !plugins/templates/*.sh
+!plugins/alchemists-orchid/
+!plugins/alchemists-orchid/*.sh
+!plugins/alchemists-orchid/*.md
+!plugins/alchemists-orchid/packages/
+!plugins/alchemists-orchid/packages/*.sh
+!plugins/alchemists-orchid/config/
+!plugins/alchemists-orchid/config/*.lua
 
 # Allow the .potions directory and its contents
 !.potions
