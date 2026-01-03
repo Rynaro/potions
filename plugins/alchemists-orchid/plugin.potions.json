@@ -1,0 +1,25 @@
+{
+  "name": "alchemists-orchid",
+  "version": "1.0.0",
+  "description": "NeoVim Alchemist's Orchid colorscheme with customizable preferences",
+  "author": "Rynaro",
+  "license": "MIT",
+  "potions_min_version": "2.6.0",
+  "platforms": ["macos", "linux", "wsl", "termux"],
+  "dependencies": [],
+  "provides": {
+    "nvim": ["colorscheme"],
+    "shell": [],
+    "tmux": []
+  },
+  "hooks": {
+    "post_install": "",
+    "pre_uninstall": ""
+  },
+  "repository": "https://github.com/Rynaro/potions-alchemists-orchid",
+  "checksums": {
+    "install.sh": "",
+    "uninstall.sh": "",
+    "packages/theme.sh": ""
+  }
+}
