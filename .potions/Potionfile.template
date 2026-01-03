@@ -1,0 +1,42 @@
+# ~/.potions/Potionfile - Potions Plugin Registry
+#
+# This file declares which plugins should be installed in your Potions environment.
+# Similar to a Gemfile, it provides a declarative way to manage plugins.
+#
+# SYNTAX:
+#   plugin 'name'                           # from official registry
+#   plugin 'owner/repo'                     # from GitHub (verified only)
+#   plugin 'owner/repo', branch: 'main'     # specific branch
+#   plugin 'owner/repo', tag: 'v1.0.0'      # specific version
+#   local_plugin 'path/to/plugin'           # local plugin (no verification)
+#
+# PLUGIN TYPES:
+#   - Remote plugins: Must be in the verified Potions registry
+#   - Local plugins: Your own plugins, no verification required
+#
+# EXAMPLES:
+#
+#   # Install the official Alchemist's Orchid NeoVim theme
+#   plugin 'alchemists-orchid'
+#
+#   # Install a verified plugin from GitHub with specific version
+#   plugin 'Rynaro/potions-docker', tag: 'v2.0.0'
+#
+#   # Install a local plugin you're developing
+#   local_plugin '~/my-plugins/custom-theme'
+#
+# COMMANDS:
+#   potions plugin install          # Install all plugins from Potionfile
+#   potions plugin update           # Update all plugins
+#   potions plugin list             # List installed plugins
+#   potions plugin status           # Show plugin status
+#
+# For more information, see:
+#   https://github.com/Rynaro/potions/blob/main/plugins/README.md
+#
+# ============================================================================
+
+# Add your plugins below:
+
+# Example: Official Alchemist's Orchid theme
+# plugin 'alchemists-orchid'
