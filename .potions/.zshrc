@@ -106,6 +106,10 @@ safe_source "$POTIONS_HOME/config/secure.zsh"
 # Machine-local configuration (not synced)
 safe_source "$POTIONS_HOME/config/local.zsh"
 
+# Load Potions plugins
+# This sources all active plugin configurations
+safe_source "$POTIONS_HOME/plugins/.init.zsh"
+
 # Platform-specific user configurations
 if is_macos; then
   safe_source "$POTIONS_HOME/config/macos.zsh"
