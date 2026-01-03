@@ -30,6 +30,15 @@ Plug 'mg979/vim-visual-multi', {'branch': 'master'} " Multiple cursors on editor
 Plug 'lukas-reineke/indent-blankline.nvim' " Context Indent Lines
 call plug#end()
 
+" Add custom Lua path for theme configurations
+lua << EOF
+local potions_lua_path = vim.fn.expand('~/.potions/nvim/lua')
+if vim.fn.isdirectory(potions_lua_path) == 1 then
+  package.path = package.path .. ';' .. potions_lua_path .. '/?.lua'
+  package.path = package.path .. ';' .. potions_lua_path .. '/?/init.lua'
+end
+EOF
+
 " Basic settings
 syntax on
 set number
@@ -41,9 +50,19 @@ set guicursor=n-v-c:block,r-cr:hor20,o:hor50
 " Set leader key to space (more ergonomic than backslash)
 let mapleader = " "
 
-" Set colorscheme
-colorscheme alchemists-orchid
-" Force custom visual mode selection colors
+" Load Alchemists Orchid theme configuration
+" Theme preferences can be customized in ~/.potions/nvim/lua/theme/alchemists-orchid.lua
+lua << EOF
+local ok, theme_config = pcall(require, 'theme.alchemists-orchid')
+if ok and theme_config.setup then
+  theme_config.setup()
+else
+  -- Fallback: set colorscheme directly if config not found
+  vim.cmd('colorscheme alchemists-orchid')
+end
+EOF
+
+" Force custom visual mode selection colors (can be overridden in theme config)
 highlight Visual ctermfg=White ctermbg=DarkGrey guifg=White guibg=DarkGrey
 
 " NERDTree settings
