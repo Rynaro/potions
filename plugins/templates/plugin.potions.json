@@ -1,0 +1,20 @@
+{
+  "name": "PLUGIN_NAME",
+  "version": "0.0.1",
+  "description": "A Potions plugin that does something awesome",
+  "author": "Your Name",
+  "license": "MIT",
+  "potions_min_version": "2.6.0",
+  "platforms": ["macos", "linux", "wsl", "termux"],
+  "dependencies": [],
+  "provides": {
+    "nvim": [],
+    "shell": [],
+    "tmux": []
+  },
+  "hooks": {
+    "post_install": "",
+    "pre_uninstall": ""
+  },
+  "checksums": {}
+}

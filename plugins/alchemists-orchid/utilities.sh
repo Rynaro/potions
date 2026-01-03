@@ -1,46 +1,52 @@
 #!/bin/bash
 
-UTILITIES_VERSION=1.1.0
+# Alchemists Orchid Theme - Utilities
+# Plugin utilities following Potions plugin system v2.0.0
 
+UTILITIES_VERSION="2.0.0"
+PLUGIN_RELATIVE_FOLDER="${PLUGIN_RELATIVE_FOLDER:-$(dirname "$0")}"
+
+# Environment
 OS_TYPE="$(uname -s)"
 POTIONS_HOME="${POTIONS_HOME:-$HOME/.potions}"
 THEME_CONFIG_DIR="$POTIONS_HOME/nvim/lua/theme"
 THEME_CONFIG_FILE="$THEME_CONFIG_DIR/alchemists-orchid.lua"
 
-# Log function
+# Logging
 log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [alchemists-orchid] $*"
 }
 
 # Function to safely source a script if it exists
 safe_source() {
-  [ -f "$PLUGIN_RELATIVE_FOLDER/$1" ] && source "$PLUGIN_RELATIVE_FOLDER/$1"
+  local file="$1"
+  if [ -f "$PLUGIN_RELATIVE_FOLDER/$file" ]; then
+    source "$PLUGIN_RELATIVE_FOLDER/$file"
+  elif [ -f "$file" ]; then
+    source "$file"
+  fi
 }
 
 # Function to check if a command exists
 command_exists() {
-  local cmd="$1"
-  command -v "$cmd" &> /dev/null
+  command -v "$1" &> /dev/null
 }
 
-# Function to check if the environment is macOS
+# Platform detection functions
 is_macos() {
   [ "$OS_TYPE" = "Darwin" ]
 }
 
-# Function to check if the environment is WSL
-is_wsl() {
-  grep -qi microsoft /proc/version 2>/dev/null
+is_linux() {
+  [ "$OS_TYPE" = "Linux" ]
 }
 
-# Function to check if the environment is Termux
 is_termux() {
   [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/termux-info" ]
 }
 
-# Function to check if the environment is Linux-based kernel
-is_linux() {
-  [ "$OS_TYPE" = "Linux" ]
+is_wsl() {
+  grep -qi microsoft /proc/version 2>/dev/null
 }
 
 # Ensure directory exists
@@ -63,5 +69,13 @@ setup_theme_config() {
     log "Theme configuration created at $THEME_CONFIG_FILE"
   else
     log "Theme configuration already exists, preserving user customizations"
+  fi
+}
+
+# Remove theme configuration (for uninstall)
+remove_theme_config() {
+  if [ -f "$THEME_CONFIG_FILE" ]; then
+    log "Theme configuration exists at: $THEME_CONFIG_FILE"
+    log "Preserving user customizations - remove manually if desired"
   fi
 }

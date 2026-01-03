@@ -577,10 +577,46 @@ ${BOLD}EXAMPLES:${NC}
     potions status               # Show installation status
     potions doctor               # Run health check
 
+${BOLD}PLUGIN COMMANDS:${NC}
+    ${CYAN}plugin install${NC} [name]   Install plugins from Potionfile or specific plugin
+    ${CYAN}plugin uninstall${NC} <name> Uninstall a plugin
+    ${CYAN}plugin list${NC}             List installed plugins
+    ${CYAN}plugin update${NC} [name]    Update plugins
+    ${CYAN}plugin status${NC}           Show plugin system status
+    ${CYAN}plugin activate${NC} <name>  Activate a plugin
+    ${CYAN}plugin deactivate${NC} <name> Deactivate a plugin
+    ${CYAN}plugin create${NC} <name>    Create a new plugin scaffold
+
 ${BOLD}For more information, visit:${NC}
     https://github.com/Rynaro/potions
 
 EOF
+}
+
+# Command: plugin (delegates to plugins.sh)
+cmd_plugin() {
+  local subcommand="${1:-help}"
+  shift || true
+  
+  # Find plugins.sh script
+  local plugins_script=""
+  
+  # Try repo root first (if running from development)
+  if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/plugins.sh" ]; then
+    plugins_script="$REPO_ROOT/plugins.sh"
+  # Try installed location
+  elif [ -f "$POTIONS_REPO_DIR/plugins.sh" ]; then
+    plugins_script="$POTIONS_REPO_DIR/plugins.sh"
+  fi
+  
+  if [ -z "$plugins_script" ] || [ ! -f "$plugins_script" ]; then
+    log_error "Plugin manager not found."
+    log_info "Please upgrade Potions to get the plugin system."
+    exit 1
+  fi
+  
+  # Execute plugins.sh with the subcommand
+  exec "$plugins_script" "$subcommand" "$@"
 }
 
 # Main command router
@@ -606,6 +642,10 @@ main() {
       ;;
     doctor)
       cmd_doctor
+      ;;
+    plugin|plugins)
+      shift
+      cmd_plugin "$@"
       ;;
     help|--help|-h)
       cmd_help
