@@ -24,6 +24,11 @@ source "$CORE_DIR/lockfile.sh"
 source "$CORE_DIR/security.sh"
 source "$CORE_DIR/scanner.sh"
 
+# Source registry client if available
+if [ -z "$REGISTRY_SOURCED" ]; then
+  source "$CORE_DIR/registry.sh" 2>/dev/null || true
+fi
+
 # Plugin directories
 INSTALLED_PLUGINS_DIR="${POTIONS_HOME}/plugins"
 STATE_FILE="${INSTALLED_PLUGINS_DIR}/.state"
@@ -131,6 +136,51 @@ plugin_install() {
   if [[ "$source" == github:* ]]; then
     local repo="${source#github:}"
     repo_url="https://github.com/${repo}.git"
+  elif [[ "$source" == registry:* ]]; then
+    # Fetch manifest from registry to get repository info
+    local registry_name="${source#registry:}"
+    log "Fetching plugin manifest from registry: $registry_name"
+    
+    if [ -n "$REGISTRY_SOURCED" ] && command -v registry_fetch_manifest > /dev/null 2>&1; then
+      local manifest_file="$temp_dir/manifest.potion"
+      if registry_fetch_manifest "$registry_name" "$manifest_file"; then
+        # Parse repository from manifest
+        # Look for repository field in YAML
+        local repo_field
+        repo_field=$(grep -E "^[[:space:]]*repository[[:space:]]*:" "$manifest_file" 2>/dev/null | \
+                     head -1 | \
+                     sed -E "s/^[[:space:]]*repository[[:space:]]*:[[:space:]]*//" | \
+                     sed -E "s/^[\"']//;s/[\"']$//" | \
+                     sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        
+        if [ -n "$repo_field" ]; then
+          # Extract owner/repo from URL
+          if echo "$repo_field" | grep -qE '^https://github\.com/'; then
+            repo=$(echo "$repo_field" | sed 's|^https://github\.com/||' | sed 's|\.git$||')
+            repo_url="https://github.com/${repo}.git"
+          elif echo "$repo_field" | grep -qE '^git@github\.com:'; then
+            repo=$(echo "$repo_field" | sed 's|^git@github\.com:||' | sed 's|\.git$||')
+            repo_url="https://github.com/${repo}.git"
+          elif echo "$repo_field" | grep -qE '/'; then
+            # Assume it's already owner/repo format
+            repo="$repo_field"
+            repo_url="https://github.com/${repo}.git"
+          else
+            log "Invalid repository format in manifest: $repo_field"
+            return 1
+          fi
+        else
+          log "No repository field found in manifest"
+          return 1
+        fi
+      else
+        log "Failed to fetch manifest from registry"
+        return 1
+      fi
+    else
+      log "Registry client not available"
+      return 1
+    fi
   else
     log "Unknown source type: $source"
     return 1
@@ -531,6 +581,25 @@ plugin_list() {
 plugin_search() {
   local query="$1"
   
+  # Try registry search first
+  if [ -n "$REGISTRY_SOURCED" ] && command -v registry_search > /dev/null 2>&1; then
+    local results
+    results=$(registry_search "$query" 2>/dev/null)
+    
+    if [ -n "$results" ]; then
+      echo ""
+      echo "Search Results:"
+      echo "==============="
+      echo ""
+      for plugin in $results; do
+        printf "  %s\n" "$plugin"
+      done
+      echo ""
+      return 0
+    fi
+  fi
+  
+  # Fallback to local registry
   list_verified_plugins | grep -i "$query" || echo "No plugins found matching: $query"
 }
 
@@ -550,6 +619,40 @@ plugin_info() {
     # Check if it's in the registry
     if is_verified_plugin "$name"; then
       echo "Plugin: $name (not installed)"
+      echo ""
+      
+      # Try to get detailed info from registry
+      if [ -n "$REGISTRY_SOURCED" ] && command -v registry_fetch_manifest > /dev/null 2>&1; then
+        local temp_manifest
+        temp_manifest=$(mktemp)
+        if registry_fetch_manifest "$name" "$temp_manifest" 2>/dev/null; then
+          # Display info from manifest (registry returns .potion YAML format)
+          local version author description license repository
+          if command -v parse_potion_field > /dev/null 2>&1; then
+            version=$(parse_potion_field "$temp_manifest" "version" 2>/dev/null || echo "unknown")
+            author=$(parse_potion_field "$temp_manifest" "author" 2>/dev/null || echo "unknown")
+            description=$(parse_potion_field "$temp_manifest" "description" 2>/dev/null || echo "No description")
+            license=$(parse_potion_field "$temp_manifest" "license" 2>/dev/null || echo "unknown")
+            repository=$(parse_potion_field "$temp_manifest" "repository" 2>/dev/null || echo "")
+          else
+            # Fallback: try to extract with grep/sed
+            version=$(grep -E "^[[:space:]]*version[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "unknown")
+            author=$(grep -E "^[[:space:]]*author[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "unknown")
+            description=$(grep -E "^[[:space:]]*description[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "No description")
+            license=$(grep -E "^[[:space:]]*license[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "unknown")
+            repository=$(grep -E "^[[:space:]]*repository[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "")
+          fi
+          
+          echo "Version: $version"
+          echo "Author: $author"
+          echo "Description: $description"
+          echo "License: $license"
+          [ -n "$repository" ] && echo "Repository: $repository"
+          echo ""
+          rm -f "$temp_manifest"
+        fi
+      fi
+      
       display_plugin_security_status "$name"
       return 0
     fi
