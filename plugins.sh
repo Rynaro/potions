@@ -203,15 +203,8 @@ cmd_info() {
 
 # Command: create (scaffold new plugin)
 cmd_create() {
-  local plugin_name="$1"
-  
-  if [ -z "$plugin_name" ]; then
-    log_error "Usage: $0 create <plugin_name>"
-    exit 1
-  fi
-  
   source "$SCRIPT_DIR/plugins/scaffold_plugin.sh"
-  create_plugin "$plugin_name"
+  create_plugin "$@"
 }
 
 # Command: verify
@@ -290,6 +283,42 @@ cmd_clean() {
   log_success "Cleanup complete"
 }
 
+# Command: registry-sync
+cmd_registry_sync() {
+  # Source registry module
+  if [ -z "$REGISTRY_SOURCED" ]; then
+    source "$SCRIPT_DIR/plugins/core/registry.sh" 2>/dev/null || {
+      log_error "Registry module not available"
+      return 1
+    }
+  fi
+  
+  if command -v registry_sync > /dev/null 2>&1; then
+    registry_sync
+  else
+    log_error "Registry sync function not available"
+    return 1
+  fi
+}
+
+# Command: registry-status
+cmd_registry_status() {
+  # Source registry module
+  if [ -z "$REGISTRY_SOURCED" ]; then
+    source "$SCRIPT_DIR/plugins/core/registry.sh" 2>/dev/null || {
+      log_error "Registry module not available"
+      return 1
+    }
+  fi
+  
+  if command -v registry_status > /dev/null 2>&1; then
+    registry_status
+  else
+    log_error "Registry status function not available"
+    return 1
+  fi
+}
+
 # Command: help
 cmd_help() {
   show_banner
@@ -319,7 +348,7 @@ ${BOLD}COMMANDS:${NC}
     
     ${CYAN}info${NC} <plugin>             Show plugin details
     
-    ${CYAN}create${NC} <name>             Scaffold a new plugin
+    ${CYAN}create${NC} <name> [--potion]  Scaffold a new plugin (--potion for YAML format)
     
     ${CYAN}verify${NC} <plugin>           Run security audit on a plugin
     
@@ -328,6 +357,9 @@ ${BOLD}COMMANDS:${NC}
     ${CYAN}regenerate-init${NC}           Regenerate the plugin init script
     
     ${CYAN}clean${NC}                     Clean up orphaned entries
+    
+    ${CYAN}registry-sync${NC}             Sync plugin registry cache
+    ${CYAN}registry-status${NC}           Show registry connection status
     
     ${CYAN}help${NC}                      Show this help message
 
@@ -407,6 +439,12 @@ main() {
       ;;
     clean|cleanup)
       cmd_clean
+      ;;
+    registry-sync|sync)
+      cmd_registry_sync
+      ;;
+    registry-status|registry)
+      cmd_registry_status
       ;;
     help|--help|-h)
       cmd_help
