@@ -22,7 +22,8 @@ fi
 MANIFEST_REQUIRED_FIELDS=("name" "version" "description" "author" "potions_min_version")
 
 # Required files for a valid plugin
-PLUGIN_REQUIRED_FILES=("plugin.potions.json" "install.sh" "README.md")
+# Note: manifest can be either plugin.potions.json (JSON) or .potion (YAML)
+PLUGIN_REQUIRED_FILES=("install.sh" "README.md")
 
 # Parse JSON field from manifest using native bash (no jq dependency)
 # Usage: parse_manifest_field <manifest_file> <field_name>
@@ -58,6 +59,12 @@ parse_manifest_array() {
     return 1
   fi
   
+  # Check if it's YAML or JSON
+  if is_yaml_manifest "$manifest_file"; then
+    parse_potion_array "$manifest_file" "$field"
+    return $?
+  fi
+  
   # Extract array values (simplified parser for flat arrays)
   local values
   values=$(grep -o "\"$field\"[[:space:]]*:[[:space:]]*\[[^]]*\]" "$manifest_file" 2>/dev/null | \
@@ -69,65 +76,272 @@ parse_manifest_array() {
   echo "$values"
 }
 
+# Check if manifest file is YAML format (.potion)
+# Usage: is_yaml_manifest <manifest_file>
+is_yaml_manifest() {
+  local manifest_file="$1"
+  
+  if [ ! -f "$manifest_file" ]; then
+    return 1
+  fi
+  
+  # Check file extension
+  if echo "$manifest_file" | grep -qE '\.potion$'; then
+    return 0
+  fi
+  
+  # Check if it starts with YAML-like content (not JSON)
+  local first_line
+  first_line=$(head -1 "$manifest_file" | tr -d '[:space:]')
+  
+  # YAML typically starts with a key (no quotes) or comment
+  if echo "$first_line" | grep -qE '^[a-zA-Z_][a-zA-Z0-9_]*:' || echo "$first_line" | grep -qE '^#'; then
+    return 0
+  fi
+  
+  # If it starts with {, it's likely JSON
+  if echo "$first_line" | grep -qE '^{'; then
+    return 1
+  fi
+  
+  # Default: assume YAML if not clearly JSON
+  return 0
+}
+
+# Find manifest file in plugin directory (supports both formats)
+# Usage: find_manifest_file <plugin_path>
+find_manifest_file() {
+  local plugin_path="$1"
+  
+  # Prefer .potion (YAML) if both exist
+  if [ -f "$plugin_path/.potion" ]; then
+    echo "$plugin_path/.potion"
+    return 0
+  fi
+  
+  if [ -f "$plugin_path/plugin.potions.json" ]; then
+    echo "$plugin_path/plugin.potions.json"
+    return 0
+  fi
+  
+  return 1
+}
+
+# Parse YAML field from .potion manifest
+# Usage: parse_potion_field <manifest_file> <field_name>
+parse_potion_field() {
+  local manifest_file="$1"
+  local field="$2"
+  
+  if [ ! -f "$manifest_file" ]; then
+    return 1
+  fi
+  
+  # Simple YAML parser using grep/sed
+  # Handles: field: value, field: "value", field: 'value'
+  local value
+  value=$(grep -E "^[[:space:]]*${field}[[:space:]]*:" "$manifest_file" 2>/dev/null | \
+          head -1 | \
+          sed -E "s/^[[:space:]]*${field}[[:space:]]*:[[:space:]]*//" | \
+          sed -E "s/^[\"']//;s/[\"']$//" | \
+          sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  
+  if [ -n "$value" ]; then
+    echo "$value"
+    return 0
+  fi
+  
+  return 1
+}
+
+# Parse YAML array field from .potion manifest
+# Usage: parse_potion_array <manifest_file> <field_name>
+parse_potion_array() {
+  local manifest_file="$1"
+  local field="$2"
+  
+  if [ ! -f "$manifest_file" ]; then
+    return 1
+  fi
+  
+  # Find the array field
+  local in_array=false
+  local values=""
+  
+  while IFS= read -r line; do
+    # Check if this is the array field
+    if echo "$line" | grep -qE "^[[:space:]]*${field}[[:space:]]*:"; then
+      in_array=true
+      # Check if it's inline array: field: [value1, value2]
+      if echo "$line" | grep -qE '\[.*\]'; then
+        values=$(echo "$line" | sed -E "s/^[[:space:]]*${field}[[:space:]]*:[[:space:]]*\[//" | \
+                 sed 's/\].*$//' | \
+                 tr ',' '\n' | \
+                 sed "s/^[[:space:]]*[\"']//;s/[\"'][[:space:]]*$//" | \
+                 sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
+                 grep -v '^$')
+        echo "$values"
+        return 0
+      fi
+      continue
+    fi
+    
+    # If we're in the array, collect values
+    if [ "$in_array" = true ]; then
+      # Check if we've hit the next top-level key (end of array)
+      if echo "$line" | grep -qE '^[[:space:]]*[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*:'; then
+        break
+      fi
+      
+      # Extract value from list item: - value or - "value"
+      local item
+      item=$(echo "$line" | sed -E 's/^[[:space:]]*-[[:space:]]*//' | \
+             sed -E "s/^[\"']//;s/[\"']$//" | \
+             sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      
+      if [ -n "$item" ]; then
+        if [ -z "$values" ]; then
+          values="$item"
+        else
+          values="$values"$'\n'"$item"
+        fi
+      fi
+    fi
+  done < "$manifest_file"
+  
+  if [ -n "$values" ]; then
+    echo "$values"
+    return 0
+  fi
+  
+  return 1
+}
+
 # Get plugin name from manifest
 # Usage: get_plugin_name <plugin_path>
 get_plugin_name() {
   local plugin_path="$1"
-  local manifest="$plugin_path/plugin.potions.json"
-  parse_manifest_field "$manifest" "name"
+  local manifest
+  manifest=$(find_manifest_file "$plugin_path")
+  
+  if [ -z "$manifest" ]; then
+    return 1
+  fi
+  
+  if is_yaml_manifest "$manifest"; then
+    parse_potion_field "$manifest" "name"
+  else
+    parse_manifest_field "$manifest" "name"
+  fi
 }
 
 # Get plugin version from manifest
 # Usage: get_plugin_version <plugin_path>
 get_plugin_version() {
   local plugin_path="$1"
-  local manifest="$plugin_path/plugin.potions.json"
-  parse_manifest_field "$manifest" "version"
+  local manifest
+  manifest=$(find_manifest_file "$plugin_path")
+  
+  if [ -z "$manifest" ]; then
+    return 1
+  fi
+  
+  if is_yaml_manifest "$manifest"; then
+    parse_potion_field "$manifest" "version"
+  else
+    parse_manifest_field "$manifest" "version"
+  fi
 }
 
 # Get minimum Potions version required by plugin
 # Usage: get_potions_min_version <plugin_path>
 get_potions_min_version() {
   local plugin_path="$1"
-  local manifest="$plugin_path/plugin.potions.json"
-  parse_manifest_field "$manifest" "potions_min_version"
+  local manifest
+  manifest=$(find_manifest_file "$plugin_path")
+  
+  if [ -z "$manifest" ]; then
+    return 1
+  fi
+  
+  if is_yaml_manifest "$manifest"; then
+    parse_potion_field "$manifest" "potions_min_version"
+  else
+    parse_manifest_field "$manifest" "potions_min_version"
+  fi
 }
 
 # Get plugin author from manifest
 # Usage: get_plugin_author <plugin_path>
 get_plugin_author() {
   local plugin_path="$1"
-  local manifest="$plugin_path/plugin.potions.json"
-  parse_manifest_field "$manifest" "author"
+  local manifest
+  manifest=$(find_manifest_file "$plugin_path")
+  
+  if [ -z "$manifest" ]; then
+    return 1
+  fi
+  
+  if is_yaml_manifest "$manifest"; then
+    parse_potion_field "$manifest" "author"
+  else
+    parse_manifest_field "$manifest" "author"
+  fi
 }
 
 # Get plugin description from manifest
 # Usage: get_plugin_description <plugin_path>
 get_plugin_description() {
   local plugin_path="$1"
-  local manifest="$plugin_path/plugin.potions.json"
-  parse_manifest_field "$manifest" "description"
+  local manifest
+  manifest=$(find_manifest_file "$plugin_path")
+  
+  if [ -z "$manifest" ]; then
+    return 1
+  fi
+  
+  if is_yaml_manifest "$manifest"; then
+    parse_potion_field "$manifest" "description"
+  else
+    parse_manifest_field "$manifest" "description"
+  fi
 }
 
 # Get plugin license from manifest
 # Usage: get_plugin_license <plugin_path>
 get_plugin_license() {
   local plugin_path="$1"
-  local manifest="$plugin_path/plugin.potions.json"
-  parse_manifest_field "$manifest" "license"
+  local manifest
+  manifest=$(find_manifest_file "$plugin_path")
+  
+  if [ -z "$manifest" ]; then
+    return 1
+  fi
+  
+  if is_yaml_manifest "$manifest"; then
+    parse_potion_field "$manifest" "license"
+  else
+    parse_manifest_field "$manifest" "license"
+  fi
 }
 
 # Get supported platforms from manifest
 # Usage: get_plugin_platforms <plugin_path>
 get_plugin_platforms() {
   local plugin_path="$1"
-  local manifest="$plugin_path/plugin.potions.json"
+  local manifest
+  manifest=$(find_manifest_file "$plugin_path")
+  
+  if [ -z "$manifest" ]; then
+    return 1
+  fi
+  
   parse_manifest_array "$manifest" "platforms"
 }
 
-# Validate that manifest file is valid JSON
-# Usage: validate_manifest_json <manifest_file>
-validate_manifest_json() {
+# Validate that manifest file is valid JSON or YAML
+# Usage: validate_manifest_format <manifest_file>
+validate_manifest_format() {
   local manifest_file="$1"
   
   if [ ! -f "$manifest_file" ]; then
@@ -135,28 +349,49 @@ validate_manifest_json() {
     return 1
   fi
   
-  # Basic JSON structure validation
-  # Check for opening and closing braces
-  local first_char last_char
-  first_char=$(head -c1 "$manifest_file" | tr -d '[:space:]')
-  last_char=$(tail -c2 "$manifest_file" | head -c1 | tr -d '[:space:]')
-  
-  if [ "$first_char" != "{" ] || [ "$last_char" != "}" ]; then
-    log "Invalid JSON structure in manifest"
-    return 1
+  if is_yaml_manifest "$manifest_file"; then
+    # Basic YAML validation - check it's not empty and has some structure
+    if [ ! -s "$manifest_file" ]; then
+      log "Manifest file is empty"
+      return 1
+    fi
+    
+    # Check for at least one key-value pair
+    if ! grep -qE '^[[:space:]]*[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*:' "$manifest_file"; then
+      log "Invalid YAML structure in manifest"
+      return 1
+    fi
+    
+    return 0
+  else
+    # Basic JSON structure validation
+    # Check for opening and closing braces
+    local first_char last_char
+    first_char=$(head -c1 "$manifest_file" | tr -d '[:space:]')
+    last_char=$(tail -c2 "$manifest_file" | head -c1 | tr -d '[:space:]')
+    
+    if [ "$first_char" != "{" ] || [ "$last_char" != "}" ]; then
+      log "Invalid JSON structure in manifest"
+      return 1
+    fi
+    
+    # Check for balanced braces (simple check)
+    local open_braces close_braces
+    open_braces=$(grep -o '{' "$manifest_file" | wc -l | tr -d ' ')
+    close_braces=$(grep -o '}' "$manifest_file" | wc -l | tr -d ' ')
+    
+    if [ "$open_braces" != "$close_braces" ]; then
+      log "Unbalanced braces in manifest JSON"
+      return 1
+    fi
+    
+    return 0
   fi
-  
-  # Check for balanced braces (simple check)
-  local open_braces close_braces
-  open_braces=$(grep -o '{' "$manifest_file" | wc -l | tr -d ' ')
-  close_braces=$(grep -o '}' "$manifest_file" | wc -l | tr -d ' ')
-  
-  if [ "$open_braces" != "$close_braces" ]; then
-    log "Unbalanced braces in manifest JSON"
-    return 1
-  fi
-  
-  return 0
+}
+
+# Legacy function name for backward compatibility
+validate_manifest_json() {
+  validate_manifest_format "$@"
 }
 
 # Validate manifest has all required fields
@@ -165,8 +400,20 @@ validate_manifest_fields() {
   local manifest_file="$1"
   local missing_fields=()
   
+  local is_yaml=false
+  if is_yaml_manifest "$manifest_file"; then
+    is_yaml=true
+  fi
+  
   for field in "${MANIFEST_REQUIRED_FIELDS[@]}"; do
-    if ! parse_manifest_field "$manifest_file" "$field" > /dev/null 2>&1; then
+    local value
+    if [ "$is_yaml" = true ]; then
+      value=$(parse_potion_field "$manifest_file" "$field" 2>/dev/null)
+    else
+      value=$(parse_manifest_field "$manifest_file" "$field" 2>/dev/null)
+    fi
+    
+    if [ -z "$value" ]; then
       missing_fields+=("$field")
     fi
   done
@@ -185,6 +432,14 @@ validate_plugin_files() {
   local plugin_path="$1"
   local missing_files=()
   
+  # Check for manifest file (either format)
+  local manifest
+  manifest=$(find_manifest_file "$plugin_path")
+  if [ -z "$manifest" ]; then
+    missing_files+=("manifest (.potion or plugin.potions.json)")
+  fi
+  
+  # Check other required files
   for file in "${PLUGIN_REQUIRED_FILES[@]}"; do
     if [ ! -f "$plugin_path/$file" ]; then
       missing_files+=("$file")
@@ -240,7 +495,8 @@ validate_plugin_platform() {
 # Usage: validate_plugin <plugin_path>
 validate_plugin() {
   local plugin_path="$1"
-  local manifest_file="$plugin_path/plugin.potions.json"
+  local manifest_file
+  manifest_file=$(find_manifest_file "$plugin_path")
   local errors=0
   
   log "Validating plugin at: $plugin_path"
@@ -250,13 +506,18 @@ validate_plugin() {
     errors=$((errors + 1))
   fi
   
-  # Validate manifest JSON structure
-  if ! validate_manifest_json "$manifest_file"; then
-    errors=$((errors + 1))
-  fi
-  
-  # Validate required fields
-  if ! validate_manifest_fields "$manifest_file"; then
+  # Validate manifest format (JSON or YAML)
+  if [ -n "$manifest_file" ]; then
+    if ! validate_manifest_format "$manifest_file"; then
+      errors=$((errors + 1))
+    fi
+    
+    # Validate required fields
+    if ! validate_manifest_fields "$manifest_file"; then
+      errors=$((errors + 1))
+    fi
+  else
+    log "No manifest file found"
     errors=$((errors + 1))
   fi
   
@@ -306,7 +567,8 @@ generate_plugin_checksums() {
 # Usage: verify_plugin_checksums <plugin_path>
 verify_plugin_checksums() {
   local plugin_path="$1"
-  local manifest_file="$plugin_path/plugin.potions.json"
+  local manifest_file
+  manifest_file=$(find_manifest_file "$plugin_path")
   
   # This is a simplified check - full implementation would parse checksums from manifest
   # and compare with actual file checksums
