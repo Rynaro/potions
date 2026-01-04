@@ -18,7 +18,12 @@ if [ -z "$ACCESSORIES_SOURCED" ]; then
   source "$REPO_ROOT/packages/accessories.sh"
 fi
 
-# Registry file location
+# Source registry client if available
+if [ -z "$REGISTRY_SOURCED" ]; then
+  source "$CORE_DIR/registry.sh" 2>/dev/null || true
+fi
+
+# Registry file location (fallback for backward compatibility)
 VERIFIED_REGISTRY="$PLUGINS_DIR/registry/verified.txt"
 
 # Check if a path is a local plugin (filesystem path)
@@ -42,13 +47,33 @@ is_local_plugin() {
 is_verified_plugin() {
   local plugin_spec="$1"
   
-  if [ ! -f "$VERIFIED_REGISTRY" ]; then
-    log "Verified registry not found: $VERIFIED_REGISTRY"
-    return 1
+  # Try registry first (if available)
+  if [ -n "$REGISTRY_SOURCED" ] && command -v registry_is_verified > /dev/null 2>&1; then
+    # Extract plugin name from spec (handle owner/repo format)
+    local plugin_name
+    if echo "$plugin_spec" | grep -q "/"; then
+      # It's owner/repo format - extract repo name
+      plugin_name=$(basename "$plugin_spec")
+    else
+      plugin_name="$plugin_spec"
+    fi
+    
+    if registry_is_verified "$plugin_name"; then
+      return 0
+    fi
+    
+    # Also try with full owner/repo format
+    if registry_is_verified "$plugin_spec"; then
+      return 0
+    fi
   fi
   
-  # Check if plugin is in registry (format: owner/repo|version|checksum_url|description)
-  grep -q "^${plugin_spec}|" "$VERIFIED_REGISTRY" 2>/dev/null
+  # Fallback to local verified.txt for backward compatibility
+  if [ -f "$VERIFIED_REGISTRY" ]; then
+    grep -q "^${plugin_spec}|" "$VERIFIED_REGISTRY" 2>/dev/null && return 0
+  fi
+  
+  return 1
 }
 
 # Get verified plugin info from registry
@@ -56,11 +81,37 @@ is_verified_plugin() {
 get_verified_plugin_info() {
   local plugin_spec="$1"
   
-  if [ ! -f "$VERIFIED_REGISTRY" ]; then
-    return 1
+  # Try registry first (if available)
+  if [ -n "$REGISTRY_SOURCED" ] && command -v registry_get_plugin_info > /dev/null 2>&1; then
+    local plugin_name
+    if echo "$plugin_spec" | grep -q "/"; then
+      plugin_name=$(basename "$plugin_spec")
+    else
+      plugin_name="$plugin_spec"
+    fi
+    
+    local info
+    info=$(registry_get_plugin_info "$plugin_name" 2>/dev/null)
+    if [ -n "$info" ]; then
+      echo "$info"
+      return 0
+    fi
+    
+    # Try with full spec
+    info=$(registry_get_plugin_info "$plugin_spec" 2>/dev/null)
+    if [ -n "$info" ]; then
+      echo "$info"
+      return 0
+    fi
   fi
   
-  grep "^${plugin_spec}|" "$VERIFIED_REGISTRY" | head -1
+  # Fallback to local verified.txt
+  if [ -f "$VERIFIED_REGISTRY" ]; then
+    grep "^${plugin_spec}|" "$VERIFIED_REGISTRY" | head -1
+    return 0
+  fi
+  
+  return 1
 }
 
 # Get minimum version for verified plugin
@@ -100,11 +151,14 @@ verify_plugin_signature() {
     return 0
   fi
   
-  # Check if plugin is in verified registry
+  # Check if plugin is in verified registry (tries registry first, then local)
   if ! is_verified_plugin "$plugin_spec"; then
     log "Plugin '$plugin_spec' is not in the verified registry"
     log "Only verified plugins from the Potions registry can be installed remotely"
     log "For local plugins, use: local_plugin '/path/to/plugin'"
+    log ""
+    log "To submit a plugin to the registry, see:"
+    log "  https://github.com/Rynaro/potions-shelf"
     return 1
   fi
   
@@ -185,21 +239,51 @@ verify_plugin_checksums() {
 # List all verified plugins
 # Usage: list_verified_plugins
 list_verified_plugins() {
-  if [ ! -f "$VERIFIED_REGISTRY" ]; then
-    log "Verified registry not found"
-    return 1
+  # Try registry first (if available)
+  if [ -n "$REGISTRY_SOURCED" ] && command -v registry_search > /dev/null 2>&1; then
+    echo "Verified Potions Plugins (from registry):"
+    echo "========================================="
+    echo ""
+    
+    local plugins
+    plugins=$(registry_search "" 2>/dev/null)
+    
+    if [ -n "$plugins" ]; then
+      for plugin in $plugins; do
+        # Get more info from registry if possible
+        local info
+        info=$(registry_get_plugin_info "$plugin" 2>/dev/null | head -5)
+        if [ -n "$info" ]; then
+          # Extract description if available
+          local desc
+          desc=$(echo "$info" | grep -o '"description"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)".*/\1/' | head -1)
+          printf "  %-35s %s\n" "$plugin" "${desc:-No description}"
+        else
+          printf "  %-35s\n" "$plugin"
+        fi
+      done
+      return 0
+    fi
   fi
   
-  echo "Verified Potions Plugins:"
-  echo "========================="
-  
-  while IFS='|' read -r repo version _ description; do
-    # Skip comments and empty lines
-    [[ "$repo" =~ ^# ]] && continue
-    [ -z "$repo" ] && continue
+  # Fallback to local verified.txt
+  if [ -f "$VERIFIED_REGISTRY" ]; then
+    echo "Verified Potions Plugins (local):"
+    echo "================================="
+    echo ""
     
-    printf "%-35s %-8s %s\n" "$repo" "v$version" "$description"
-  done < "$VERIFIED_REGISTRY"
+    while IFS='|' read -r repo version _ description; do
+      # Skip comments and empty lines
+      [[ "$repo" =~ ^# ]] && continue
+      [ -z "$repo" ] && continue
+      
+      printf "  %-35s %-8s %s\n" "$repo" "v$version" "$description"
+    done < "$VERIFIED_REGISTRY"
+    return 0
+  fi
+  
+  log "Verified registry not found"
+  return 1
 }
 
 # Check if plugin comes from trusted source
