@@ -41,15 +41,26 @@
 !plugins.sh
 !plugins/
 !plugins/*.sh
+!plugins/*.md
+
+# Plugin core modules
+!plugins/core/
+!plugins/core/*.sh
+
+# Plugin registry
+!plugins/registry/
+!plugins/registry/*.txt
+!plugins/registry/*.sh
+
+# Plugin templates
 !plugins/templates/
 !plugins/templates/*.sh
-!plugins/alchemists-orchid/
-!plugins/alchemists-orchid/*.sh
-!plugins/alchemists-orchid/*.md
-!plugins/alchemists-orchid/packages/
-!plugins/alchemists-orchid/packages/*.sh
-!plugins/alchemists-orchid/config/
-!plugins/alchemists-orchid/config/*.lua
+!plugins/templates/*.json
+!plugins/templates/*.md
+
+# Plugin tests
+!plugins/tests/
+!plugins/tests/*.sh
 
 # Allow the .potions directory and its contents
 !.potions
@@ -91,6 +102,9 @@
 !.potions/bin
 !.potions/bin/
 !.potions/bin/potions
+
+# Allow Potionfile template
+!.potions/Potionfile.template
 
 # Git configuration files
 !.gitconfig

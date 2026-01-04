@@ -1,25 +1,41 @@
 #!/bin/bash
 
-safe_source "utilities.sh"
+# Package installation script template
+# Each package script handles installation of a specific component
 
-MY_PREFERRED_PACKAGE_VERSION=1.0.0
+PACKAGE_VERSION="1.0.0"
 
+# Source utilities from parent plugin
+source "$(dirname "$0")/../utilities.sh"
+
+# Function to prepare package installation
 prepare_package() {
-  # sudo apt install -y build-essentials
+  log "Preparing package installation..."
+  # Add preparation steps
+  # Example: check for required system dependencies
 }
 
-# Function to install package 1
+# Function to install the package
 install_package() {
-  echo "Installing package 1..."
-  # Installation commands for package 1
-  echo "Installing super cool package $MY_PREFERRED_PACKAGE_VERSION"
+  log "Installing package..."
+  # Add installation commands
+  # Use platform detection for cross-platform support:
+  # if is_macos; then
+  #   brew install package
+  # elif is_termux; then
+  #   pkg install package
+  # elif is_wsl || is_linux; then
+  #   sudo apt-get install -y package
+  # fi
 }
 
+# Function to configure the package
 configure_package() {
-  # docker build ~/projects/super-duper-app
+  log "Configuring package..."
+  # Add configuration steps
 }
 
-# Run installation
+# Run installation pipeline
 prepare_package
 install_package
 configure_package

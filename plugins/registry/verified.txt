@@ -1,0 +1,29 @@
+# Verified Potions Plugins Registry
+# =================================
+#
+# This file contains the list of plugins that have been verified by the
+# Potions Quality Assurance process. Only plugins listed here can be
+# installed from remote sources.
+#
+# Format: owner/repo|min_version|checksum_url|description
+#
+# Adding a plugin to this registry:
+#   1. Plugin author submits a PR to add their plugin
+#   2. Potions maintainer reviews the plugin code
+#   3. Maintainer runs: ./plugins/registry/verify_submission.sh <repo>
+#   4. If approved, maintainer adds entry and regenerates checksums
+#
+# Security note:
+#   All plugins in this registry have been reviewed for:
+#   - No malicious code patterns
+#   - Proper variable quoting
+#   - Safe file operations
+#   - No hardcoded credentials
+#
+# ============================================================================
+
+# Official Potions Plugins
+# (No official plugins currently in registry)
+
+# Community Verified Plugins
+# (Add verified community plugins below)
