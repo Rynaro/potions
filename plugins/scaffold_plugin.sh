@@ -35,12 +35,30 @@ get_author_name() {
 
 # Create a new plugin scaffold
 create_plugin() {
-  local plugin_name="$1"
+  local plugin_name=""
+  local use_potion=false
+  
+  # Parse arguments
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --potion)
+        use_potion=true
+        shift
+        ;;
+      *)
+        if [ -z "$plugin_name" ]; then
+          plugin_name="$1"
+        fi
+        shift
+        ;;
+    esac
+  done
   
   if [ -z "$plugin_name" ]; then
-    echo "Usage: create_plugin <plugin_name>"
+    echo "Usage: create_plugin <plugin_name> [--potion]"
     echo ""
     echo "Example: create_plugin my-awesome-plugin"
+    echo "Example: create_plugin my-awesome-plugin --potion"
     exit 1
   fi
   
@@ -69,9 +87,46 @@ create_plugin() {
   local author
   author=$(get_author_name)
   
-  # Create plugin.potions.json
-  log "Creating plugin manifest..."
-  cat > "$plugin_dir/plugin.potions.json" << EOF
+  # Create manifest (JSON or YAML based on flag)
+  if [ "$use_potion" = true ]; then
+    log "Creating plugin manifest (.potion format)..."
+    cat > "$plugin_dir/.potion" << EOF
+name: $plugin_name
+version: "0.0.1"
+description: A Potions plugin
+author: $author
+repository: https://github.com/yourusername/$plugin_name
+license: MIT
+tags: []
+
+# Minimum Potions version required
+potions_min_version: "2.6.0"
+
+# Supported platforms
+platforms:
+  - macos
+  - linux
+  - wsl
+  - termux
+
+# Plugin dependencies
+dependencies: []
+
+# What this plugin provides
+provides:
+  nvim: []
+  shell: []
+  tmux: []
+
+# Optional homepage
+# homepage: https://example.com
+
+# Optional checksum (for security)
+# checksum: sha256:...
+EOF
+  else
+    log "Creating plugin manifest (JSON format)..."
+    cat > "$plugin_dir/plugin.potions.json" << EOF
 {
   "name": "$plugin_name",
   "version": "0.0.1",
@@ -93,6 +148,7 @@ create_plugin() {
   "checksums": {}
 }
 EOF
+  fi
   
   # Create install.sh
   log "Creating install.sh..."
