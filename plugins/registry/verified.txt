@@ -23,7 +23,7 @@
 # ============================================================================
 
 # Official Potions Plugins
-Rynaro/potions-alchemists-orchid|1.0.0|https://raw.githubusercontent.com/Rynaro/potions-alchemists-orchid/main/.checksums|NeoVim Alchemist's Orchid colorscheme
+# (No official plugins currently in registry)
 
 # Community Verified Plugins
 # (Add verified community plugins below)
