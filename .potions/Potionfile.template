@@ -4,20 +4,25 @@
 # Similar to a Gemfile, it provides a declarative way to manage plugins.
 #
 # SYNTAX:
-#   plugin 'name'                           # from official registry
+#   plugin 'name'                           # from Potions Shelf Registry
 #   plugin 'owner/repo'                     # from GitHub (verified only)
 #   plugin 'owner/repo', branch: 'main'     # specific branch
 #   plugin 'owner/repo', tag: 'v1.0.0'      # specific version
 #   local_plugin 'path/to/plugin'           # local plugin (no verification)
 #
 # PLUGIN TYPES:
-#   - Remote plugins: Must be in the verified Potions registry
+#   - Remote plugins: Fetched from Potions Shelf Registry (https://github.com/Rynaro/potions-shelf)
 #   - Local plugins: Your own plugins, no verification required
+#
+# REGISTRY:
+#   Plugins are automatically fetched from the Potions Shelf Registry.
+#   Use 'potions plugin registry-sync' to manually update the registry cache.
+#   Use 'potions plugin search' to discover available plugins.
 #
 # EXAMPLES:
 #
-#   # Install the official Alchemist's Orchid NeoVim theme
-#   plugin 'alchemists-orchid'
+#   # Install the official Orchid Flask NeoVim theme
+#   plugin 'orchid-flask'
 #
 #   # Install a verified plugin from GitHub with specific version
 #   plugin 'Rynaro/potions-docker', tag: 'v2.0.0'
@@ -30,13 +35,17 @@
 #   potions plugin update           # Update all plugins
 #   potions plugin list             # List installed plugins
 #   potions plugin status           # Show plugin status
+#   potions plugin search [query]   # Search available plugins in registry
+#   potions plugin registry-sync    # Sync registry cache
+#   potions plugin registry-status  # Show registry connection status
 #
 # For more information, see:
 #   https://github.com/Rynaro/potions/blob/main/plugins/README.md
+#   Registry: https://github.com/Rynaro/potions-shelf
 #
 # ============================================================================
 
 # Add your plugins below:
 
-# Example: Official Alchemist's Orchid theme
-# plugin 'alchemists-orchid'
+# Example: Official Orchid Flask theme
+# plugin 'orchid-flask'

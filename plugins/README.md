@@ -5,10 +5,11 @@ A powerful, secure, and easy-to-use plugin system for extending Potions function
 ## Overview
 
 The Potions plugin system allows you to:
-- Install verified plugins from the Potions registry
+- Install verified plugins from the [Potions Shelf Registry](https://github.com/Rynaro/potions-shelf)
 - Create and use your own local plugins
 - Manage plugin lifecycle (install, uninstall, activate, deactivate)
 - Extend NeoVim, shell, and tmux configurations
+- Search and discover plugins from the official registry
 
 ## Quick Start
 
@@ -18,7 +19,7 @@ The Potions plugin system allows you to:
 
 ```bash
 # Official verified plugins
-plugin 'alchemists-orchid'
+plugin 'orchid-flask'
 
 # GitHub repos (must be verified)
 plugin 'Rynaro/potions-docker', tag: 'v1.0.0'
@@ -59,7 +60,14 @@ potions plugin uninstall my-plugin
 
 ### Verified Plugins (Remote)
 
-Remote plugins must be in the verified Potions registry. This ensures:
+Remote plugins are fetched from the [Potions Shelf Registry](https://github.com/Rynaro/potions-shelf), a GitHub-hosted registry that provides:
+- Automated validation and security scanning
+- Easy plugin discovery via search
+- Manifest-based plugin definitions (.potion format)
+- Dependency resolution
+- Checksum verification
+
+Plugins in the registry are verified to ensure:
 - Code has been reviewed by Potions maintainers
 - No malicious patterns detected
 - Follows Potions coding standards
@@ -77,13 +85,18 @@ Your own plugins that bypass verification:
 ### Scaffold a New Plugin
 
 ```bash
+# Create plugin with JSON manifest (default)
 ./plugins.sh create my-awesome-plugin
+
+# Create plugin with YAML manifest (.potion format for registry)
+./plugins.sh create my-awesome-plugin --potion
 ```
 
 This creates:
 ```
 plugins/my-awesome-plugin/
-├── plugin.potions.json    # Plugin manifest
+├── plugin.potions.json    # Plugin manifest (JSON) OR
+├── .potion                # Plugin manifest (YAML, if --potion used)
 ├── install.sh             # Installation script
 ├── uninstall.sh           # Uninstallation script
 ├── activate.sh            # Activation script
@@ -95,6 +108,8 @@ plugins/my-awesome-plugin/
 │   └── init.zsh
 └── README.md              # Documentation
 ```
+
+**Note:** Use `--potion` flag to generate a YAML manifest (.potion format) which is required for submission to the Potions Shelf Registry.
 
 ### Plugin Manifest
 
@@ -168,7 +183,7 @@ Located at `~/.potions/Potionfile`, declares which plugins to install:
 
 ```bash
 # Plugin from registry
-plugin 'alchemists-orchid'
+plugin 'orchid-flask'
 
 # Plugin from GitHub with specific version
 plugin 'Rynaro/potions-docker', tag: 'v2.0.0'
@@ -213,14 +228,41 @@ Active plugins are loaded at shell startup via `~/.potions/plugins/.init.zsh`. T
 - Shell configurations from `config/*.zsh`
 - Shell configurations from `config/*.sh`
 
+## Registry Management
+
+### Sync Registry Cache
+
+```bash
+# Manually sync the registry cache
+./plugins.sh registry-sync
+
+# Check registry connection status
+./plugins.sh registry-status
+```
+
+The registry cache is automatically updated when needed (every 24 hours by default).
+
+### Search Plugins
+
+```bash
+# List all available plugins
+./plugins.sh search
+
+# Search for specific plugins
+./plugins.sh search docker
+./plugins.sh search theme
+```
+
 ## Contributing Plugins
 
-To add your plugin to the verified registry:
+To add your plugin to the [Potions Shelf Registry](https://github.com/Rynaro/potions-shelf):
 
-1. Ensure your plugin follows the structure above
-2. Run validation: `./plugins.sh validate your-plugin`
-3. Submit a PR to the Potions repository
-4. Maintainer will review and verify your plugin
+1. Create your plugin with `--potion` flag: `./plugins.sh create my-plugin --potion`
+2. Ensure your plugin follows the structure above
+3. Run validation: `./plugins.sh validate my-plugin`
+4. Submit a PR to the [potions-shelf repository](https://github.com/Rynaro/potions-shelf) with your `.potion` manifest
+5. The registry's automated validation will verify your plugin
+6. Once approved, your plugin will be available to all Potions users
 
 ## Migration
 
