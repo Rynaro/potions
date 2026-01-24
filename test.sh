@@ -205,6 +205,7 @@ test_repo_structure() {
   assert_dir_exists "$SCRIPT_DIR/packages/common" "packages/common exists"
   assert_dir_exists "$SCRIPT_DIR/packages/macos" "packages/macos exists"
   assert_dir_exists "$SCRIPT_DIR/packages/debian" "packages/debian exists"
+  assert_dir_exists "$SCRIPT_DIR/packages/fedora" "packages/fedora exists"
 }
 
 test_bash_syntax() {
@@ -227,7 +228,7 @@ test_bash_syntax() {
   done
 
   # Platform packages (spot check)
-  for platform in macos debian wsl termux; do
+  for platform in macos debian fedora wsl termux; do
     if [ -d "$SCRIPT_DIR/packages/$platform" ]; then
       for script in "$SCRIPT_DIR/packages/$platform"/*.sh; do
         if [ -f "$script" ]; then
@@ -367,6 +368,14 @@ test_platform_detection() {
     TESTS_PASSED=$((TESTS_PASSED + 1))
   else
     log_failure "is_termux function not found"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  if type is_fedora &>/dev/null; then
+    log_success "is_fedora function exists"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "is_fedora function not found"
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 }
