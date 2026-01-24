@@ -24,7 +24,11 @@ install_package() {
   #   brew install package
   # elif is_termux; then
   #   pkg install package
-  # elif is_wsl || is_linux; then
+  # elif is_wsl; then
+  #   sudo apt-get install -y package
+  # elif is_fedora; then
+  #   sudo dnf install -y package
+  # elif is_linux; then
   #   sudo apt-get install -y package
   # fi
 }

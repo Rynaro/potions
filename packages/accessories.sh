@@ -37,8 +37,18 @@ update_repositories() {
     brew update
   elif is_termux; then
     pkg update
-  elif is_wsl || is_linux; then
+  elif is_wsl; then
     if is_apt_package_manager; then
+      log "If you do not need sudo for any reason, modify this script!"
+      sudo apt-get update
+    else
+      exit_with_message "No supported package manager have been found! Consider move to another environment supported! Or create a patch! :)"
+    fi
+  elif is_linux; then
+    if is_fedora || is_dnf_package_manager; then
+      log "If you do not need sudo for any reason, modify this script!"
+      sudo dnf makecache
+    elif is_apt_package_manager; then
       log "If you do not need sudo for any reason, modify this script!"
       sudo apt-get update
     else
@@ -95,6 +105,16 @@ is_linux() {
   [ $OS_TYPE = "Linux" ]
 }
 
+# Function to check if the environment is Fedora (or Fedora-based)
+is_fedora() {
+  [ -f /etc/fedora-release ] || grep -qi '^ID=fedora' /etc/os-release 2>/dev/null
+}
+
+# Function to check if dnf is the package manager
+is_dnf_package_manager() {
+  command_exists dnf
+}
+
 install_package() {
   local package=${1:?"Package name is required"}
   local skip_check=${2:-false}
@@ -116,7 +136,11 @@ install_package() {
   elif is_wsl; then
     platform="wsl"
   elif is_linux; then
-    platform="debian"
+    if is_fedora; then
+      platform="fedora"
+    else
+      platform="debian"
+    fi
   fi
 
   # Validate platform

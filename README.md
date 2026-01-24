@@ -4,11 +4,11 @@
 
 **One command. Powerful dev environment. Any platform.**
 
-Potions transforms your fresh macOS, WSL, or Termux installation into a fully-configured development environment in minutes.
+Potions transforms your fresh macOS, WSL, Termux, or Fedora installation into a fully-configured development environment in minutes.
 
 ## ✨ Features
 
-- **Cross-Platform**: macOS, WSL (Windows), Termux (Android), Debian/Linux
+- **Cross-Platform**: macOS, WSL (Windows), Termux (Android), Debian/Linux, Fedora
 - **Pre-configured Tools**: Zsh, Git, NeoVim, Tmux, and more
 - **Professional CLI**: Manage your installation with `potions` commands
 - **Plugin System**: Extend functionality with custom plugins

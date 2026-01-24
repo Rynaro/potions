@@ -36,6 +36,8 @@
 !packages/termux/*.sh
 !packages/debian/
 !packages/debian/*.sh
+!packages/fedora/
+!packages/fedora/*.sh
 
 # Plugin Management System
 !plugins.sh
@@ -146,4 +148,4 @@
 !.tmux.conf
 !.tmux
 !.tmux/
-!.tmux/*.yml# Ignore everything by default
+!.tmux/*.yml
