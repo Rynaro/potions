@@ -146,6 +146,8 @@ elif [ "$OS_TYPE" = "Linux" ]; then
     OS_NAME="WSL"
   elif [ -n "$PREFIX" ] && [ -x "$PREFIX/bin/termux-info" ]; then
     OS_NAME="Termux"
+  elif [ -f /etc/fedora-release ] || grep -qi '^ID=fedora' /etc/os-release 2>/dev/null; then
+    OS_NAME="Fedora"
   else
     OS_NAME="Linux"
   fi
@@ -190,6 +192,8 @@ else
     brew install curl
   elif [ "$OS_NAME" = "Termux" ]; then
     pkg install -y curl
+  elif [ "$OS_NAME" = "Fedora" ]; then
+    sudo dnf install -y curl
   else
     # Debian/Ubuntu/WSL
     sudo apt-get update
@@ -262,6 +266,8 @@ else
       brew install unzip
     elif [ "$OS_NAME" = "Termux" ]; then
       pkg install -y unzip
+    elif [ "$OS_NAME" = "Fedora" ]; then
+      sudo dnf install -y unzip
     else
       sudo apt-get update
       sudo apt-get install -y unzip
