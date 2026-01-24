@@ -10,8 +10,14 @@ update_repositories() {
     brew update
   elif is_termux; then
     pkg update
-  elif is_wsl || is_linux; then
+  elif is_wsl; then
     sudo apt-get update
+  elif is_linux; then
+    if is_fedora || is_dnf_package_manager; then
+      sudo dnf makecache
+    else
+      sudo apt-get update
+    fi
   fi
 }
 
@@ -55,6 +61,16 @@ is_macos() {
 # Function to check if the environment is Linux-based kernel
 is_linux() {
   [ $OS_TYPE = "Linux" ]
+}
+
+# Function to check if the environment is Fedora (or Fedora-based)
+is_fedora() {
+  [ -f /etc/fedora-release ] || grep -qi '^ID=fedora' /etc/os-release 2>/dev/null
+}
+
+# Function to check if dnf is the package manager
+is_dnf_package_manager() {
+  command -v dnf &> /dev/null
 }
 
 is_debian_bookworm() {
