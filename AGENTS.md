@@ -4,7 +4,7 @@
 
 This document guides AI coding assistants working on Potions. It's designed to be platform-agnostic and works with any AI coding tool (Cursor, GitHub Copilot, Codeium, Continue, Windsurf, etc.).
 
-**What is Potions?** A cross-platform development environment setup tool that installs and configures Zsh, Git, NeoVim, Tmux on macOS, WSL, Termux, and Debian/Linux systems.
+**What is Potions?** A cross-platform development environment setup tool that installs and configures Zsh, Git, NeoVim, Tmux on macOS, WSL, Termux, Debian/Linux, and Fedora systems.
 
 ---
 
@@ -70,7 +70,7 @@ mkdir "$dir"
 
 ### 2. Cross-Platform Support
 
-All code MUST work on: **macOS**, **WSL**, **Termux**, **Debian/Linux**.
+All code MUST work on: **macOS**, **WSL**, **Termux**, **Debian/Linux**, **Fedora**.
 
 ```bash
 # ✅ Good: Platform detection
@@ -78,7 +78,11 @@ if is_macos; then
   brew install package
 elif is_termux; then
   pkg install package
-elif is_wsl || is_linux; then
+elif is_wsl; then
+  sudo apt-get install -y package
+elif is_fedora; then
+  sudo dnf install -y package
+elif is_linux; then
   sudo apt-get install -y package
 fi
 
@@ -147,8 +151,11 @@ packages/
 ├── macos/              # macOS-specific installers
 ├── wsl/                # WSL-specific installers
 ├── termux/             # Termux-specific installers
-└── debian/             # Debian/Linux-specific installers
+├── debian/             # Debian/Linux-specific installers
+└── fedora/             # Fedora (dnf) installers
 ```
+
+On Fedora, Neovim is installed via `dnf install neovim` (distro package). Other platforms may build from source. Prefer distro packages when available to reduce install overhead. `update_repositories` uses `sudo dnf makecache` on Fedora and `apt-get update` on apt-based systems.
 
 ### User Configuration (Preserved on Upgrade)
 
@@ -249,7 +256,11 @@ if is_macos; then
   brew install package
 elif is_termux; then
   pkg install package
-elif is_wsl || is_linux; then
+elif is_wsl; then
+  sudo apt-get install -y package
+elif is_fedora; then
+  sudo dnf install -y package
+elif is_linux; then
   sudo apt-get install -y package
 fi
 ```
@@ -336,6 +347,8 @@ source packages/accessories.sh
 | `is_wsl` | Running in Windows Subsystem for Linux |
 | `is_termux` | Running in Termux on Android |
 | `is_linux` | Running on any Linux-based system |
+| `is_fedora` | Running on Fedora (or Fedora-based) |
+| `is_dnf_package_manager` | dnf is available |
 | `is_apt_package_manager` | apt is available |
 
 #### Core Utilities
@@ -445,6 +458,7 @@ echo "SCRIPT_DIR: $SCRIPT_DIR"
 is_macos && echo "macOS" || echo "Not macOS"
 is_wsl && echo "WSL" || echo "Not WSL"
 is_termux && echo "Termux" || echo "Not Termux"
+is_fedora && echo "Fedora" || echo "Not Fedora"
 ```
 
 ---
@@ -482,6 +496,7 @@ These files may contain sensitive data and are gitignored:
    ```
    packages/macos/mypackage.sh
    packages/debian/mypackage.sh
+   packages/fedora/mypackage.sh
    packages/wsl/mypackage.sh
    packages/termux/mypackage.sh
    ```
@@ -509,6 +524,10 @@ These files may contain sensitive data and are gitignored:
 3. Test installation and uninstallation
 4. Document in plugin README
 
+### Known Limitations
+
+- **Fedora in WSL**: WSL is always treated as `wsl` (apt). Fedora running inside WSL still uses apt-based logic. Native Fedora uses dnf.
+
 ### Common Commands
 
 ```bash
@@ -534,7 +553,7 @@ find . -name "*.sh" -exec bash -n {} \;
 
 When working on Potions, ask yourself:
 
-1. **Platform**: Does this work on macOS, WSL, Termux, AND Debian?
+1. **Platform**: Does this work on macOS, WSL, Termux, Debian, AND Fedora?
 2. **Idempotency**: Can I run this twice without errors?
 3. **User Data**: Am I backing up before modifying user files?
 4. **Errors**: What happens if this fails? Is the message helpful?
@@ -553,7 +572,7 @@ When working on Potions, ask yourself:
 Before implementing something new, check if a pattern already exists:
 
 - **Package installation** → `install_package()`
-- **Platform detection** → `is_macos()`, `is_wsl()`, etc.
+- **Platform detection** → `is_macos()`, `is_wsl()`, `is_fedora()`, etc.
 - **Directory creation** → `ensure_directory()`
 - **Safe file sourcing** → `safe_source()`
 - **Logging** → `log()`, `log_error()`, etc.
