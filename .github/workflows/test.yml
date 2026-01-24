@@ -68,6 +68,20 @@ jobs:
       - name: Test install simulation
         run: ./install.sh --test
 
+  test-fedora:
+    name: Test on Fedora
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run test suite
+        run: ./test.sh --no-simulate
+
+      - name: Test install simulation
+        run: ./install.sh --test
+
   idempotency-test:
     name: Idempotency Test
     runs-on: ubuntu-latest
