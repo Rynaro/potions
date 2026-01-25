@@ -92,8 +92,8 @@ for file in "${CRITICAL_FILES[@]}"; do
   fi
 done
 
-# Sort for consistency
-sort -o "$CHECKSUMS_FILE" "$CHECKSUMS_FILE"
+# Sort for consistency (use LC_ALL=C for consistent ASCII sorting across platforms)
+LC_ALL=C sort -o "$CHECKSUMS_FILE" "$CHECKSUMS_FILE"
 
 echo ""
 log_info "Checksums file generated: $CHECKSUMS_FILE"

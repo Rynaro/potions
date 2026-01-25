@@ -41,11 +41,53 @@ Potions installs software and modifies user configurations. Security is paramoun
 
 ### Checksum Verification
 
-Critical files are protected by SHA256 checksums in `.checksums`. When modifying protected files:
+Critical files are protected by SHA256 checksums in `.checksums`. This ensures file integrity during upgrades and prevents tampering.
 
-1. Make your changes
-2. Run `./scripts/generate-checksums.sh` to update checksums
-3. Commit both the file changes and updated `.checksums`
+#### Critical Requirements
+
+**The `.checksums` file MUST always be sorted alphabetically.** The CI validation compares the committed file with a freshly generated (sorted) version. If the order differs, validation will fail even if checksums are correct.
+
+**Never manually edit `.checksums`.** Always use `./scripts/generate-checksums.sh` which:
+- Calculates SHA256 checksums for all critical files
+- Sorts entries alphabetically using `LC_ALL=C sort` for consistency
+- Ensures the file format matches CI expectations
+
+#### When to Update Checksums
+
+Update checksums when:
+- **Version changes** - Always update `.checksums` when bumping `.version`
+- **Critical files modified** - Any changes to protected files require checksum updates
+- **New critical files added** - Add to `CRITICAL_FILES` array in `generate-checksums.sh`
+
+#### Step-by-Step Process
+
+1. **Make your changes** to critical files or version
+2. **Run the script**: `./scripts/generate-checksums.sh`
+   - This calculates new checksums and sorts them correctly
+   - The script uses `LC_ALL=C sort` for consistent ASCII sorting across platforms
+3. **Verify the output** - Check that `.checksums` is sorted (files starting with `.` come first)
+4. **Commit together** - Always commit `.checksums` alongside file changes in the same commit
+5. **Test locally** - Run `LC_ALL=C sort .checksums | diff - .checksums` to verify it's sorted
+
+#### Why Sorting Matters
+
+The CI workflow (`version-checksum-validation.yml`) generates expected checksums and sorts them. It then compares the committed `.checksums` file using `diff`. If the order differs:
+- `diff` will report differences even though checksums match
+- CI validation fails with "Checksums file is outdated" error
+- The PR may pass (if checksums are correct but unsorted), but main branch CI will fail
+
+#### Files Protected by Checksums
+
+The following files are tracked in `.checksums`:
+- `drink.sh` - Remote installer
+- `install.sh` - Main installer
+- `upgrade.sh` - Upgrade script
+- `plugins.sh` - Plugin manager
+- `.version` - Version file
+- `.potions/.zshrc` - Zsh configuration
+- `.potions/bin/potions` - Potions binary
+
+When modifying any of these files, you MUST update `.checksums`.
 
 ---
 
@@ -473,6 +515,8 @@ Before every commit, verify:
 - [ ] **All variables quoted** - `"$var"` not `$var`
 - [ ] **No eval with untrusted data** - Never `eval "$user_input"`
 - [ ] **Checksums updated** - Run `./scripts/generate-checksums.sh` if needed
+- [ ] **Checksums sorted** - Verify `.checksums` is alphabetically sorted (use `LC_ALL=C sort .checksums | diff - .checksums` to verify)
+- [ ] **Never manually edit `.checksums`** - Always use the script to ensure proper formatting and sorting
 - [ ] **User files backed up** - Backup logic before any overwrite
 - [ ] **Error messages safe** - Don't leak paths or sensitive info
 - [ ] **Sudo usage documented** - Explain why privilege escalation is needed
