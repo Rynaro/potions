@@ -173,6 +173,34 @@ is_apt_package_manager() {
   command_exists apt
 }
 
+# Function to ensure zsh is in /etc/shells (required for chsh on Linux systems)
+ensure_zsh_in_shells() {
+  local zsh_path="$1"
+  
+  if [ ! -f "/etc/shells" ]; then
+    log "WARNING: /etc/shells not found, skipping shell registration"
+    return 0
+  fi
+  
+  # Check if zsh is already in /etc/shells
+  if grep -Fxq "$zsh_path" /etc/shells 2>/dev/null; then
+    log "Zsh path $zsh_path already in /etc/shells"
+    return 0
+  fi
+  
+  # Add zsh to /etc/shells (requires sudo on Linux)
+  if is_linux && ! is_termux; then
+    log "Adding zsh to /etc/shells..."
+    echo "$zsh_path" | sudo tee -a /etc/shells > /dev/null || {
+      log "WARNING: Failed to add zsh to /etc/shells. You may need to run: echo '$zsh_path' | sudo tee -a /etc/shells"
+      return 1
+    }
+    log "Successfully added zsh to /etc/shells"
+  fi
+  
+  return 0
+}
+
 # Function to check and create directory
 ensure_directory() {
   local dir="$1"
