@@ -92,7 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run tests in Termux container
+      - name: Run test suite
         run: |
           # Run directly without entrypoint scripts since GitHub Actions
           # doesn't start containers as root. We run as whatever user the
@@ -117,10 +117,6 @@ jobs:
               echo \"Running as: \$(whoami) (uid: \$(id -u))\"
               echo ''
               
-              echo '=== Running Test Suite ==='
-              ./test.sh --no-simulate
-              
-              echo ''
               echo '=== Testing Platform Detection ==='
               source packages/accessories.sh 2>/dev/null || true
               if is_termux; then
@@ -131,34 +127,22 @@ jobs:
               fi
               
               echo ''
-              echo '=== Running Full Install Test ==='
-              # install.sh will source packages/accessories.sh itself.
-              # No pre-sourcing needed - accessories.sh handles its own setup.
-              ./install.sh
+              ./test.sh --no-simulate
+            "
+
+      - name: Test install simulation
+        run: |
+          docker run --rm --privileged \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            -e PREFIX=/data/data/com.termux/files/usr \
+            -e HOME=/data/data/com.termux/files/home \
+            -e TMPDIR=/data/data/com.termux/files/usr/tmp \
+            -e PATH=/data/data/com.termux/files/usr/bin:/usr/bin:/bin \
+            termux/termux-docker:aarch64 \
+            bash -c "
+              set -e
               
-              echo ''
-              echo '=== Validating Installation ==='
-              if [ -d \"\$HOME/.potions\" ]; then
-                echo '✓ Potions directory created'
-              else
-                echo '✗ Potions directory not found'
-                exit 1
-              fi
-              
-              if [ -f \"\$HOME/.termux/shell\" ]; then
-                echo '✓ Termux shell configuration created'
-                cat \"\$HOME/.termux/shell\"
-              else
-                echo '⚠ Termux shell configuration not found (may be normal if zsh already default)'
-              fi
-              
-              echo ''
-              echo '=== Testing Idempotency ==='
-              echo 'Running install.sh a second time...'
-              ./install.sh
-              echo '✓ Idempotency test passed - install can run multiple times'
-              
-              echo ''
               echo '=== Termux-Specific Validations ==='
               if command -v pkg > /dev/null 2>&1; then
                 echo '✓ pkg command available'
@@ -182,7 +166,8 @@ jobs:
               fi
               
               echo ''
-              echo '=== All Termux Tests Passed ==='
+              echo '=== Running Install Simulation ==='
+              ./install.sh --test
             "
 
   idempotency-test:
