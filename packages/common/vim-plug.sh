@@ -4,8 +4,8 @@ ensure_directory "$USER_HOME_FOLDER/.config/nvim"
 ensure_directory "$POTIONS_HOME/plugged"
 echo "source $POTIONS_HOME/nvim/init.vim" > ~/.config/nvim/init.vim
 
-local target_dir="${XDG_DATA_HOME:-$USER_HOME_FOLDER/.local/share}/nvim/site/autoload"
-local plug_file="$target_dir/plug.vim"
+target_dir="${XDG_DATA_HOME:-$USER_HOME_FOLDER/.local/share}/nvim/site/autoload"
+plug_file="$target_dir/plug.vim"
 
 if [ -f "$plug_file" ]; then
   log "Vim-Plug is already installed."

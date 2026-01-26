@@ -481,9 +481,58 @@ log_error "Error"
 The GitHub Actions workflow validates:
 
 1. Syntax validation on all `.sh` files
-2. Cross-platform tests (Ubuntu, macOS)
+2. Cross-platform tests (Ubuntu, macOS, Fedora, Termux)
 3. Idempotency verification
 4. Checksum verification (`.checksums` vs actual files)
+
+#### Termux CI Testing
+
+Termux testing runs in CI using GitHub's native ARM64 runners with the official `termux/termux-docker:aarch64` Docker image:
+
+**How it works:**
+- Uses native ARM64 GitHub runners (`ubuntu-24.04-arm`) - no QEMU emulation needed
+- Runs `termux-docker:aarch64` container natively on ARM64 hardware
+- Uses `/entrypoint.sh` to ensure proper privilege dropping to `system` user
+- Runs in privileged mode (required for termux-docker's dnsmasq)
+- Executes full integration tests (actual install, not simulation)
+- Validates Termux-specific behaviors:
+  - Platform detection (`is_termux()`)
+  - Package installation via `pkg` command
+  - Shell setup via `~/.termux/shell` file
+  - Environment variables (`$PREFIX`, `termux-info`)
+
+**Why native ARM64 runners?**
+- QEMU emulation on x86 runners was unstable (dnsmasq failures, container startup issues)
+- GitHub provides free ARM64 runners for public repositories (since August 2025)
+- Native execution is faster and more reliable than emulation
+
+**Running Termux tests locally:**
+
+On ARM64 machines (Apple Silicon Mac, ARM Linux):
+```bash
+# Run Termux container with tests (native, no emulation needed)
+docker run --rm --privileged \
+  -v "$PWD:/workspace" \
+  termux/termux-docker:aarch64 \
+  /entrypoint.sh bash -c "cd /workspace && ./test.sh --no-simulate && ./install.sh"
+```
+
+On x86 machines (requires QEMU, may be unstable):
+```bash
+# Set up QEMU for ARM emulation (one-time setup)
+docker run --rm --privileged aptman/qus -s -- -p aarch64
+
+# Run Termux container with tests
+docker run --rm --privileged \
+  -v "$PWD:/workspace" \
+  termux/termux-docker:aarch64 \
+  /entrypoint.sh bash -c "cd /workspace && ./test.sh --no-simulate && ./install.sh"
+```
+
+**Important notes:**
+- Always use `/entrypoint.sh` to invoke commands - this ensures proper privilege dropping
+- The CI job has `continue-on-error: true` while stabilizing the pipeline
+- Some Termux-specific features may not work in Docker (Android runtime components)
 
 ### Debugging Tips
 

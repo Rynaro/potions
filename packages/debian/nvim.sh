@@ -5,7 +5,7 @@ NEOVIM_INSTALLATION_FOLDER=$USER_HOME_FOLDER/.neovim
 sudo apt install -y ninja-build gettext cmake unzip curl build-essential ripgrep
 
 # Save current directory
-local original_dir="$(pwd)"
+original_dir="$(pwd)"
 
 # Clone repository if it doesn't exist
 if [ ! -d "$NEOVIM_INSTALLATION_FOLDER" ]; then
