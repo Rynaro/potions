@@ -90,9 +90,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up QEMU for ARM emulation
-        uses: aptman/qus@v0.2.0
-        with:
-          args: -s -- -p aarch64
+        run: |
+          docker run --rm --privileged aptman/qus -s -- -p aarch64
 
       - name: Run tests in Termux container
         run: |
