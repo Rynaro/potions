@@ -95,7 +95,7 @@ jobs:
 
       - name: Run tests in Termux container
         run: |
-          docker run --rm --privileged \
+          docker run --rm --privileged --platform linux/arm64 \
             -v "$PWD:/workspace" \
             -w /workspace \
             termux/termux-docker:aarch64 \
