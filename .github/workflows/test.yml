@@ -94,86 +94,102 @@ jobs:
 
       - name: Run tests in Termux container
         run: |
-          # Use /entrypoint.sh to ensure proper privilege dropping to 'system' user
-          # This is required because termux-docker expects to run as non-root
+          # Use /entrypoint_root.sh to run as root initially, fix permissions,
+          # then switch to 'system' user for actual tests.
+          # This is needed because Docker mounts /workspace as root-owned,
+          # but termux-docker expects to run commands as 'system' user.
           docker run --rm --privileged \
             -v "$PWD:/workspace" \
             termux/termux-docker:aarch64 \
-            /entrypoint.sh bash -c "
+            /entrypoint_root.sh bash -c "
               set -e
-              cd /workspace
               
+              echo '=== Setting up workspace permissions ==='
+              # Make workspace readable by system user
+              chmod -R a+rX /workspace
+              chown -R system:system /workspace
+              echo '✓ Workspace permissions configured'
+              
+              echo ''
               echo '=== Termux Environment Info ==='
               termux-info || true
               echo ''
               echo \"PREFIX: \$PREFIX\"
               echo \"Architecture: \$(uname -m)\"
+              echo \"Running as: \$(whoami)\"
               echo ''
               
-              echo '=== Running Test Suite ==='
-              ./test.sh --no-simulate
-              
-              echo ''
-              echo '=== Testing Platform Detection ==='
-              source packages/accessories.sh 2>/dev/null || true
-              if is_termux; then
-                echo '✓ Platform detection: Termux detected correctly'
-              else
-                echo '✗ Platform detection: Failed to detect Termux'
-                exit 1
-              fi
-              
-              echo ''
-              echo '=== Running Full Install Test ==='
-              ./install.sh
-              
-              echo ''
-              echo '=== Validating Installation ==='
-              if [ -d \"\$HOME/.potions\" ]; then
-                echo '✓ Potions directory created'
-              else
-                echo '✗ Potions directory not found'
-                exit 1
-              fi
-              
-              if [ -f \"\$HOME/.termux/shell\" ]; then
-                echo '✓ Termux shell configuration created'
-                cat \"\$HOME/.termux/shell\"
-              else
-                echo '⚠ Termux shell configuration not found (may be normal if zsh already default)'
-              fi
-              
-              echo ''
-              echo '=== Testing Idempotency ==='
-              echo 'Running install.sh a second time...'
-              ./install.sh
-              echo '✓ Idempotency test passed - install can run multiple times'
-              
-              echo ''
-              echo '=== Termux-Specific Validations ==='
-              if command -v pkg &> /dev/null; then
-                echo '✓ pkg command available'
-              else
-                echo '✗ pkg command not found'
-                exit 1
-              fi
-              
-              if [ -n \"\$PREFIX\" ]; then
-                echo \"✓ PREFIX environment variable set: \$PREFIX\"
-              else
-                echo '✗ PREFIX environment variable not set'
-                exit 1
-              fi
-              
-              if [ -x \"\$PREFIX/bin/termux-info\" ]; then
-                echo '✓ termux-info command exists and is executable'
-              else
-                echo '✗ termux-info command not found or not executable'
-                exit 1
-              fi
-              
-              echo ''
-              echo '=== All Termux Tests Passed ==='
+              # Switch to system user for remaining tests
+              # This simulates real Termux environment where user is not root
+              su -s /bin/bash system -c '
+                set -e
+                cd /workspace
+                
+                echo \"=== Running Test Suite (as system user) ===\"
+                ./test.sh --no-simulate
+                
+                echo \"\"
+                echo \"=== Testing Platform Detection ===\"
+                source packages/accessories.sh 2>/dev/null || true
+                if is_termux; then
+                  echo \"✓ Platform detection: Termux detected correctly\"
+                else
+                  echo \"✗ Platform detection: Failed to detect Termux\"
+                  exit 1
+                fi
+                
+                echo \"\"
+                echo \"=== Running Full Install Test ===\"
+                ./install.sh
+                
+                echo \"\"
+                echo \"=== Validating Installation ===\"
+                if [ -d \"\$HOME/.potions\" ]; then
+                  echo \"✓ Potions directory created\"
+                else
+                  echo \"✗ Potions directory not found\"
+                  exit 1
+                fi
+                
+                if [ -f \"\$HOME/.termux/shell\" ]; then
+                  echo \"✓ Termux shell configuration created\"
+                  cat \"\$HOME/.termux/shell\"
+                else
+                  echo \"⚠ Termux shell configuration not found (may be normal if zsh already default)\"
+                fi
+                
+                echo \"\"
+                echo \"=== Testing Idempotency ===\"
+                echo \"Running install.sh a second time...\"
+                ./install.sh
+                echo \"✓ Idempotency test passed - install can run multiple times\"
+                
+                echo \"\"
+                echo \"=== Termux-Specific Validations ===\"
+                if command -v pkg > /dev/null 2>&1; then
+                  echo \"✓ pkg command available\"
+                else
+                  echo \"✗ pkg command not found\"
+                  exit 1
+                fi
+                
+                if [ -n \"\$PREFIX\" ]; then
+                  echo \"✓ PREFIX environment variable set: \$PREFIX\"
+                else
+                  echo \"✗ PREFIX environment variable not set\"
+                  exit 1
+                fi
+                
+                if [ -x \"\$PREFIX/bin/termux-info\" ]; then
+                  echo \"✓ termux-info command exists and is executable\"
+                else
+                  echo \"✗ termux-info command not found or not executable\"
+                  exit 1
+                fi
+                
+                echo \"\"
+                echo \"=== All Termux Tests Passed ===\"
+              '
             "
 
   idempotency-test:
