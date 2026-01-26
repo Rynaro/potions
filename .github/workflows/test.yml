@@ -132,10 +132,8 @@ jobs:
               
               echo ''
               echo '=== Running Full Install Test ==='
-              # Source accessories.sh first to ensure functions are available
-              # This works around BASH_SOURCE resolution issues in Termux
-              export POTIONS_ROOT=/workspace
-              source /workspace/packages/accessories.sh
+              # install.sh will source packages/accessories.sh itself.
+              # No pre-sourcing needed - accessories.sh handles its own setup.
               ./install.sh
               
               echo ''

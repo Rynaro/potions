@@ -1,10 +1,14 @@
 #!/bin/bash
 
-# Guard against multiple inclusion
-if [ -n "$ACCESSORIES_SOURCED" ]; then
+# Guard against multiple inclusion within the SAME process.
+# We check both the variable AND whether a core function exists.
+# This prevents skipping definitions when the variable leaks into child processes
+# (environment variables are inherited, but shell functions are not).
+if [ -n "$ACCESSORIES_SOURCED" ] && type command_exists &>/dev/null; then
   return 0
 fi
-export ACCESSORIES_SOURCED=1
+# Do NOT export - keep local to this process to avoid leaking to child scripts
+ACCESSORIES_SOURCED=1
 
 # Get the actual script directory regardless of symlinks
 if [ -z "$SCRIPT_DIR" ]; then
