@@ -481,9 +481,49 @@ log_error "Error"
 The GitHub Actions workflow validates:
 
 1. Syntax validation on all `.sh` files
-2. Cross-platform tests (Ubuntu, macOS)
+2. Cross-platform tests (Ubuntu, macOS, Fedora, Termux)
 3. Idempotency verification
 4. Checksum verification (`.checksums` vs actual files)
+
+#### Termux CI Testing
+
+Termux testing runs in CI using the official `termux/termux-docker:aarch64` Docker image with ARM emulation:
+
+**How it works:**
+- Uses QEMU emulation (`aptman/qus`) to run ARM64 containers on x86 GitHub runners
+- Runs in privileged mode (required for ARM emulation on x86)
+- Executes full integration tests (actual install, not simulation)
+- Validates Termux-specific behaviors:
+  - Platform detection (`is_termux()`)
+  - Package installation via `pkg` command
+  - Shell setup via `~/.termux/shell` file
+  - Environment variables (`$PREFIX`, `termux-info`)
+
+**Running Termux tests locally:**
+
+```bash
+# Set up QEMU for ARM emulation (one-time setup)
+docker run --rm --privileged aptman/qus -s -- -p aarch64
+
+# Run Termux container with tests
+docker run --rm --privileged \
+  -v "$PWD:/workspace" \
+  -w /workspace \
+  termux/termux-docker:aarch64 \
+  bash -c "./test.sh --no-simulate && ./install.sh"
+
+# Or run full CI test suite
+docker run --rm --privileged \
+  -v "$PWD:/workspace" \
+  -w /workspace \
+  termux/termux-docker:aarch64 \
+  bash -c "./test.sh && ./install.sh && ./install.sh"
+```
+
+**Known limitations:**
+- Tests run slower due to ARM emulation overhead (timeout: 15 minutes)
+- Requires privileged mode for emulation (security consideration)
+- Some Termux-specific features may not work in Docker (Android runtime components)
 
 ### Debugging Tips
 
