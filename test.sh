@@ -405,6 +405,95 @@ test_install_simulation() {
   fi
 }
 
+test_termux_shell_setup() {
+  log_step "Termux Shell Setup Tests"
+
+  # Source accessories.sh to get is_termux function
+  source "$SCRIPT_DIR/packages/accessories.sh" 2>/dev/null || true
+
+  # Only run if in Termux environment
+  if ! is_termux; then
+    log_skip "Not running in Termux environment"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+    return 0
+  fi
+
+  # Check if ~/.termux/shell file exists (created by zsh.sh)
+  if [ -f "$HOME/.termux/shell" ]; then
+    log_success "Termux shell configuration file exists"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    
+    # Verify it contains zsh path
+    local shell_path
+    shell_path=$(cat "$HOME/.termux/shell" 2>/dev/null || echo "")
+    if [ -n "$shell_path" ] && [ -x "$shell_path" ]; then
+      log_success "Termux shell file contains valid zsh path"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Termux shell file does not contain valid zsh path"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+  else
+    log_skip "Termux shell configuration not found (may be normal if zsh already default)"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+}
+
+test_termux_package_manager() {
+  log_step "Termux Package Manager Tests"
+
+  # Source accessories.sh to get is_termux function
+  source "$SCRIPT_DIR/packages/accessories.sh" 2>/dev/null || true
+
+  # Only run if in Termux environment
+  if ! is_termux; then
+    log_skip "Not running in Termux environment"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+    return 0
+  fi
+
+  # Check if pkg command exists
+  if command -v pkg &> /dev/null; then
+    log_success "pkg command available"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "pkg command not found"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+}
+
+test_termux_environment() {
+  log_step "Termux Environment Tests"
+
+  # Source accessories.sh to get is_termux function
+  source "$SCRIPT_DIR/packages/accessories.sh" 2>/dev/null || true
+
+  # Only run if in Termux environment
+  if ! is_termux; then
+    log_skip "Not running in Termux environment"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+    return 0
+  fi
+
+  # Check PREFIX environment variable
+  if [ -n "$PREFIX" ]; then
+    log_success "PREFIX environment variable is set"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    
+    # Verify PREFIX/bin/termux-info exists
+    if [ -x "$PREFIX/bin/termux-info" ]; then
+      log_success "termux-info command exists and is executable"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "termux-info command not found or not executable"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+  else
+    log_failure "PREFIX environment variable not set"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+}
+
 # Print summary
 print_summary() {
   echo ""
@@ -467,6 +556,14 @@ main() {
   test_upgrade_script
   test_documentation
   test_platform_detection
+
+  # Run Termux-specific tests if in Termux environment
+  source "$SCRIPT_DIR/packages/accessories.sh" 2>/dev/null || true
+  if is_termux; then
+    test_termux_shell_setup
+    test_termux_package_manager
+    test_termux_environment
+  fi
 
   # Run install simulation unless --no-simulate flag
   if [[ "$1" != "--no-simulate" ]]; then
