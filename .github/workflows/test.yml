@@ -97,8 +97,7 @@ jobs:
           # Run directly without entrypoint scripts since GitHub Actions
           # doesn't start containers as root. We run as whatever user the
           # container defaults to and rely on Termux environment variables.
-          # The --user root flag forces root user to avoid permission issues.
-          docker run --rm --privileged --user root \
+          docker run --rm --privileged \
             -v "$PWD:/workspace" \
             -w /workspace \
             -e PREFIX=/data/data/com.termux/files/usr \
@@ -133,6 +132,10 @@ jobs:
               
               echo ''
               echo '=== Running Full Install Test ==='
+              # Source accessories.sh first to ensure functions are available
+              # This works around BASH_SOURCE resolution issues in Termux
+              export POTIONS_ROOT=/workspace
+              source /workspace/packages/accessories.sh
               ./install.sh
               
               echo ''
