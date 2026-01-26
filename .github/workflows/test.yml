@@ -83,30 +83,31 @@ jobs:
         run: ./install.sh --test
 
   test-termux:
-    name: Test on Termux (aarch64)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    name: Test on Termux (native aarch64)
+    runs-on: ubuntu-24.04-arm  # Native ARM64 runner - no QEMU emulation needed
+    timeout-minutes: 10
+    # Allow failures while stabilizing the native ARM64 pipeline
+    # Remove this once the pipeline is confirmed stable
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU for ARM emulation
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - name: Run tests in Termux container
         run: |
-          docker run --rm --privileged --platform linux/arm64 \
+          # Use /entrypoint.sh to ensure proper privilege dropping to 'system' user
+          # This is required because termux-docker expects to run as non-root
+          docker run --rm --privileged \
             -v "$PWD:/workspace" \
-            -w /workspace \
             termux/termux-docker:aarch64 \
-            bash -c "
+            /entrypoint.sh bash -c "
               set -e
+              cd /workspace
+              
               echo '=== Termux Environment Info ==='
               termux-info || true
               echo ''
-              echo 'PREFIX: $PREFIX'
-              echo 'Architecture: $(uname -m)'
+              echo \"PREFIX: \$PREFIX\"
+              echo \"Architecture: \$(uname -m)\"
               echo ''
               
               echo '=== Running Test Suite ==='
