@@ -82,6 +82,99 @@ jobs:
       - name: Test install simulation
         run: ./install.sh --test
 
+  test-termux:
+    name: Test on Termux (aarch64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU for ARM emulation
+        uses: aptman/qus@v0.2.0
+        with:
+          args: -s -- -p aarch64
+
+      - name: Run tests in Termux container
+        run: |
+          docker run --rm --privileged \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            termux/termux-docker:aarch64 \
+            bash -c "
+              set -e
+              echo '=== Termux Environment Info ==='
+              termux-info || true
+              echo ''
+              echo 'PREFIX: $PREFIX'
+              echo 'Architecture: $(uname -m)'
+              echo ''
+              
+              echo '=== Running Test Suite ==='
+              ./test.sh --no-simulate
+              
+              echo ''
+              echo '=== Testing Platform Detection ==='
+              source packages/accessories.sh 2>/dev/null || true
+              if is_termux; then
+                echo '✓ Platform detection: Termux detected correctly'
+              else
+                echo '✗ Platform detection: Failed to detect Termux'
+                exit 1
+              fi
+              
+              echo ''
+              echo '=== Running Full Install Test ==='
+              ./install.sh
+              
+              echo ''
+              echo '=== Validating Installation ==='
+              if [ -d \"\$HOME/.potions\" ]; then
+                echo '✓ Potions directory created'
+              else
+                echo '✗ Potions directory not found'
+                exit 1
+              fi
+              
+              if [ -f \"\$HOME/.termux/shell\" ]; then
+                echo '✓ Termux shell configuration created'
+                cat \"\$HOME/.termux/shell\"
+              else
+                echo '⚠ Termux shell configuration not found (may be normal if zsh already default)'
+              fi
+              
+              echo ''
+              echo '=== Testing Idempotency ==='
+              echo 'Running install.sh a second time...'
+              ./install.sh
+              echo '✓ Idempotency test passed - install can run multiple times'
+              
+              echo ''
+              echo '=== Termux-Specific Validations ==='
+              if command -v pkg &> /dev/null; then
+                echo '✓ pkg command available'
+              else
+                echo '✗ pkg command not found'
+                exit 1
+              fi
+              
+              if [ -n \"\$PREFIX\" ]; then
+                echo \"✓ PREFIX environment variable set: \$PREFIX\"
+              else
+                echo '✗ PREFIX environment variable not set'
+                exit 1
+              fi
+              
+              if [ -x \"\$PREFIX/bin/termux-info\" ]; then
+                echo '✓ termux-info command exists and is executable'
+              else
+                echo '✗ termux-info command not found or not executable'
+                exit 1
+              fi
+              
+              echo ''
+              echo '=== All Termux Tests Passed ==='
+            "
+
   idempotency-test:
     name: Idempotency Test
     runs-on: ubuntu-latest
