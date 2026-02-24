@@ -21,4 +21,3 @@ if [ "$SHELL" != "$(command -v zsh)" ]; then
     log "You can manually change it by running: chsh -s $zsh_path"
   fi
 fi
-
