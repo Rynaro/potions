@@ -200,6 +200,15 @@ let g:VM_maps['Remove Region']      = '<C-S-k>'     " Remove current cursor
 let g:VM_maps['Add Cursor Down']    = '<C-S-Down>'  " Add cursor down
 let g:VM_maps['Add Cursor Up']      = '<C-S-Up>'    " Add cursor up
 
+" Neovim 0.10+ compatibility: restore ft_to_lang removed from treesitter API
+lua << EOF
+if vim.treesitter.language and not vim.treesitter.language.ft_to_lang then
+  vim.treesitter.language.ft_to_lang = function(ft)
+    return vim.treesitter.language.get_lang(ft) or ft
+  end
+end
+EOF
+
 " Telescope configuration and keybindings
 " Uses pcall to gracefully handle case when plugin isn't installed yet
 lua << EOF
