@@ -82,6 +82,94 @@ jobs:
       - name: Test install simulation
         run: ./install.sh --test
 
+  test-termux:
+    name: Test on Termux (native aarch64)
+    runs-on: ubuntu-24.04-arm  # Native ARM64 runner - no QEMU emulation needed
+    timeout-minutes: 10
+    # Allow failures while stabilizing the native ARM64 pipeline
+    # Remove this once the pipeline is confirmed stable
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run test suite
+        run: |
+          # Run directly without entrypoint scripts since GitHub Actions
+          # doesn't start containers as root. We run as whatever user the
+          # container defaults to and rely on Termux environment variables.
+          docker run --rm --privileged \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            -e PREFIX=/data/data/com.termux/files/usr \
+            -e HOME=/data/data/com.termux/files/home \
+            -e TMPDIR=/data/data/com.termux/files/usr/tmp \
+            -e PATH=/data/data/com.termux/files/usr/bin:/usr/bin:/bin \
+            termux/termux-docker:aarch64 \
+            bash -c "
+              set -e
+              
+              echo '=== Termux Environment Info ==='
+              termux-info || true
+              echo ''
+              echo \"PREFIX: \$PREFIX\"
+              echo \"HOME: \$HOME\"
+              echo \"Architecture: \$(uname -m)\"
+              echo \"Running as: \$(whoami) (uid: \$(id -u))\"
+              echo ''
+              
+              echo '=== Testing Platform Detection ==='
+              source packages/accessories.sh 2>/dev/null || true
+              if is_termux; then
+                echo '✓ Platform detection: Termux detected correctly'
+              else
+                echo '✗ Platform detection: Failed to detect Termux'
+                exit 1
+              fi
+              
+              echo ''
+              ./test.sh --no-simulate
+            "
+
+      - name: Test install simulation
+        run: |
+          docker run --rm --privileged \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            -e PREFIX=/data/data/com.termux/files/usr \
+            -e HOME=/data/data/com.termux/files/home \
+            -e TMPDIR=/data/data/com.termux/files/usr/tmp \
+            -e PATH=/data/data/com.termux/files/usr/bin:/usr/bin:/bin \
+            termux/termux-docker:aarch64 \
+            bash -c "
+              set -e
+              
+              echo '=== Termux-Specific Validations ==='
+              if command -v pkg > /dev/null 2>&1; then
+                echo '✓ pkg command available'
+              else
+                echo '✗ pkg command not found'
+                exit 1
+              fi
+              
+              if [ -n \"\$PREFIX\" ]; then
+                echo \"✓ PREFIX environment variable set: \$PREFIX\"
+              else
+                echo '✗ PREFIX environment variable not set'
+                exit 1
+              fi
+              
+              if [ -x \"\$PREFIX/bin/termux-info\" ]; then
+                echo '✓ termux-info command exists and is executable'
+              else
+                echo '✗ termux-info command not found or not executable'
+                exit 1
+              fi
+              
+              echo ''
+              echo '=== Running Install Simulation ==='
+              ./install.sh --test
+            "
+
   idempotency-test:
     name: Idempotency Test
     runs-on: ubuntu-latest

@@ -32,4 +32,3 @@ if [ "$SHELL" != "$(command -v zsh)" ]; then
     log "NOTE: You need to restart the Termux app for the change to take effect"
   fi
 fi
-
