@@ -1,0 +1,16 @@
+// User Zellij Configuration
+// This file is preserved on upgrade - add your custom settings here
+//
+// Note: Zellij KDL config does not support a "source" directive.
+// To load custom configurations, set ZELLIJ_CONFIG_DIR to a directory
+// containing your config.kdl file, or use this file for overrides.
+//
+// Example: Custom keybinding in tmux mode
+//   keybinds {
+//       tmux {
+//           bind "m" { NewPane "Right"; SwitchToMode "Normal"; }
+//       }
+//   }
+//
+// Example: Change theme
+//   theme "dracula"

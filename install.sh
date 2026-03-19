@@ -304,7 +304,7 @@ install_packages() {
   # 2. git - required for antidote, vim-plug
   # 3. zsh - required before antidote (needs ZDOTDIR)
   # 4. antidote - needs git
-  # 5. tmux - no deps
+  # 5. zellij - no deps
   # 6. neovim - no deps but needed before vim-plug
   # 7. vim-plug - needs neovim and curl
   # 8. openvpn - optional, at end
@@ -314,7 +314,7 @@ install_packages() {
     'git'
     'zsh'
     'antidote'
-    'tmux'
+    'zellij'
     'neovim'
     'vim-plug'
     'openvpn'

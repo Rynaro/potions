@@ -110,7 +110,7 @@ generate_manifest() {
   "provides": {
     "nvim": $provides_nvim,
     "shell": $provides_shell,
-    "tmux": []
+    "zellij": []
   },
   "hooks": {
     "post_install": "",

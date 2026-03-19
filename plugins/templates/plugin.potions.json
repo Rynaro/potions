@@ -10,7 +10,7 @@
   "provides": {
     "nvim": [],
     "shell": [],
-    "tmux": []
+    "zellij": []
   },
   "hooks": {
     "post_install": "",

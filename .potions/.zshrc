@@ -31,7 +31,7 @@ is_macos() {
 }
 
 # Function to check if running in an AI code editor terminal (VSCode, Cursor, etc.)
-# These terminals should not auto-start tmux to avoid terminal output capture issues
+# These terminals should not auto-start the multiplexer to avoid terminal output capture issues
 is_ai_code_editor() {
   # Check for VSCode environment variables
   if [ -n "$VSCODE_INJECTION" ] || [ -n "$VSCODE_PID" ] || [ "$TERM_PROGRAM" = "vscode" ]; then
@@ -146,16 +146,16 @@ case "$TERM_PROGRAM" in
     # Default: bind all common sequences for maximum compatibility
     bindkey "^[[1;5C" forward-word  # Standard Ctrl + Right Arrow
     bindkey "^[[1;5D" backward-word # Standard Ctrl + Left Arrow
-    bindkey "^[[5C" forward-word    # Alternative (tmux)
-    bindkey "^[[5D" backward-word   # Alternative (tmux)
+    bindkey "^[[5C" forward-word    # Alternative (multiplexer)
+    bindkey "^[[5D" backward-word   # Alternative (multiplexer)
     bindkey "^[f" forward-word      # Alt+f fallback
     bindkey "^[b" backward-word     # Alt+b fallback
     ;;
 esac
 
 # Common bindings that work across all terminals
-bindkey "^[[5C" forward-word    # Alternative sequence (tmux passthrough)
-bindkey "^[[5D" backward-word   # Alternative sequence (tmux passthrough)
+bindkey "^[[5C" forward-word    # Alternative sequence (multiplexer passthrough)
+bindkey "^[[5D" backward-word   # Alternative sequence (multiplexer passthrough)
 
 # History settings
 HISTFILE=$POTIONS_HOME/.zsh_history   # Where to save the command history
@@ -189,10 +189,10 @@ TRAPINT() {
     return 128
 }
 
-# Auto-start tmux only if not already in tmux and not in an AI code editor terminal
-# AI code editors (VSCode, Cursor, etc.) should not auto-start tmux to avoid
+# Auto-start zellij only if not already in zellij and not in an AI code editor terminal
+# AI code editors (VSCode, Cursor, etc.) should not auto-start zellij to avoid
 # terminal output capture issues
-if command -v tmux &> /dev/null && [ -z "$TMUX" ] && ! is_ai_code_editor; then
-  TMUX_PROFILE_NAME="potions-$$+"
-  tmux -f $POTIONS_HOME/tmux/tmux.conf new-session -s "$TMUX_PROFILE_NAME"
+if command -v zellij &> /dev/null && [ -z "$ZELLIJ" ] && ! is_ai_code_editor; then
+  ZELLIJ_SESSION_NAME="potions-$$+"
+  zellij --config-dir "$POTIONS_HOME/zellij" attach --create "$ZELLIJ_SESSION_NAME"
 fi

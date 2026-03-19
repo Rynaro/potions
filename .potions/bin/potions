@@ -355,7 +355,7 @@ cmd_status() {
   local files=(
     ".zshrc"
     ".zsh_aliases"
-    "tmux/tmux.conf"
+    "zellij/config.kdl"
     "nvim/init.vim"
   )
   

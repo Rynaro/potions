@@ -9,7 +9,7 @@ Potions transforms your fresh macOS, WSL, Termux, or Fedora installation into a 
 ## ✨ Features
 
 - **Cross-Platform**: macOS, WSL (Windows), Termux (Android), Debian/Linux, Fedora
-- **Pre-configured Tools**: Zsh, Git, NeoVim, Tmux, and more
+- **Pre-configured Tools**: Zsh, Git, NeoVim, Zellij, and more
 - **Professional CLI**: Manage your installation with `potions` commands
 - **Plugin System**: Extend functionality with custom plugins
 - **User Customization**: Preserved settings that survive upgrades
@@ -29,7 +29,7 @@ After installation, restart your terminal or type `zsh` to begin using your new 
 - **Zsh**: Modern shell with autosuggestions and syntax highlighting
 - **Git**: Pre-configured with useful aliases
 - **NeoVim**: Powerful editor with modern plugins
-- **Tmux**: Terminal multiplexer with intuitive keybindings
+- **Zellij**: Terminal multiplexer with intuitive keybindings
 - **Development Tools**: curl, wget, OpenVPN, and more
 
 ## 💻 CLI Commands
@@ -56,7 +56,7 @@ These files are overwritten on upgrade:
 
 - `.zshrc` - Main Zsh configuration
 - `nvim/init.vim` - NeoVim configuration
-- `tmux/tmux.conf` - Tmux configuration
+- `zellij/config.kdl` - Zellij configuration
 
 ### User Customization (Preserved on Upgrade)
 
@@ -69,7 +69,7 @@ Add your customizations here—they survive upgrades:
 | `config/local.zsh` | Machine-specific settings |
 | `config/{macos\|linux\|wsl\|termux}.zsh` | Platform-specific customizations |
 | `nvim/user.vim` | Your Neovim extensions |
-| `tmux/user.conf` | Your Tmux extensions |
+| `zellij/user.kdl` | Your Zellij extensions |
 
 ### Legacy Files (Still Supported)
 
@@ -80,18 +80,18 @@ Run `./migrate.sh` to migrate from legacy to new structure.
 
 ## ⌨️ Keybindings Quick Reference
 
-### Tmux (Prefix: `Ctrl+a`)
+### Zellij (Prefix: `Ctrl+a`)
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+a c` | New window |
-| `Ctrl+a x` | Kill pane |
-| `Ctrl+a \|` | Split horizontal |
-| `Ctrl+a -` | Split vertical |
+| `Ctrl+a c` | New tab |
+| `Ctrl+a x` | Close pane |
+| `Ctrl+a \|` | Split right |
+| `Ctrl+a -` | Split down |
 | `Ctrl+a h/j/k/l` | Navigate panes |
-| `Ctrl+a n` | Next window |
-| `Ctrl+a p` | Previous window |
-| `Ctrl+Tab` | Next window (if terminal supports) |
+| `Ctrl+a n` | Next tab |
+| `Ctrl+a p` | Previous tab |
+| `Ctrl+Tab` | Next tab (if terminal supports) |
 
 ### Neovim (Leader: `Space`)
 
@@ -162,7 +162,7 @@ Some terminals require configuration for certain key combinations. See the [Term
 
 | Issue | Solution |
 |-------|----------|
-| Ctrl+Tab not working | Configure terminal or use `Ctrl+a n` / `Ctrl+a p` |
+| Ctrl+Tab not working | Configure terminal or use `Ctrl+a n` / `Ctrl+a p` in zellij |
 | Word navigation broken | Check terminal key mappings, try Alt+f/Alt+b |
 | Ctrl+S freezes terminal | Potions should disable this; if not, run `stty -ixon` |
 

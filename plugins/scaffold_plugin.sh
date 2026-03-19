@@ -116,7 +116,7 @@ dependencies: []
 provides:
   nvim: []
   shell: []
-  tmux: []
+  zellij: []
 
 # Optional homepage
 # homepage: https://example.com
@@ -139,7 +139,7 @@ EOF
   "provides": {
     "nvim": [],
     "shell": [],
-    "tmux": []
+    "zellij": []
   },
   "hooks": {
     "post_install": "",

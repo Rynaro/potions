@@ -18,7 +18,7 @@ deactivate() {
   # - Disabling configuration files (without removing)
   # - Removing shell aliases/functions from current session
   # - Disabling NeoVim plugins
-  # - Disabling tmux configurations
+  # - Disabling zellij configurations
 }
 
 # Function for post-deactivation tasks

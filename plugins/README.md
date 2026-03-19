@@ -8,7 +8,7 @@ The Potions plugin system allows you to:
 - Install verified plugins from the [Potions Shelf Registry](https://github.com/Rynaro/potions-shelf)
 - Create and use your own local plugins
 - Manage plugin lifecycle (install, uninstall, activate, deactivate)
-- Extend NeoVim, shell, and tmux configurations
+- Extend NeoVim, shell, and zellij configurations
 - Search and discover plugins from the official registry
 
 ## Quick Start
@@ -128,7 +128,7 @@ Every plugin must have a `plugin.potions.json`:
   "provides": {
     "nvim": ["colorscheme"],
     "shell": ["aliases", "functions"],
-    "tmux": []
+    "zellij": []
   }
 }
 ```

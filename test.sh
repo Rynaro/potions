@@ -190,10 +190,10 @@ test_repo_structure() {
   assert_file_exists "$SCRIPT_DIR/.potions/nvim/init.vim" "init.vim exists"
   assert_file_exists "$SCRIPT_DIR/.potions/nvim/user.vim" "user.vim exists"
 
-  # Tmux
-  assert_dir_exists "$SCRIPT_DIR/.potions/tmux" "tmux directory exists"
-  assert_file_exists "$SCRIPT_DIR/.potions/tmux/tmux.conf" "tmux.conf exists"
-  assert_file_exists "$SCRIPT_DIR/.potions/tmux/user.conf" "user.conf exists"
+  # Zellij
+  assert_dir_exists "$SCRIPT_DIR/.potions/zellij" "zellij directory exists"
+  assert_file_exists "$SCRIPT_DIR/.potions/zellij/config.kdl" "config.kdl exists"
+  assert_file_exists "$SCRIPT_DIR/.potions/zellij/user.kdl" "user.kdl exists"
 
   # Terminal setup
   assert_dir_exists "$SCRIPT_DIR/.potions/terminal-setup" "terminal-setup directory exists"
@@ -251,28 +251,14 @@ test_config_validity() {
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "config/secure.zsh" ".zshrc sources config/secure.zsh"
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "config/local.zsh" ".zshrc sources config/local.zsh"
 
-  # Check tmux.conf has user extension
-  assert_file_contains "$SCRIPT_DIR/.potions/tmux/tmux.conf" "user.conf" "tmux.conf sources user.conf"
+  # Check zellij config.kdl has tmux mode keybindings
+  assert_file_contains "$SCRIPT_DIR/.potions/zellij/config.kdl" "Tmux" "config.kdl has tmux mode"
 
   # Check init.vim has user extension
   assert_file_contains "$SCRIPT_DIR/.potions/nvim/init.vim" "user.vim" "init.vim sources user.vim"
 
-  # Check no conflicting keybindings in tmux
-  if grep -q "bind -n C-n" "$SCRIPT_DIR/.potions/tmux/tmux.conf" 2>/dev/null; then
-    log_failure "tmux.conf still has conflicting C-n binding"
-    TESTS_FAILED=$((TESTS_FAILED + 1))
-  else
-    log_success "tmux.conf has no conflicting C-n binding"
-    TESTS_PASSED=$((TESTS_PASSED + 1))
-  fi
-
-  if grep -q "bind -n C-p" "$SCRIPT_DIR/.potions/tmux/tmux.conf" 2>/dev/null; then
-    log_failure "tmux.conf still has conflicting C-p binding"
-    TESTS_FAILED=$((TESTS_FAILED + 1))
-  else
-    log_success "tmux.conf has no conflicting C-p binding"
-    TESTS_PASSED=$((TESTS_PASSED + 1))
-  fi
+  # Check zellij config uses clear-defaults
+  assert_file_contains "$SCRIPT_DIR/.potions/zellij/config.kdl" "clear-defaults=true" "config.kdl uses clear-defaults"
 }
 
 test_install_script() {
@@ -303,8 +289,8 @@ test_install_script() {
 test_common_packages() {
   log_step "Common Package Tests"
 
-  # Check tmux.sh is idempotent
-  assert_file_contains "$SCRIPT_DIR/packages/common/tmux.sh" "if \[ -d" "tmux.sh has idempotent check"
+  # Check zellij.sh exists and ensures directory
+  assert_file_contains "$SCRIPT_DIR/packages/common/zellij.sh" "ensure_directory" "zellij.sh uses ensure_directory"
 
   # Check zsh.sh uses REPO_ROOT
   assert_file_contains "$SCRIPT_DIR/packages/common/zsh.sh" "REPO_ROOT" "zsh.sh uses REPO_ROOT"
@@ -316,7 +302,7 @@ test_upgrade_script() {
   # Check upgrade.sh preserves new config files
   assert_file_contains "$SCRIPT_DIR/upgrade.sh" "config/aliases.zsh" "upgrade.sh preserves config/aliases.zsh"
   assert_file_contains "$SCRIPT_DIR/upgrade.sh" "nvim/user.vim" "upgrade.sh preserves nvim/user.vim"
-  assert_file_contains "$SCRIPT_DIR/upgrade.sh" "tmux/user.conf" "upgrade.sh preserves tmux/user.conf"
+  assert_file_contains "$SCRIPT_DIR/upgrade.sh" "zellij/user.kdl" "upgrade.sh preserves zellij/user.kdl"
 }
 
 test_documentation() {

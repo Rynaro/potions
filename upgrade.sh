@@ -486,7 +486,7 @@ preserve_user_files() {
     "config/termux.zsh"
     "nvim/user.vim"
     "nvim/lua/theme/alchemists-orchid.lua"
-    "tmux/user.conf"
+    "zellij/user.kdl"
     # Legacy files (for backwards compatibility)
     ".zsh_aliases"
     ".zsh_secure_aliases"
@@ -577,7 +577,7 @@ update_dotfiles() {
     "config/termux.zsh"
     "nvim/user.vim"
     "nvim/lua/theme/alchemists-orchid.lua"
-    "tmux/user.conf"
+    "zellij/user.kdl"
     # Legacy files (for backwards compatibility)
     ".zsh_aliases"
     ".zsh_secure_aliases"

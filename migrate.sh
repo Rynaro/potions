@@ -235,12 +235,12 @@ EOF
     log_info "Created nvim/user.vim"
   fi
 
-  if [ ! -f "$POTIONS_HOME/tmux/user.conf" ]; then
-    cat > "$POTIONS_HOME/tmux/user.conf" << 'EOF'
-# User Tmux Configuration
-# Add your custom settings here
+  if [ ! -f "$POTIONS_HOME/zellij/user.kdl" ]; then
+    cat > "$POTIONS_HOME/zellij/user.kdl" << 'EOF'
+// User Zellij Configuration
+// Add your custom settings here
 EOF
-    log_info "Created tmux/user.conf"
+    log_info "Created zellij/user.kdl"
   fi
 }
 
@@ -262,7 +262,7 @@ print_completion() {
     echo -e "  ${CYAN}config/local.zsh${NC}    - Machine-specific settings"
     echo -e "  ${CYAN}config/{platform}.zsh${NC} - Platform-specific settings"
     echo -e "  ${CYAN}nvim/user.vim${NC}       - Your Neovim customizations"
-    echo -e "  ${CYAN}tmux/user.conf${NC}      - Your Tmux customizations"
+    echo -e "  ${CYAN}zellij/user.kdl${NC}     - Your Zellij customizations"
     echo ""
     echo -e "${WHITE}Next steps:${NC}"
     echo -e "  ${CYAN}1.${NC} Restart your terminal or run ${BOLD}exec zsh${NC}"
