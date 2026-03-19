@@ -94,11 +94,11 @@
 !.potions/nvim/init.vim
 !.potions/nvim/user.vim
 
-# Allow TMUX config files
-!.potions/tmux
-!.potions/tmux/
-!.potions/tmux/tmux.conf
-!.potions/tmux/user.conf
+# Allow Zellij config files
+!.potions/zellij
+!.potions/zellij/
+!.potions/zellij/config.kdl
+!.potions/zellij/user.kdl
 
 # Allow Potions CLI
 !.potions/bin
@@ -143,9 +143,5 @@
 !.github/workflows
 !.github/workflows/*.yml
 
-# Screen and tmux configuration files
+# Screen configuration files
 !.screenrc
-!.tmux.conf
-!.tmux
-!.tmux/
-!.tmux/*.yml

@@ -18,7 +18,7 @@ activate() {
   # - Enabling configuration files
   # - Setting up shell aliases/functions
   # - Activating NeoVim plugins
-  # - Enabling tmux configurations
+  # - Enabling zellij configurations
 }
 
 # Function for post-activation tasks

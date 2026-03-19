@@ -61,10 +61,9 @@ Describe how to use the plugin's features.
 - Aliases
 - Functions
 
-### Tmux
+### Zellij
 
 - Key bindings
-- Status bar widgets
 
 ## Uninstallation
 

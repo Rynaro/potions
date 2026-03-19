@@ -87,7 +87,7 @@ create_test_manifest() {
   "provides": {
     "nvim": ["colorscheme"],
     "shell": ["aliases"],
-    "tmux": []
+    "zellij": []
   }
 }
 EOF

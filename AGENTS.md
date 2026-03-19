@@ -4,7 +4,7 @@
 
 This document guides AI coding assistants working on Potions. It's designed to be platform-agnostic and works with any AI coding tool (Cursor, GitHub Copilot, Codeium, Continue, Windsurf, etc.).
 
-**What is Potions?** A cross-platform development environment setup tool that installs and configures Zsh, Git, NeoVim, Tmux on macOS, WSL, Termux, Debian/Linux, and Fedora systems.
+**What is Potions?** A cross-platform development environment setup tool that installs and configures Zsh, Git, NeoVim, Zellij on macOS, WSL, Termux, Debian/Linux, and Fedora systems.
 
 ---
 
@@ -209,7 +209,7 @@ These files are **never overwritten** during upgrades:
 | `config/secure.zsh` | Private configs (gitignored) |
 | `config/local.zsh` | Local machine-specific settings |
 | `nvim/user.vim` | User's NeoVim extensions |
-| `tmux/user.conf` | User's Tmux customizations |
+| `zellij/user.kdl` | User's Zellij customizations |
 
 ### Plugin System
 

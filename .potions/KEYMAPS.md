@@ -1,27 +1,27 @@
 # Potions Keymaps Reference
 
-This document provides a unified reference for all keybindings across Zsh, Tmux, and Neovim to help understand and avoid conflicts.
+This document provides a unified reference for all keybindings across Zsh, Zellij, and Neovim to help understand and avoid conflicts.
 
 ---
 
 ## Quick Reference Table
 
-| Key Combo | Zsh | Tmux | Neovim | Notes |
-|-----------|-----|------|--------|-------|
-| `Ctrl+a` | - | PREFIX | Beginning of line | Neovim uses for line navigation |
+| Key Combo | Zsh | Zellij | Neovim | Notes |
+|-----------|-----|--------|--------|-------|
+| `Ctrl+a` | - | PREFIX (enters tmux mode) | Beginning of line | Neovim uses for line navigation |
 | `Ctrl+b` | - | (unbound) | - | Available |
 | `Ctrl+c` | Interrupt | - | Copy (visual) | Standard interrupt in shell |
 | `Ctrl+d` | EOF/Logout | - | Move 10 lines down | Be careful in shell |
 | `Ctrl+e` | - | - | End of line | |
-| `Ctrl+h/j/k/l` | - | Resize panes | Move lines | After Tmux prefix |
-| `Ctrl+n` | History next | - | NERDTree toggle | **Conflict resolved: removed from tmux** |
-| `Ctrl+p` | History prev | - | Buffer pick → `<leader>bp` | **Changed to avoid conflict** |
+| `Ctrl+h/j/k/l` | - | Resize panes | Move lines | After Zellij prefix |
+| `Ctrl+n` | History next | - | NERDTree toggle | **No conflict with zellij** |
+| `Ctrl+p` | History prev | - | Buffer pick → `<leader>bp` | **No conflict with zellij** |
 | `Ctrl+s` | - | - | Quick save | Enable with `stty -ixon` |
 | `Ctrl+u` | Clear line | - | Move 10 lines up | |
 | `Ctrl+v` | - | - | Paste | |
 | `Ctrl+x` | - | - | Buffer pick delete → `<leader>bx` | **Changed to avoid conflict** |
-| `Ctrl+Tab` | - | Next window | - | May not work in all terminals |
-| `Ctrl+Shift+Tab` | - | Prev window | - | May not work in all terminals |
+| `Ctrl+Tab` | - | Next tab | - | May not work in all terminals |
+| `Ctrl+Shift+Tab` | - | Prev tab | - | May not work in all terminals |
 | `Ctrl+Arrow` | Word nav | Resize panes | - | Terminal-dependent |
 | `Space` | - | - | LEADER | Most Neovim commands |
 
@@ -29,38 +29,33 @@ This document provides a unified reference for all keybindings across Zsh, Tmux,
 
 ## Reserved Keys by Tool
 
-### Tmux Reserved Keys (with prefix `Ctrl+a`)
+### Zellij Reserved Keys (with prefix `Ctrl+a`)
 
-These keys are used after pressing `Ctrl+a`:
+These keys are used after pressing `Ctrl+a` (enters tmux mode):
 
 | Key | Action |
 |-----|--------|
-| `c` | New window |
-| `x` | Kill pane |
-| `X` | Kill window |
+| `c` | New tab |
+| `x` | Close pane |
+| `X` | Close tab |
 | `h/j/k/l` | Navigate panes |
-| `C-h/j/k/l` | Resize panes |
-| `\|` | Split horizontal |
-| `-` | Split vertical |
-| `=` | Even horizontal layout |
-| `E` | Even vertical layout |
-| `T` | Tiled layout |
-| `M` | Main horizontal layout |
-| `V` | Main vertical layout |
-| `S` | Choose session |
-| `s` / `w` | Choose window |
-| `r` | Reload config |
-| `B` | Break pane |
-| `J` | Join pane |
-| `R` | Rename window |
-| `<` / `>` | Swap pane left/right |
+| `C-h/j/k/l` | Resize panes (repeatable) |
+| `\|` | Split right |
+| `-` | Split down |
+| `=` / `E` / `T` / `M` / `V` | Cycle layouts (NextSwapLayout) |
+| `S` | Session manager |
+| `B` | Break pane into tab |
+| `R` | Rename tab |
+| `<` / `>` | Swap pane position (repeatable) |
+| `n` / `p` | Next / previous tab |
+| `Ctrl+a` | Send Ctrl+a to application |
 
 **No-prefix bindings** (work without `Ctrl+a`):
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+Tab` | Next window |
-| `Ctrl+Shift+Tab` | Previous window |
+| `Ctrl+Tab` | Next tab |
+| `Ctrl+Shift+Tab` | Previous tab |
 
 ### Neovim Reserved Keys
 
@@ -156,7 +151,7 @@ Different terminals send different escape sequences for the same key combination
 | iTerm2 | `^[[1;5C` | `^[[1;5D` |
 | Terminal.app | `^[f` (Alt+f) | `^[b` (Alt+b) |
 | Alacritty | `^[[1;5C` | `^[[1;5D` |
-| tmux | `^[[5C` | `^[[5D` |
+| Zellij | `^[[5C` | `^[[5D` |
 | VS Code Terminal | `^[[1;5C` | `^[[1;5D` |
 
 The `.zshrc` configuration includes bindings for all common terminals.
@@ -169,8 +164,6 @@ The `.zshrc` configuration includes bindings for all common terminals.
 
 | Conflict | Old Binding | Resolution |
 |----------|-------------|------------|
-| `Ctrl+n` - Tmux window nav vs NERDTree | Tmux: `C-n` | **Removed from Tmux** - use `Ctrl+Tab` instead |
-| `Ctrl+p` - Tmux window nav vs Buffer pick | Tmux: `C-p` | **Removed from Tmux** - use `Ctrl+Shift+Tab`; Neovim: use `<leader>bp` |
 | `Ctrl+x` - Buffer delete vs multi-cursor skip | Both Neovim | **Neovim changed** to `<leader>bx` for buffer delete |
 | `Ctrl+d` - Multi-cursor vs scroll | Both Neovim | **Multi-cursor changed** to `<leader>d` |
 
@@ -178,7 +171,7 @@ The `.zshrc` configuration includes bindings for all common terminals.
 
 | Keys | Conflict | Mitigation |
 |------|----------|------------|
-| `Ctrl+a` | Tmux prefix vs Neovim line start | In Neovim inside Tmux, press `Ctrl+a` twice to send to Neovim |
+| `Ctrl+a` | Zellij prefix vs Neovim line start | In Neovim inside Zellij, press `Ctrl+a` twice to send to Neovim |
 | `Ctrl+d` | Shell EOF vs Neovim scroll | Be careful at command line; in Neovim it scrolls |
 
 ---
@@ -219,7 +212,7 @@ key_bindings:
 
 **Neovim**: Add to `~/.potions/nvim/user.vim` (preserved on upgrade)
 
-**Tmux**: Add to `~/.potions/tmux/user.conf` (preserved on upgrade)
+**Zellij**: Add to `~/.potions/zellij/user.kdl` (preserved on upgrade)
 
 **Zsh**: Add to `~/.potions/config/aliases.zsh` (preserved on upgrade)
 
@@ -235,7 +228,7 @@ To override a default binding, add your custom binding in the user files above. 
 
 1. **Check terminal support**: Some terminals don't send certain key sequences
 2. **Check for conflicts**: Use `cat -v` or `showkey -a` to see what your terminal sends
-3. **Check tmux passthrough**: Ensure tmux isn't intercepting the key
+3. **Check zellij passthrough**: Ensure zellij isn't intercepting the key
 
 ### Testing Key Sequences
 
@@ -256,12 +249,12 @@ cat -v
 :map
 ```
 
-### Debugging in Tmux
+### Debugging in Zellij
 
 ```bash
-# Show all key bindings
-tmux list-keys
+# Zellij uses KDL configuration - check your config
+cat ~/.potions/zellij/config.kdl
 
-# Show bindings for specific key
-tmux list-keys | grep <key>
+# List active keybindings by checking the config file
+# Zellij does not have a runtime key listing command like tmux
 ```

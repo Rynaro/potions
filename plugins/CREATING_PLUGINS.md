@@ -49,7 +49,7 @@ The `plugin.potions.json` file is the heart of your plugin:
   "provides": {
     "nvim": ["colorscheme", "plugin"],
     "shell": ["aliases", "functions"],
-    "tmux": ["keybindings"]
+    "zellij": ["keybindings"]
   },
   "hooks": {
     "post_install": "",

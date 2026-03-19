@@ -56,8 +56,8 @@ Use these alternative bindings in Terminal.app:
 
 | Default Binding | Terminal.app Alternative |
 |-----------------|-------------------------|
-| Ctrl+Tab (tmux next window) | Prefix + n (`Ctrl+a n`) |
-| Ctrl+Shift+Tab (tmux prev window) | Prefix + p (`Ctrl+a p`) |
+| Ctrl+Tab (zellij next tab) | Prefix + n (`Ctrl+a n`) |
+| Ctrl+Shift+Tab (zellij prev tab) | Prefix + p (`Ctrl+a p`) |
 | Ctrl+Right (forward word) | Alt+f (Option+f) |
 | Ctrl+Left (backward word) | Alt+b (Option+b) |
 
@@ -156,12 +156,12 @@ return {
 
 The integrated terminal in VS Code and Cursor works well with most bindings.
 
-### Note on Tmux
+### Note on Zellij
 
-By default, Potions does not auto-start tmux in VS Code/Cursor terminals to avoid terminal capture issues. You can manually start tmux if needed:
+By default, Potions does not auto-start zellij in VS Code/Cursor terminals to avoid terminal capture issues. You can manually start zellij if needed:
 
 ```bash
-tmux
+zellij
 ```
 
 ### Key Binding Conflicts
@@ -199,11 +199,11 @@ cat -v
 
 ### Common Issues
 
-#### Ctrl+Tab not working in tmux
+#### Ctrl+Tab not working in zellij
 
 Your terminal may not send the correct escape sequence. Use the alternative:
-- Press `Ctrl+a` then `n` for next window
-- Press `Ctrl+a` then `p` for previous window
+- Press `Ctrl+a` then `n` for next tab
+- Press `Ctrl+a` then `p` for previous tab
 
 #### Word navigation not working
 

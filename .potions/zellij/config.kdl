@@ -1,0 +1,101 @@
+// Potions Zellij Configuration
+// Prefix-based workflow using built-in tmux compatibility mode
+// Press Ctrl+a to enter tmux mode, then use familiar keybindings
+
+// Clear all default keybindings
+keybinds clear-defaults=true {
+    // Normal mode: only Ctrl+a to enter tmux mode + direct tab switching
+    normal {
+        // Enter tmux mode (prefix key)
+        bind "Ctrl a" { SwitchToMode "Tmux"; }
+
+        // Direct tab navigation (no prefix needed)
+        bind "Ctrl Tab" { GoToNextTab; }
+        bind "Ctrl Shift Tab" { GoToPreviousTab; }
+    }
+
+    // Tmux mode: all prefix-based keybindings
+    tmux {
+        // Pane navigation
+        bind "h" { MoveFocus "Left"; SwitchToMode "Normal"; }
+        bind "j" { MoveFocus "Down"; SwitchToMode "Normal"; }
+        bind "k" { MoveFocus "Up"; SwitchToMode "Normal"; }
+        bind "l" { MoveFocus "Right"; SwitchToMode "Normal"; }
+
+        // Pane resizing (repeatable - stays in tmux mode)
+        bind "Ctrl h" { Resize "Increase Left"; }
+        bind "Ctrl j" { Resize "Increase Down"; }
+        bind "Ctrl k" { Resize "Increase Up"; }
+        bind "Ctrl l" { Resize "Increase Right"; }
+        bind "Ctrl Left" { Resize "Increase Left"; }
+        bind "Ctrl Right" { Resize "Increase Right"; }
+        bind "Ctrl Up" { Resize "Increase Up"; }
+        bind "Ctrl Down" { Resize "Increase Down"; }
+
+        // Split panes
+        bind "|" { NewPane "Right"; SwitchToMode "Normal"; }
+        bind "-" { NewPane "Down"; SwitchToMode "Normal"; }
+
+        // Tab management
+        bind "c" { NewTab; SwitchToMode "Normal"; }
+        bind "x" { CloseFocus; SwitchToMode "Normal"; }
+        bind "X" { CloseTab; SwitchToMode "Normal"; }
+
+        // Tab navigation
+        bind "n" { GoToNextTab; SwitchToMode "Normal"; }
+        bind "p" { GoToPreviousTab; SwitchToMode "Normal"; }
+
+        // Layouts (all map to NextSwapLayout - cycles through available layouts)
+        bind "=" { NextSwapLayout; SwitchToMode "Normal"; }
+        bind "E" { NextSwapLayout; SwitchToMode "Normal"; }
+        bind "T" { NextSwapLayout; SwitchToMode "Normal"; }
+        bind "M" { NextSwapLayout; SwitchToMode "Normal"; }
+        bind "V" { NextSwapLayout; SwitchToMode "Normal"; }
+
+        // Swap panes (repeatable - stays in tmux mode)
+        bind "<" { MovePaneBackwards; }
+        bind ">" { MovePaneForwards; }
+
+        // Session management
+        bind "S" { SwitchToMode "Session"; }
+
+        // Break pane into its own tab
+        bind "B" { BreakPane; SwitchToMode "Normal"; }
+
+        // Rename tab
+        bind "R" { SwitchToMode "RenameTab"; }
+
+        // Send Ctrl+a to the application (press Ctrl+a twice)
+        bind "Ctrl a" { Write 1; SwitchToMode "Normal"; }
+
+        // Cancel tmux mode
+        bind "Esc" { SwitchToMode "Normal"; }
+    }
+
+    // Session mode
+    session {
+        bind "Esc" { SwitchToMode "Normal"; }
+    }
+
+    // Rename tab mode
+    renametab {
+        bind "Esc" { SwitchToMode "Normal"; }
+    }
+
+    // Scroll mode
+    scroll {
+        bind "Esc" { SwitchToMode "Normal"; }
+    }
+
+    // Search mode
+    search {
+        bind "Esc" { SwitchToMode "Normal"; }
+    }
+}
+
+// Options
+mouse_mode true
+scroll_buffer_size 50000
+session_serialization true
+pane_frames false
+default_mode "normal"

@@ -138,7 +138,7 @@ backup_customizations() {
     "config/wsl.zsh"
     "config/termux.zsh"
     "nvim/user.vim"
-    "tmux/user.conf"
+    "zellij/user.kdl"
     "sources/macos.sh"
     "sources/linux.sh"
     "sources/wsl.sh"
