@@ -195,8 +195,8 @@ TRAPINT() {
 if command -v zellij &> /dev/null && [ -z "$ZELLIJ" ] && ! is_ai_code_editor; then
   _potions_session="${POTIONS_SESSION:-potions-main}"
   if zellij list-sessions 2>/dev/null | grep -q "^${_potions_session}"; then
-    exec zellij --config-dir "$POTIONS_HOME/zellij" attach "${_potions_session}"
+    zellij --config-dir "$POTIONS_HOME/zellij" attach "${_potions_session}"
   else
-    exec zellij --config-dir "$POTIONS_HOME/zellij" --session "${_potions_session}"
+    zellij --config-dir "$POTIONS_HOME/zellij" --session "${_potions_session}"
   fi
 fi

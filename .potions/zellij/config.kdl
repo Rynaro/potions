@@ -68,7 +68,7 @@ keybinds clear-defaults=true {
 
         // Swap panes (repeatable - stays in tmux mode)
         bind "<" { MovePaneBackwards; }
-        bind ">" { MovePaneForwards; }
+        bind ">" { MovePane; }
 
         // Pane shuffling
         bind "{" { MovePane "Left"; }
