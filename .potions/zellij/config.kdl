@@ -22,7 +22,7 @@ keybinds clear-defaults=true {
         bind "k" { MoveFocus "Up"; SwitchToMode "Normal"; }
         bind "l" { MoveFocus "Right"; SwitchToMode "Normal"; }
 
-        // Pane resizing (repeatable - stays in tmux mode)
+        // Pane resizing - one-shot (stays in tmux mode)
         bind "Ctrl h" { Resize "Increase Left"; }
         bind "Ctrl j" { Resize "Increase Down"; }
         bind "Ctrl k" { Resize "Increase Up"; }
@@ -31,6 +31,9 @@ keybinds clear-defaults=true {
         bind "Ctrl Right" { Resize "Increase Right"; }
         bind "Ctrl Up" { Resize "Increase Up"; }
         bind "Ctrl Down" { Resize "Increase Down"; }
+
+        // Enter dedicated resize mode
+        bind "r" { SwitchToMode "Resize"; }
 
         // Split panes
         bind "|" { NewPane "Right"; SwitchToMode "Normal"; }
@@ -45,6 +48,17 @@ keybinds clear-defaults=true {
         bind "n" { GoToNextTab; SwitchToMode "Normal"; }
         bind "p" { GoToPreviousTab; SwitchToMode "Normal"; }
 
+        // Numbered tab navigation
+        bind "1" { GoToTab 1; SwitchToMode "Normal"; }
+        bind "2" { GoToTab 2; SwitchToMode "Normal"; }
+        bind "3" { GoToTab 3; SwitchToMode "Normal"; }
+        bind "4" { GoToTab 4; SwitchToMode "Normal"; }
+        bind "5" { GoToTab 5; SwitchToMode "Normal"; }
+        bind "6" { GoToTab 6; SwitchToMode "Normal"; }
+        bind "7" { GoToTab 7; SwitchToMode "Normal"; }
+        bind "8" { GoToTab 8; SwitchToMode "Normal"; }
+        bind "9" { GoToTab 9; SwitchToMode "Normal"; }
+
         // Layouts (all map to NextSwapLayout - cycles through available layouts)
         bind "=" { NextSwapLayout; SwitchToMode "Normal"; }
         bind "E" { NextSwapLayout; SwitchToMode "Normal"; }
@@ -55,6 +69,15 @@ keybinds clear-defaults=true {
         // Swap panes (repeatable - stays in tmux mode)
         bind "<" { MovePaneBackwards; }
         bind ">" { MovePaneForwards; }
+
+        // Pane shuffling
+        bind "{" { MovePane "Left"; }
+        bind "}" { MovePane "Right"; }
+
+        // Pane focus and floating
+        bind "z" { ToggleFocusFullscreen; SwitchToMode "Normal"; }
+        bind "f" { TogglePaneEmbedOrFloating; SwitchToMode "Normal"; }
+        bind "F" { ToggleFloatingPanes; SwitchToMode "Normal"; }
 
         // Session management
         bind "S" { SwitchToMode "Session"; }
@@ -72,14 +95,32 @@ keybinds clear-defaults=true {
         bind "Esc" { SwitchToMode "Normal"; }
     }
 
+    // Resize mode: directional resizing with h/j/k/l
+    resize {
+        bind "h" { Resize "Increase Left"; }
+        bind "j" { Resize "Increase Down"; }
+        bind "k" { Resize "Increase Up"; }
+        bind "l" { Resize "Increase Right"; }
+        bind "H" { Resize "Decrease Left"; }
+        bind "J" { Resize "Decrease Down"; }
+        bind "K" { Resize "Decrease Up"; }
+        bind "L" { Resize "Decrease Right"; }
+        bind "=" "+" { Resize "Increase"; }
+        bind "-" { Resize "Decrease"; }
+        bind "Esc" "Enter" { SwitchToMode "Normal"; }
+    }
+
     // Session mode
     session {
         bind "Esc" { SwitchToMode "Normal"; }
+        bind "d" { Detach; }
+        bind "w" { LaunchOrFocusPlugin "zellij:session-manager" { floating true; }; SwitchToMode "Normal"; }
     }
 
     // Rename tab mode
     renametab {
-        bind "Esc" { SwitchToMode "Normal"; }
+        bind "Enter" { SwitchToMode "Normal"; }
+        bind "Esc" { UndoRenameTab; SwitchToMode "Normal"; }
     }
 
     // Scroll mode
@@ -97,5 +138,26 @@ keybinds clear-defaults=true {
 mouse_mode true
 scroll_buffer_size 50000
 session_serialization true
+serialization_interval 300
+serialize_pane_viewport true
 pane_frames false
 default_mode "normal"
+default_layout "default"
+theme "potions"
+
+// Themes
+themes {
+    potions {
+        fg "#c0caf5"
+        bg "#1a1b26"
+        black "#15161e"
+        red "#f7768e"
+        green "#9ece6a"
+        yellow "#e0af68"
+        blue "#7aa2f7"
+        magenta "#bb9af7"
+        cyan "#7dcfff"
+        white "#a9b1d6"
+        orange "#ff9e64"
+    }
+}
