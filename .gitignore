@@ -99,6 +99,9 @@
 !.potions/zellij/
 !.potions/zellij/config.kdl
 !.potions/zellij/user.kdl
+!.potions/zellij/layouts
+!.potions/zellij/layouts/
+!.potions/zellij/layouts/*.kdl
 
 # Allow Potions CLI
 !.potions/bin
