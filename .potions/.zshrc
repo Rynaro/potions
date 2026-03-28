@@ -189,12 +189,27 @@ TRAPINT() {
     return 128
 }
 
+# Derive a deterministic alchemical session name from the machine's hostname.
+# Maps hostname ASCII sum modulo 16 to one of 16 alchemical terms, giving each
+# machine a stable identity within the Potions theme.
+_potions_zellij_session_name() {
+  local _alchemical_words=(cauldron elixir alembic crucible tincture phlogiston azoth vitriol
+                           philosopher quintessence transmutation reagent catalyst retort sublimate athanor)
+  local host="${HOSTNAME:-$(hostname 2>/dev/null || echo "lab")}"
+  local sum=0
+  local char
+  while IFS= read -rn1 char; do
+    [[ -n "$char" ]] && sum=$(( sum + $(printf '%d' "'$char") ))
+  done <<< "$host"
+  echo "${_alchemical_words[$(( (sum % 16) + 1 ))]}"
+}
+
 # Auto-start zellij only if not already in zellij and not in an AI code editor terminal
 # AI code editors (VSCode, Cursor, etc.) should not auto-start zellij to avoid
 # terminal output capture issues
 if command -v zellij &> /dev/null && [ -z "$ZELLIJ" ] && ! is_ai_code_editor; then
-  _potions_session="${POTIONS_SESSION:-potions-main}"
-  if zellij list-sessions 2>/dev/null | grep -q "^${_potions_session}"; then
+  _potions_session="${POTIONS_SESSION:-$(_potions_zellij_session_name)}"
+  if zellij list-sessions 2>/dev/null | awk '{print $1}' | grep -qx "${_potions_session}"; then
     zellij --config-dir "$POTIONS_HOME/zellij" attach "${_potions_session}"
   else
     zellij --config-dir "$POTIONS_HOME/zellij" --session "${_potions_session}"

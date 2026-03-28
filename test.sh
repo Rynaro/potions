@@ -259,6 +259,24 @@ test_config_validity() {
 
   # Check zellij config uses clear-defaults
   assert_file_contains "$SCRIPT_DIR/.potions/zellij/config.kdl" "clear-defaults=true" "config.kdl uses clear-defaults"
+
+  # Check alchemical session naming function exists
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_potions_zellij_session_name" ".zshrc has alchemical session name function"
+
+  # Check alchemical word list is present
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_alchemical_words" ".zshrc has alchemical word list"
+
+  # Check awk strip is present for session state annotation handling
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "awk '{print \$1}'" ".zshrc strips session state annotations"
+
+  # Check hardcoded potions-main session name is gone
+  if grep -q "potions-main" "$SCRIPT_DIR/.potions/.zshrc"; then
+    log_failure ".zshrc must not contain hardcoded 'potions-main' session name"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success ".zshrc does not contain hardcoded 'potions-main'"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
 }
 
 test_install_script() {
