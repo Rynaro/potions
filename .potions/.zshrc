@@ -198,9 +198,9 @@ _potions_zellij_session_name() {
   local host="${HOSTNAME:-$(hostname 2>/dev/null || echo "lab")}"
   local sum=0
   local char
-  while IFS= read -rn1 char; do
-    [[ -n "$char" ]] && sum=$(( sum + $(printf '%d' "'$char") ))
-  done <<< "$host"
+  for char in ${(s::)host}; do
+    sum=$(( sum + $(printf '%d' "'$char") ))
+  done
   echo "${_alchemical_words[$(( (sum % 16) + 1 ))]}"
 }
 
