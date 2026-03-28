@@ -12,6 +12,23 @@ keybinds clear-defaults=true {
         // Direct tab navigation (no prefix needed)
         bind "Ctrl Tab" { GoToNextTab; }
         bind "Ctrl Shift Tab" { GoToPreviousTab; }
+
+        // Direct pane navigation (no prefix needed)
+        bind "Alt h" { MoveFocus "Left"; }
+        bind "Alt j" { MoveFocus "Down"; }
+        bind "Alt k" { MoveFocus "Up"; }
+        bind "Alt l" { MoveFocus "Right"; }
+        // Arrow-key aliases for terminals where Alt+hjkl is unreliable (e.g. Termux)
+        bind "Alt Left"  { MoveFocus "Left"; }
+        bind "Alt Down"  { MoveFocus "Down"; }
+        bind "Alt Up"    { MoveFocus "Up"; }
+        bind "Alt Right" { MoveFocus "Right"; }
+
+        // Block Ctrl+D from reaching the session-manager plugin.
+        // Unbound keys in normal mode forward as raw bytes to the focused plugin.
+        // The session-manager maps Ctrl+D (byte 0x04) to "kill all sessions except
+        // current" — an irreversible destructive action. This intercepts it first.
+        bind "Ctrl d" { SwitchToMode "Normal"; }
     }
 
     // Tmux mode: all prefix-based keybindings
@@ -115,6 +132,14 @@ keybinds clear-defaults=true {
         bind "Esc" { SwitchToMode "Normal"; }
         bind "d" { Detach; }
         bind "w" { LaunchOrFocusPlugin "zellij:session-manager" { floating true; }; SwitchToMode "Normal"; }
+
+        // Forward Delete and Backspace to the session-manager plugin.
+        // With clear-defaults=true, Zellij drops unbound keys before the plugin
+        // receives them. WriteChars emits the DEL byte (0x7F) directly, which
+        // the session-manager interprets as "kill selected session".
+        // Both keys map to 0x7F: macOS sends 0x7F for the physical Delete key,
+        // and most Linux terminals also use 0x7F for Backspace.
+        bind "Delete" "Backspace" { WriteChars "\u007f"; }
     }
 
     // Rename tab mode
