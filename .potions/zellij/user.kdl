@@ -1,16 +1,34 @@
 // User Zellij Configuration
-// This file is preserved on upgrade - add your custom settings here
+// This file is preserved on upgrade — add your custom settings here.
 //
-// Note: Zellij KDL config does not support a "source" directive.
-// To load custom configurations, set ZELLIJ_CONFIG_DIR to a directory
-// containing your config.kdl file, or use this file for overrides.
+// ── LAYOUT SELECTION ────────────────────────────────────────────────────────
+// Three layouts are available. Uncomment one line below to activate it.
 //
-// Example: Custom keybinding in tmux mode
+//   default  — tab bar only, no status bar (the shipped default)
+//   compact  — tab bar + single-row mode indicator (shows NORMAL / RESIZE / etc.)
+//   minimal  — tab bar only (same as default, explicit alias)
+//
+// default_layout "compact"
+// default_layout "minimal"
+//
+// ── PANE NAVIGATION ─────────────────────────────────────────────────────────
+// Alt+h/j/k/l  move focus between panes (no prefix needed)
+// Alt+arrows   same, for terminals where Alt+hjkl is not forwarded (e.g. Termux)
+//
+// Ctrl+a then h/j/k/l  also works (tmux-prefix style, unchanged)
+//
+// ── CUSTOM KEYBINDINGS ──────────────────────────────────────────────────────
+// Example: add a binding in tmux mode
 //   keybinds {
 //       tmux {
 //           bind "m" { NewPane "Right"; SwitchToMode "Normal"; }
 //       }
 //   }
 //
-// Example: Change theme
+// ── THEME ────────────────────────────────────────────────────────────────────
+// Example: switch to a different theme
 //   theme "dracula"
+//
+// Note: Zellij KDL config does not support a "source" directive.
+// To load a fully custom config, set ZELLIJ_CONFIG_DIR to a directory
+// containing your own config.kdl.
