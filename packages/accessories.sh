@@ -22,6 +22,19 @@ if [ -z "$REPO_ROOT" ]; then
   export REPO_ROOT
 fi
 
+# Alchemists Orchid Papyrus — canonical palette (see docs/color-palette.md)
+# ANSI slots are themed by Zellij to the correct hex values at render time.
+# Scripts reference these variables; do NOT hardcode hex values inline.
+RED='\033[0;31m'     # input.border.error  #D32F2F
+GREEN='\033[0;32m'   # color.accent.nature #C8E7D5
+YELLOW='\033[1;33m'  # color.accent.warm   #F8D1E0
+BLUE='\033[0;34m'    # color.primary-deep  #6F4A8E
+MAGENTA='\033[0;35m' # color.primary       #CDB4DB
+CYAN='\033[0;36m'    # color.accent.cool   #B9C9E6
+WHITE='\033[1;37m'   # color.secondary     #E5D4F1
+BOLD='\033[1m'
+NC='\033[0m'
+
 # Environment Variables
 OS_TYPE="$(uname -s)"
 USER_HOME_FOLDER=$HOME

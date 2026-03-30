@@ -68,7 +68,7 @@ export PATH="$POTIONS_HOME/bin:$PATH"
 
 # Git Prompt configuration
 # Wrap git_super_status in error handling to prevent prompt rendering issues
-PROMPT='%F{cyan}%n%f%F{magenta}@%f%F{red}%m%f:%b$(git_super_status 2>/dev/null || echo "") %~ %(#.#.$) '
+PROMPT='%F{cyan}%n%f%F{magenta}@%f%F{blue}%m%f:%b$(git_super_status 2>/dev/null || echo "") %~ %(#.#.$) '
 
 if is_macos; then
   # macOS-specific configurations
@@ -189,10 +189,17 @@ TRAPINT() {
     return 128
 }
 
-# Derive a deterministic alchemical session name from the machine's hostname.
-# Maps hostname ASCII sum modulo 16 to one of 16 alchemical terms, giving each
-# machine a stable identity within the Potions theme.
+# Derive a deterministic two-word alchemical session name from the machine's hostname.
+# A single 16-word list produced collisions on common hostnames (e.g. "server" always
+# mapped to "vitriol"). Two independent 16-element lists give 256 combinations, reducing
+# collision probability to ~0.4%. Names are hyphen-joined (e.g. "verdant-retort") so
+# they remain a single awk field in the attach-or-create pipeline below.
+# Formula:
+#   w1 = (ascii_sum % 16) + 1
+#   w2 = ((ascii_sum + hostname_length) % 16) + 1
 _potions_zellij_session_name() {
+  local _materials=(golden silver copper iron obsidian azure crimson verdant pale molten
+                    frozen ethereal arcane vivid tarnished radiant)
   local _alchemical_words=(cauldron elixir alembic crucible tincture phlogiston azoth vitriol
                            philosopher quintessence transmutation reagent catalyst retort sublimate athanor)
   local host="${HOSTNAME:-$(hostname 2>/dev/null || echo "lab")}"
@@ -201,7 +208,10 @@ _potions_zellij_session_name() {
   for char in ${(s::)host}; do
     sum=$(( sum + $(printf '%d' "'$char") ))
   done
-  echo "${_alchemical_words[$(( (sum % 16) + 1 ))]}"
+  local len="${#host}"
+  local w1=$(( (sum % 16) + 1 ))
+  local w2=$(( ((sum + len) % 16) + 1 ))
+  echo "${_materials[$w1]}-${_alchemical_words[$w2]}"
 }
 
 # Auto-start zellij only if not already in zellij and not in an AI code editor terminal

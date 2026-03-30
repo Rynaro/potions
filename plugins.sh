@@ -12,7 +12,7 @@ source "$SCRIPT_DIR/packages/accessories.sh"
 source "$SCRIPT_DIR/plugins/core/engine.sh"
 source "$SCRIPT_DIR/plugins/core/loader.sh"
 
-# Colors for output
+# Colors for output — Alchemists Orchid Papyrus palette (docs/color-palette.md)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
