@@ -168,21 +168,36 @@ serialize_pane_viewport true
 pane_frames false
 default_mode "normal"
 default_layout "default"
-theme "potions"
+// To switch between dark and light: change "potions-dark" to "potions-light" below.
+theme "potions-dark"
 
-// Themes
+// Themes — Alchemists Orchid Papyrus (https://github.com/Rynaro/alchemists-orchid-papyrus)
+// Full slot-to-token mapping: docs/color-palette.md
 themes {
-    potions {
-        fg "#c0caf5"
-        bg "#1a1b26"
-        black "#15161e"
-        red "#f7768e"
-        green "#9ece6a"
-        yellow "#e0af68"
-        blue "#7aa2f7"
-        magenta "#bb9af7"
-        cyan "#7dcfff"
-        white "#a9b1d6"
-        orange "#ff9e64"
+    potions-dark {
+        fg "#E5D4F1"     // color.secondary     lavender.300
+        bg "#1E1B2E"     // color.surface.dark  orchid-tinted deep
+        black "#15121F"  // deep-dark
+        red "#D32F2F"    // input.border.error
+        green "#C8E7D5"  // color.accent.nature mint.400
+        yellow "#F8D1E0" // color.accent.warm   pink.400
+        blue "#B9C9E6"   // color.accent.cool   blue.400
+        magenta "#CDB4DB" // color.primary      orchid.500
+        cyan "#A88FBC"   // orchid.600
+        white "#9E93B8"  // muted-orchid
+        orange "#6F4A8E" // color.primary-deep  orchid.700
+    }
+    potions-light {
+        fg "#4A4A4A"     // color.text.primary  neutral.700
+        bg "#F8F5F2"     // color.surface       cream.100
+        black "#E5E1DD"  // cream.300
+        red "#D32F2F"    // input.border.error
+        green "#C8E7D5"  // color.accent.nature mint.400
+        yellow "#F8D1E0" // color.accent.warm   pink.400
+        blue "#B9C9E6"   // color.accent.cool   blue.400
+        magenta "#CDB4DB" // color.primary      orchid.500
+        cyan "#6F4A8E"   // color.primary-deep  orchid.700
+        white "#6D6D6D"  // color.text.secondary neutral.600
+        orange "#A88FBC" // orchid.600
     }
 }
