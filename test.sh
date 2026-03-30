@@ -263,11 +263,48 @@ test_config_validity() {
   # Check alchemical session naming function exists
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_potions_zellij_session_name" ".zshrc has alchemical session name function"
 
-  # Check alchemical word list is present
+  # Check both word lists are present
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_materials" ".zshrc has material/adjective word list"
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_alchemical_words" ".zshrc has alchemical word list"
 
   # Check awk strip is present for session state annotation handling
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "awk '{print \$1}'" ".zshrc strips session state annotations"
+
+  # Functional: verify composed session name for reference hostname
+  if command -v zsh &>/dev/null; then
+    _session_name_result=$(HOSTNAME=server zsh -c '
+      source "$1/.potions/.zshrc" 2>/dev/null || true
+      _potions_zellij_session_name
+    ' _ "$SCRIPT_DIR")
+    if [ "$_session_name_result" = "verdant-retort" ]; then
+      log_success "Session naming: HOSTNAME=server → verdant-retort"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Session naming: expected 'verdant-retort', got '$_session_name_result'"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+    # Check output matches two-word hyphenated format
+    if echo "$_session_name_result" | grep -qE '^[a-z]+-[a-z]+$'; then
+      log_success "Session name format: two hyphen-joined lowercase words"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Session name format invalid: '$_session_name_result'"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+  else
+    log_success "Session naming functional test: skipped (zsh not in PATH)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # Unit: verify awk pipeline treats hyphenated names as a single field
+  _awk_result=$(echo "verdant-retort RUNNING" | awk '{print $1}')
+  if [ "$_awk_result" = "verdant-retort" ]; then
+    log_success "awk pipeline: hyphenated session name is single field"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "awk pipeline: expected 'verdant-retort', got '$_awk_result'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
 
   # Check hardcoded potions-main session name is gone
   if grep -q "potions-main" "$SCRIPT_DIR/.potions/.zshrc"; then
