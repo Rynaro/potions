@@ -82,16 +82,19 @@ Run `./migrate.sh` to migrate from legacy to new structure.
 
 ### Zellij (Prefix: `Ctrl+a`)
 
-| Key | Action |
-|-----|--------|
-| `Ctrl+a c` | New tab |
-| `Ctrl+a x` | Close pane |
-| `Ctrl+a \|` | Split right |
-| `Ctrl+a -` | Split down |
-| `Ctrl+a h/j/k/l` | Navigate panes |
-| `Ctrl+a n` | Next tab |
-| `Ctrl+a p` | Previous tab |
-| `Ctrl+Tab` | Next tab (if terminal supports) |
+> **macOS users:** The prefix is `Ctrl+a` (hold Control, press A) — **not** `Cmd+A`. `Cmd+A` triggers "Select All" in your terminal and never reaches Zellij. See the [Terminal Setup Guide](.potions/terminal-setup/TERMINAL_SETUP.md) for macOS-specific setup.
+
+| Key | Action | macOS Notes |
+|-----|--------|-------------|
+| `Ctrl+a c` | New tab | or `Alt+t` |
+| `Ctrl+a x` | Close pane | or `Alt+w` |
+| `Ctrl+a \|` | Split right | or `Alt+d` |
+| `Ctrl+a -` | Split down | — |
+| `Ctrl+a h/j/k/l` | Navigate panes | or `Alt+h/j/k/l` |
+| `Ctrl+a n` | Next tab | or `Alt+n` |
+| `Ctrl+a p` | Previous tab | or `Alt+p` |
+| `Ctrl+a z` | Toggle fullscreen | or `Alt+Enter` |
+| `Ctrl+Tab` | Next tab | Not forwarded by Terminal.app — use `Alt+n` |
 
 ### Neovim (Leader: `Space`)
 
@@ -162,7 +165,9 @@ Some terminals require configuration for certain key combinations. See the [Term
 
 | Issue | Solution |
 |-------|----------|
-| Ctrl+Tab not working | Configure terminal or use `Ctrl+a n` / `Ctrl+a p` in zellij |
+| Tmux mode (`Ctrl+a`) does not activate on macOS | You may be pressing `Cmd+A` (⌘A) instead of `Ctrl+a`. Use `cat -v` to verify. |
+| `Ctrl+Tab` not working | Use `Alt+n` or `Ctrl+a n`; or configure terminal (see Terminal Setup Guide) |
+| `Cmd+D/T/W` does nothing in Zellij | These are intercepted by macOS. Use `Alt+d/t/w` or configure Cmd→Alt forwarding |
 | Word navigation broken | Check terminal key mappings, try Alt+f/Alt+b |
 | Ctrl+S freezes terminal | Potions should disable this; if not, run `stty -ixon` |
 

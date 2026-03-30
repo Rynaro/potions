@@ -7,9 +7,19 @@ keybinds clear-defaults=true {
     // Normal mode: only Ctrl+a to enter tmux mode + direct tab switching
     normal {
         // Enter tmux mode (prefix key)
+        // macOS CRITICAL — Ctrl+a vs Cmd+A ──────────────────────────────────
+        // The prefix key is Ctrl+a (hold Control, press A — ASCII 0x01 = ^A).
+        // On macOS, Cmd+A (⌘A) is intercepted by the terminal before Zellij
+        // ever sees it and triggers "Select All" in the terminal window.
+        // If tmux mode never activates, diagnose with:
+        //   cat -v  →  press your key  →  Ctrl+a prints ^A; Cmd+A prints nothing
+        // The Ctrl key is the bottom-left corner key; ⌘ Cmd is next to the spacebar.
         bind "Ctrl a" { SwitchToMode "Tmux"; }
 
         // Direct tab navigation (no prefix needed)
+        // macOS: Ctrl+Tab and Ctrl+Shift+Tab are not forwarded by Terminal.app
+        // or iTerm2 by default. Use Alt+n / Alt+p (below) or Ctrl+a n / Ctrl+a p
+        // as alternatives. To enable: see ~/.potions/terminal-setup/TERMINAL_SETUP.md
         bind "Ctrl Tab" { GoToNextTab; }
         bind "Ctrl Shift Tab" { GoToPreviousTab; }
 
@@ -23,6 +33,25 @@ keybinds clear-defaults=true {
         bind "Alt Down"  { MoveFocus "Down"; }
         bind "Alt Up"    { MoveFocus "Up"; }
         bind "Alt Right" { MoveFocus "Right"; }
+
+        // macOS-convention Alt bindings ──────────────────────────────────────
+        // These mirror standard macOS terminal shortcuts (Cmd+D/T/W/etc).
+        // macOS users: forward Cmd+<key> → Alt+<key> once in your terminal:
+        //   iTerm2:       Profiles → Keys → Key Mappings → "+" →
+        //                 Keyboard Shortcut: Cmd+D, Action: Send Escape Sequence, value: d
+        //                 (repeat for each key: t→t, w→w, n→n, p→p, Return→\n)
+        //   Ghostty:      keybind = cmd+d=send_key:alt+d  (in ghostty.conf)
+        //   Kitty:        map cmd+d send_key alt+d  (in kitty.conf)
+        //   Terminal.app: Preferences → Profiles → Keyboard → "Use Option as Meta Key"
+        //                 then press Option+<key> instead of Cmd+<key>
+        //   Alacritty:    { key = "D", mods = "Command", chars = "\x1bd" }  (in alacritty.toml)
+        // Linux / WSL / Termux: press Alt+<key> directly — no setup needed.
+        bind "Alt d" { NewPane "Right"; }           // Cmd+D       → split pane right
+        bind "Alt t" { NewTab; }                     // Cmd+T       → new tab
+        bind "Alt w" { CloseFocus; }                 // Cmd+W       → close pane
+        bind "Alt n" { GoToNextTab; }                // Cmd+Shift+] → next tab
+        bind "Alt p" { GoToPreviousTab; }            // Cmd+Shift+[ → prev tab
+        bind "Alt Enter" { ToggleFocusFullscreen; }  // Cmd+Return  → toggle fullscreen
 
         // Block Ctrl+D from reaching the session-manager plugin.
         // Unbound keys in normal mode forward as raw bytes to the focused plugin.
@@ -40,6 +69,9 @@ keybinds clear-defaults=true {
         bind "l" { MoveFocus "Right"; SwitchToMode "Normal"; }
 
         // Pane resizing - one-shot (stays in tmux mode)
+        // macOS: Ctrl+h may be interpreted as DEL (0x08) by some terminals.
+        // macOS: Ctrl+Arrow may not be forwarded correctly by Terminal.app.
+        // Alternatives (all platforms): Ctrl+a r then hjkl / arrow keys (resize mode)
         bind "Ctrl h" { Resize "Increase Left"; }
         bind "Ctrl j" { Resize "Increase Down"; }
         bind "Ctrl k" { Resize "Increase Up"; }
