@@ -4,6 +4,9 @@
 # Allow essential docs
 !README.md
 !AGENTS.md
+!docs
+!docs/
+!docs/*.md
 
 # Assets
 !assets
