@@ -161,6 +161,29 @@ assert_syntax_valid() {
   fi
 }
 
+assert_no_local_outside_function() {
+  local file="$1"
+  local description="${2:-No local outside functions: $file}"
+
+  local violations
+  violations=$(awk '
+    /[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*\(\).*\{/ || /^function[[:space:]].*\{/ { depth++ }
+    /^[[:space:]]*\}[[:space:]]*$/ { if (depth > 0) depth-- }
+    /^[[:space:]]*local[[:space:]]/ { if (depth == 0) print NR ": " $0 }
+  ' "$file")
+
+  if [ -z "$violations" ]; then
+    log_success "$description"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    return 0
+  else
+    log_failure "$description"
+    echo "$violations"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    return 1
+  fi
+}
+
 # Test categories
 test_repo_structure() {
   log_step "Repository Structure Tests"
@@ -234,6 +257,39 @@ test_bash_syntax() {
         if [ -f "$script" ]; then
           local name=$(basename "$script")
           assert_syntax_valid "$script" "packages/$platform/$name syntax"
+        fi
+      done
+    fi
+  done
+}
+
+test_no_local_outside_functions() {
+  log_step "No local Outside Functions"
+
+  # Core scripts
+  assert_no_local_outside_function "$SCRIPT_DIR/drink.sh" "drink.sh: no local outside functions"
+  assert_no_local_outside_function "$SCRIPT_DIR/install.sh" "install.sh: no local outside functions"
+  assert_no_local_outside_function "$SCRIPT_DIR/upgrade.sh" "upgrade.sh: no local outside functions"
+  assert_no_local_outside_function "$SCRIPT_DIR/plugins.sh" "plugins.sh: no local outside functions"
+  assert_no_local_outside_function "$SCRIPT_DIR/packages/accessories.sh" "accessories.sh: no local outside functions"
+
+  # Common packages
+  for script in "$SCRIPT_DIR"/packages/common/*.sh; do
+    if [ -f "$script" ]; then
+      local name
+      name=$(basename "$script")
+      assert_no_local_outside_function "$script" "packages/common/$name: no local outside functions"
+    fi
+  done
+
+  # Platform packages
+  for platform in macos debian fedora wsl termux; do
+    if [ -d "$SCRIPT_DIR/packages/$platform" ]; then
+      for script in "$SCRIPT_DIR/packages/$platform"/*.sh; do
+        if [ -f "$script" ]; then
+          local name
+          name=$(basename "$script")
+          assert_no_local_outside_function "$script" "packages/$platform/$name: no local outside functions"
         fi
       done
     fi
@@ -591,6 +647,7 @@ main() {
   # Run test categories
   test_repo_structure
   test_bash_syntax
+  test_no_local_outside_functions
   test_config_validity
   test_install_script
   test_common_packages

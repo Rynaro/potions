@@ -301,7 +301,7 @@ else
   
   # Display version after download
   if [ -f "$POTIONS_DIR/.version" ]; then
-    local version=$(cat "$POTIONS_DIR/.version" | tr -d '[:space:]')
+    version=$(cat "$POTIONS_DIR/.version" | tr -d '[:space:]')
     if [ -n "$version" ]; then
       log_info "Potions version: ${BOLD}v${version}${NC}"
     fi
