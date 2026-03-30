@@ -41,6 +41,22 @@ POTIONS_BACKUPS_DIR="$POTIONS_HOME/backups"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd 2>/dev/null || echo "")"
 
+# Load help library (graceful degradation when file is absent)
+POTIONS_HELP_AVAILABLE=false
+_potions_help_lib=""
+if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.potions/lib/help.sh" ]; then
+  _potions_help_lib="$REPO_ROOT/.potions/lib/help.sh"
+elif [ -f "$POTIONS_HOME/lib/help.sh" ]; then
+  _potions_help_lib="$POTIONS_HOME/lib/help.sh"
+fi
+if [ -n "$_potions_help_lib" ]; then
+  # shellcheck source=/dev/null
+  if . "$_potions_help_lib" 2>/dev/null; then
+    POTIONS_HELP_AVAILABLE=true
+  fi
+fi
+unset _potions_help_lib
+
 # Platform detection functions
 is_macos() {
   [ "$(uname -s)" = "Darwin" ]
@@ -552,9 +568,81 @@ cmd_doctor() {
   echo ""
 }
 
+# Command: keybindings (branded popup)
+cmd_keybindings() {
+  if [ "$POTIONS_HELP_AVAILABLE" = true ]; then
+    local _version; _version=$(get_version)
+    detect_terminal_capabilities
+    # Enforce minimum render width
+    if [ "${POTIONS_DISPLAY_WIDTH:-0}" -lt 72 ]; then
+      POTIONS_DISPLAY_WIDTH=72
+    fi
+    render_popup_header "$_version"
+    local _section
+    for _section in "${POTIONS_HELP_SECTIONS[@]}"; do
+      "help_section_${_section}"
+    done
+    render_popup_footer
+  else
+    # Plain-text fallback for older installs where lib/help.sh is absent
+    echo ""
+    echo "Potions Keybindings"
+    echo "==================="
+    echo ""
+    echo "Zellij:"
+    echo "  Ctrl+a           Enter prefix mode"
+    echo "  Alt+h/j/k/l      Navigate panes"
+    echo "  Alt+d            Split pane right"
+    echo "  Alt+t / Alt+w    New tab / Close pane"
+    echo "  Alt+n / Alt+p    Next / previous tab"
+    echo "  Ctrl+a  |  -     Split right / down"
+    echo "  Ctrl+a  c x X    New tab / Close pane / Close tab"
+    echo "  Ctrl+a  n p      Next / previous tab"
+    echo "  Ctrl+a  S        Session manager"
+    echo ""
+    echo "Zsh:"
+    echo "  Ctrl+a / Ctrl+e  Beginning / end of line"
+    echo "  Ctrl+r           Reverse history search"
+    echo "  Ctrl+u / Ctrl+k  Clear to start / end"
+    echo "  Ctrl+w           Delete word backward"
+    echo ""
+    echo "Neovim:"
+    echo "  Ctrl+s           Save file"
+    echo "  Ctrl+n           Toggle NERDTree"
+    echo "  Space ff / fg    Find files / Live grep"
+    echo "  Space q / wq     Quit / Write and quit"
+    echo "  Space h / l      Previous / next buffer"
+    echo ""
+    echo "Full reference: ~/.potions/KEYMAPS.md"
+    echo ""
+  fi
+}
+
 # Command: help
 cmd_help() {
-  cat << EOF
+  if [ "$POTIONS_HELP_AVAILABLE" = true ]; then
+    local _version; _version=$(get_version)
+    detect_terminal_capabilities
+    if [ "${POTIONS_DISPLAY_WIDTH:-0}" -lt 72 ]; then
+      POTIONS_DISPLAY_WIDTH=72
+    fi
+    render_popup_header "$_version"
+    help_section_commands
+    echo ""
+    if [ "$POTIONS_HAS_COLOR" = true ]; then
+      printf "    ${POTIONS_COLOR_DIM}plugin install${POTIONS_NC}  [name]    Install plugins from Potionfile or specific plugin\n"
+      printf "    ${POTIONS_COLOR_DIM}plugin list${POTIONS_NC}               List installed plugins\n"
+      printf "    ${POTIONS_COLOR_DIM}plugin update${POTIONS_NC}  [name]     Update plugins\n"
+      printf "    ${POTIONS_COLOR_DIM}plugin status${POTIONS_NC}             Show plugin system status\n"
+    else
+      printf "    plugin install  [name]    Install plugins from Potionfile or specific plugin\n"
+      printf "    plugin list               List installed plugins\n"
+      printf "    plugin update  [name]     Update plugins\n"
+      printf "    plugin status             Show plugin system status\n"
+    fi
+    render_popup_footer
+  else
+    cat << EOF
 ${BOLD}Potions CLI${NC} - Professional command-line interface for Potions
 
 ${BOLD}USAGE:${NC}
@@ -563,19 +651,13 @@ ${BOLD}USAGE:${NC}
 ${BOLD}COMMANDS:${NC}
     ${CYAN}upgrade${NC}           Upgrade Potions to the latest version
     ${CYAN}update${NC}            Check if updates are available
+    ${CYAN}keybindings${NC}       Show keybindings popup (aliases: keys, kb)
     ${CYAN}version${NC}           Show current Potions version
     ${CYAN}versions${NC}          Alias for 'version'
     ${CYAN}status${NC}            Show installation status
     ${CYAN}info${NC}              Show system information
     ${CYAN}doctor${NC}            Run health check on installation
     ${CYAN}help${NC}              Show this help message
-
-${BOLD}EXAMPLES:${NC}
-    potions upgrade              # Upgrade to latest version
-    potions update               # Check for updates
-    potions version              # Show version
-    potions status               # Show installation status
-    potions doctor               # Run health check
 
 ${BOLD}PLUGIN COMMANDS:${NC}
     ${CYAN}plugin install${NC} [name]   Install plugins from Potionfile or specific plugin
@@ -591,6 +673,7 @@ ${BOLD}For more information, visit:${NC}
     https://github.com/Rynaro/potions
 
 EOF
+  fi
 }
 
 # Command: plugin (delegates to plugins.sh)
@@ -630,6 +713,9 @@ main() {
       ;;
     update)
       cmd_update
+      ;;
+    keybindings|keys|kb)
+      cmd_keybindings
       ;;
     version|versions)
       cmd_version

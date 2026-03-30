@@ -48,10 +48,71 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 
 **No-prefix bindings** (work without `Ctrl+a`):
 
-| Key | Action |
-|-----|--------|
-| `Ctrl+Tab` | Next tab |
-| `Ctrl+Shift+Tab` | Previous tab |
+| Key | Action | macOS Notes |
+|-----|--------|-------------|
+| `Ctrl+Tab` | Next tab | Not forwarded by Terminal.app/iTerm2 — use `Alt+n` instead |
+| `Ctrl+Shift+Tab` | Previous tab | Not forwarded by Terminal.app/iTerm2 — use `Alt+p` instead |
+| `Alt+h/j/k/l` | Navigate panes | Press Alt directly on all platforms |
+| `Alt+Arrow` | Navigate panes | Termux-safe alias |
+| `Alt+d` | Split pane right | macOS: forward `Cmd+D` → `Alt+d` in terminal settings |
+| `Alt+t` | New tab | macOS: forward `Cmd+T` → `Alt+t` |
+| `Alt+w` | Close pane | macOS: forward `Cmd+W` → `Alt+w` |
+| `Alt+n` | Next tab | macOS: forward `Cmd+Shift+]` → `Alt+n` |
+| `Alt+p` | Previous tab | macOS: forward `Cmd+Shift+[` → `Alt+p` |
+| `Alt+Enter` | Toggle fullscreen | macOS: forward `Cmd+Return` → `Alt+Enter` |
+
+---
+
+## macOS Keybinding Compatibility
+
+### macOS: Cmd vs Ctrl — The Prefix Key Problem
+
+On macOS, `Cmd` (⌘) and `Ctrl` are different physical keys. The Zellij prefix is **`Ctrl+a`** (hold Control, press A — ASCII `^A`, byte `0x01`), **not** `Cmd+A`.
+
+`Cmd+A` is intercepted by the terminal emulator at the macOS application layer and triggers **Select All**. Zellij never receives it. If tmux mode does not activate, run this diagnostic:
+
+```bash
+cat -v
+# Press your key combination:
+# Ctrl+a  →  prints ^A          ✓ correct, Zellij will see it
+# Cmd+A   →  nothing / selects text   ✗ terminal intercepted it
+```
+
+The **Ctrl** key on a Mac keyboard is in the bottom-left corner. The **⌘ Cmd** key is next to the spacebar.
+
+**Shortcuts intercepted by macOS terminals** (Zellij never sees these):
+
+| macOS Shortcut | Terminal Action | Zellij Alternative |
+|---|---|---|
+| `Cmd+A` | Select All | `Ctrl+a` (the real prefix — press **Ctrl**, not ⌘) |
+| `Cmd+D` | (split/duplicate in terminal) | `Alt+d` or `Ctrl+a \|` |
+| `Cmd+T` | New terminal tab | `Alt+t` or `Ctrl+a c` |
+| `Cmd+W` | Close window/tab | `Alt+w` or `Ctrl+a x` |
+| `Cmd+Return` | Fullscreen (terminal-level) | `Alt+Enter` or `Ctrl+a z` |
+
+### macOS-Convention Alt Bindings
+
+The `Alt+<key>` bindings in `config.kdl` mirror macOS terminal conventions. All platforms use them directly. macOS users can optionally restore `Cmd` muscle memory with a one-time terminal setting (see [Terminal Setup](.potions/terminal-setup/TERMINAL_SETUP.md)):
+
+| Alt Binding | Mirrors | Action |
+|---|---|---|
+| `Alt+d` | `Cmd+D` | Split pane right |
+| `Alt+t` | `Cmd+T` | New tab |
+| `Alt+w` | `Cmd+W` | Close pane |
+| `Alt+n` | `Cmd+Shift+]` | Next tab |
+| `Alt+p` | `Cmd+Shift+[` | Previous tab |
+| `Alt+Enter` | `Cmd+Return` | Toggle fullscreen |
+
+### Bindings That May Require Terminal Config on macOS
+
+| Binding | Mode | Problem | Alternative (always works) |
+|---|---|---|---|
+| `Ctrl+Tab` | normal | Not forwarded by Terminal.app / iTerm2 by default | `Alt+n` or `Ctrl+a n` |
+| `Ctrl+Shift+Tab` | normal | Not forwarded by Terminal.app / iTerm2 by default | `Alt+p` or `Ctrl+a p` |
+| `Ctrl+h` (resize) | tmux | May be interpreted as DEL (0x08) on some terminals | `Ctrl+a r` then `h` |
+| `Ctrl+Arrow` (resize) | tmux | Non-standard sequences from Terminal.app | `Ctrl+a r` then arrow keys |
+
+For iTerm2, Alacritty, Kitty, WezTerm: see the [Terminal Setup Guide](.potions/terminal-setup/TERMINAL_SETUP.md) to configure these sequences.
 
 ---
 

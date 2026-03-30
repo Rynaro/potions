@@ -17,6 +17,29 @@
 //
 // Ctrl+a then h/j/k/l  also works (tmux-prefix style, unchanged)
 //
+// ── macOS NOTES ─────────────────────────────────────────────────────────────
+// The prefix key is Ctrl+a (not Cmd+A). On macOS, Cmd+A triggers "Select All"
+// in the terminal — Zellij never sees it. Use the Ctrl key (bottom-left corner),
+// not the ⌘ Cmd key (next to spacebar).
+//
+// Alt+d/t/w/n/p/Enter are bound in config.kdl and mirror macOS Cmd conventions:
+//   Alt+d → split right  (Cmd+D in iTerm2/Warp/Ghostty)
+//   Alt+t → new tab      (Cmd+T)
+//   Alt+w → close pane   (Cmd+W)
+//   Alt+n → next tab     (Cmd+Shift+])
+//   Alt+p → prev tab     (Cmd+Shift+[)
+//   Alt+Enter → fullscreen (Cmd+Return)
+//
+// macOS users can restore Cmd muscle memory by forwarding Cmd+<key> → Alt+<key>
+// in their terminal. One-time setup per terminal:
+//   iTerm2:    Profiles → Keys → Option Key: "Esc+"
+//              then add Key Mappings: Cmd+D → Send Escape Sequence "d"  (etc.)
+//   Ghostty:   keybind = cmd+d=send_key:alt+d  (in ghostty.conf, one line per key)
+//   Kitty:     map cmd+d send_key alt+d  (in kitty.conf, one line per key)
+//   Terminal.app: Preferences → Profiles → Keyboard → "Use Option as Meta Key"
+//                 then press Option+<key> instead of Cmd+<key>
+// See ~/.potions/terminal-setup/TERMINAL_SETUP.md for full per-terminal instructions.
+//
 // ── CUSTOM KEYBINDINGS ──────────────────────────────────────────────────────
 // Example: add a binding in tmux mode
 //   keybinds {

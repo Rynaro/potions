@@ -111,6 +111,11 @@
 !.potions/bin/
 !.potions/bin/potions
 
+# Allow help library
+!.potions/lib
+!.potions/lib/
+!.potions/lib/help.sh
+
 # Allow Potionfile template
 !.potions/Potionfile.template
 
