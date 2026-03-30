@@ -86,14 +86,20 @@ end
 EOF
 
 " Persist highlight overrides across colorscheme reloads via autocmd ColorScheme.
-" Alchemists Orchid palette reference:
-"   background:     #1e1a2e   mid-dark purple
-"   foreground:     #e0d7f5   soft lavender white
-"   orchid accent:  #c678dd   bright orchid / purple
-"   muted fg:       #7a7094   muted lavender-grey
-"   selection bg:   #44395a   deep orchid selection
-"   tab active bg:  #2d2640   slightly lighter dark purple
-"   tab fill bg:    #16121f   very dark purple
+" Alchemists Orchid Papyrus palette reference (https://github.com/Rynaro/alchemists-orchid-papyrus)
+" Full canonical token table: docs/color-palette.md
+"   bg (surface.dark):     #1E1B2E  orchid-tinted deep dark   (color.surface.dark)
+"   fg (secondary):        #E5D4F1  soft lavender white       (color.secondary / lavender.300)
+"   primary:               #CDB4DB  orchid.500                (color.primary)
+"   primary-deep:          #6F4A8E  orchid.700                (color.primary-deep)
+"   accent.cool:           #B9C9E6  blue.400                  (color.accent.cool)
+"   accent.nature:         #C8E7D5  mint.400                  (color.accent.nature)
+"   accent.warm:           #F8D1E0  pink.400                  (color.accent.warm)
+"   error:                 #D32F2F  input.border.error
+"   muted-orchid:          #9E93B8  desaturated lavender
+"   selection bg:          #44395a  deep orchid selection      (plugin-internal)
+"   tab active bg:         #2d2640  slightly lighter dark       (plugin-internal)
+"   tab fill bg:           #16121f  very dark purple            (plugin-internal)
 
 augroup ThemeHighlights
   autocmd!
