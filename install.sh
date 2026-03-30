@@ -12,7 +12,7 @@ if [ "${DEBUG:-}" = "1" ]; then
   set -x
 fi
 
-# Colors for output (Oh My Zsh style)
+# Colors for output — Alchemists Orchid Papyrus palette (docs/color-palette.md)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
