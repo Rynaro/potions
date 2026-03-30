@@ -135,11 +135,11 @@ keybinds clear-defaults=true {
 
         // Forward Delete and Backspace to the session-manager plugin.
         // With clear-defaults=true, Zellij drops unbound keys before the plugin
-        // receives them. WriteChars emits the DEL byte (0x7F) directly, which
-        // the session-manager interprets as "kill selected session".
+        // receives them. Write 127 emits the DEL byte (0x7F = 127) directly,
+        // which the session-manager interprets as "kill selected session".
         // Both keys map to 0x7F: macOS sends 0x7F for the physical Delete key,
         // and most Linux terminals also use 0x7F for Backspace.
-        bind "Delete" "Backspace" { WriteChars "\u007f"; }
+        bind "Delete" "Backspace" { Write 127; }
     }
 
     // Rename tab mode
