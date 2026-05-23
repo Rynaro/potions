@@ -323,8 +323,8 @@ test_config_validity() {
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_materials" ".zshrc has material/adjective word list"
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_alchemical_words" ".zshrc has alchemical word list"
 
-  # Check awk strip is present for session state annotation handling
-  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "awk '{print \$1}'" ".zshrc strips session state annotations"
+  # Check attach --create is used so dead sessions resurrect on reopen
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "attach --create" ".zshrc uses attach --create for session resurrection"
 
   # Functional: verify composed session name for reference hostname
   if command -v zsh &>/dev/null; then
