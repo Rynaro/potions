@@ -22,7 +22,7 @@ is_termux() {
 
 # Function to check if the environment is WSL
 is_wsl() {
-  grep -qi microsoft /proc/version
+  grep -qi microsoft /proc/version 2>/dev/null
 }
 
 # Function to check if the environment is macOS
@@ -206,7 +206,7 @@ _potions_zellij_session_name() {
 # Auto-start zellij only if not already in zellij and not in an AI code editor terminal
 # AI code editors (VSCode, Cursor, etc.) should not auto-start zellij to avoid
 # terminal output capture issues
-if command -v zellij &> /dev/null && [ -z "$ZELLIJ" ] && ! is_ai_code_editor; then
+if command -v zellij &> /dev/null && [ -z "$ZELLIJ" ] && ! is_ai_code_editor && ! is_termux; then
   _potions_session="${POTIONS_SESSION:-$(_potions_zellij_session_name)}"
   zellij --config-dir "$POTIONS_HOME/zellij" attach --create "${_potions_session}"
 fi

@@ -109,7 +109,7 @@ is_termux() {
 
 # Function to check if the environment is WSL
 is_wsl() {
-  grep -qi microsoft /proc/version
+  grep -qi microsoft /proc/version 2>/dev/null
 }
 
 # Function to check if the environment is macOS
