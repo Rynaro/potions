@@ -191,17 +191,13 @@ keybinds clear-defaults=true {
     }
 }
 
-// Suppress the built-in welcome screen / release-notes overlay.
-// Zellij 0.43+ shows a startup overlay backed by the session-manager plugin and
-// tries to persist its dismissal by rewriting config.kdl. Since Potions ships
-// this file from a managed location it isn't writable at runtime, so dismissing
-// the overlay fails with "Failed to write config to disk" and the overlay
-// reappears on every session. Disable the overlay outright instead.
-plugins {
-    welcome-screen location="zellij:session-manager" {
-        welcome_screen false
-    }
-}
+// Suppress the built-in startup-tips overlay and release-notes screen.
+// Zellij 0.43+ shows a startup "tips" overlay; pressing Ctrl+C to dismiss it
+// permanently triggers a config rewrite that fails for users whose config.kdl
+// isn't writable from zellij's runtime context, producing "Failed to write
+// config to disk" and leaving the overlay stuck on every new session.
+// The binary itself documents the workaround: set show_startup_tips false.
+show_startup_tips false
 show_release_notes false
 
 // Options
