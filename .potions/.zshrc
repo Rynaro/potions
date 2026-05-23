@@ -189,28 +189,17 @@ TRAPINT() {
     return 128
 }
 
-# Derive a deterministic two-word alchemical session name from the machine's hostname.
-# A single 16-word list produced collisions on common hostnames (e.g. "server" always
-# mapped to "vitriol"). Two independent 16-element lists give 256 combinations, reducing
-# collision probability to ~0.4%. Names are hyphen-joined (e.g. "verdant-retort") so
-# they remain a single awk field in the attach-or-create pipeline below.
-# Formula:
-#   w1 = (ascii_sum % 16) + 1
-#   w2 = ((ascii_sum + hostname_length) % 16) + 1
+# Pick a random two-word alchemical session name from independent 16-element lists.
+# Each call returns a fresh name — capture once per shell if you need stability.
+# Two 16-element lists give 256 combinations; occasional collisions are tolerable
+# since zellij attach --create no-ops on an already-running same-name session.
 _potions_zellij_session_name() {
   local _materials=(golden silver copper iron obsidian azure crimson verdant pale molten
                     frozen ethereal arcane vivid tarnished radiant)
   local _alchemical_words=(cauldron elixir alembic crucible tincture phlogiston azoth vitriol
                            philosopher quintessence transmutation reagent catalyst retort sublimate athanor)
-  local host="${HOSTNAME:-$(hostname 2>/dev/null || echo "lab")}"
-  local sum=0
-  local char
-  for char in ${(s::)host}; do
-    sum=$(( sum + $(printf '%d' "'$char") ))
-  done
-  local len="${#host}"
-  local w1=$(( (sum % 16) + 1 ))
-  local w2=$(( ((sum + len) % 16) + 1 ))
+  local w1=$(( (RANDOM % 16) + 1 ))
+  local w2=$(( (RANDOM % 16) + 1 ))
   echo "${_materials[$w1]}-${_alchemical_words[$w2]}"
 }
 

@@ -326,20 +326,16 @@ test_config_validity() {
   # Check attach --create is used so dead sessions resurrect on reopen
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "attach --create" ".zshrc uses attach --create for session resurrection"
 
-  # Functional: verify composed session name for reference hostname
+  # Functional: verify generated name matches the expected format and uses words from both lists
   if command -v zsh &>/dev/null; then
-    _session_name_result=$(HOSTNAME=server zsh -c '
+    _materials_list="golden silver copper iron obsidian azure crimson verdant pale molten frozen ethereal arcane vivid tarnished radiant"
+    _alchemical_list="cauldron elixir alembic crucible tincture phlogiston azoth vitriol philosopher quintessence transmutation reagent catalyst retort sublimate athanor"
+
+    _session_name_result=$(ZELLIJ=1 zsh -c '
       source "$1/.potions/.zshrc" 2>/dev/null || true
       _potions_zellij_session_name
     ' _ "$SCRIPT_DIR")
-    if [ "$_session_name_result" = "verdant-retort" ]; then
-      log_success "Session naming: HOSTNAME=server → verdant-retort"
-      TESTS_PASSED=$((TESTS_PASSED + 1))
-    else
-      log_failure "Session naming: expected 'verdant-retort', got '$_session_name_result'"
-      TESTS_FAILED=$((TESTS_FAILED + 1))
-    fi
-    # Check output matches two-word hyphenated format
+
     if echo "$_session_name_result" | grep -qE '^[a-z]+-[a-z]+$'; then
       log_success "Session name format: two hyphen-joined lowercase words"
       TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -347,19 +343,32 @@ test_config_validity() {
       log_failure "Session name format invalid: '$_session_name_result'"
       TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
+
+    _w1="${_session_name_result%%-*}"
+    _w2="${_session_name_result##*-}"
+    if echo " $_materials_list " | grep -q " $_w1 " && echo " $_alchemical_list " | grep -q " $_w2 "; then
+      log_success "Session name words from expected lists: $_w1 / $_w2"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Session name words not from expected lists: '$_session_name_result'"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    # Non-determinism: 50 invocations should produce >1 distinct name
+    _distinct_count=$(ZELLIJ=1 zsh -c '
+      source "$1/.potions/.zshrc" 2>/dev/null || true
+      for _ in {1..50}; do _potions_zellij_session_name; done
+    ' _ "$SCRIPT_DIR" | sort -u | wc -l | tr -d " ")
+    if [ "$_distinct_count" -gt 1 ]; then
+      log_success "Session name randomness: $_distinct_count distinct names across 50 calls"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Session name not random: only $_distinct_count distinct names across 50 calls"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
   else
     log_success "Session naming functional test: skipped (zsh not in PATH)"
     TESTS_PASSED=$((TESTS_PASSED + 1))
-  fi
-
-  # Unit: verify awk pipeline treats hyphenated names as a single field
-  _awk_result=$(echo "verdant-retort RUNNING" | awk '{print $1}')
-  if [ "$_awk_result" = "verdant-retort" ]; then
-    log_success "awk pipeline: hyphenated session name is single field"
-    TESTS_PASSED=$((TESTS_PASSED + 1))
-  else
-    log_failure "awk pipeline: expected 'verdant-retort', got '$_awk_result'"
-    TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
   # Check hardcoded potions-main session name is gone
