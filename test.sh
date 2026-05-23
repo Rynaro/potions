@@ -524,21 +524,25 @@ test_termux_shell_setup() {
     return 0
   fi
 
-  # Check if ~/.termux/shell file exists (created by zsh.sh)
-  if [ -f "$HOME/.termux/shell" ]; then
-    log_success "Termux shell configuration file exists"
+  # ~/.termux/shell MUST be a symlink to the shell binary — Termux execs it
+  # directly. A regular file (even with a valid path inside) makes Termux
+  # unusable with "exec: Permission denied" on next launch.
+  if [ -L "$HOME/.termux/shell" ]; then
+    log_success "Termux shell configuration is a symlink"
     TESTS_PASSED=$((TESTS_PASSED + 1))
-    
-    # Verify it contains zsh path
-    local shell_path
-    shell_path=$(cat "$HOME/.termux/shell" 2>/dev/null || echo "")
-    if [ -n "$shell_path" ] && [ -x "$shell_path" ]; then
-      log_success "Termux shell file contains valid zsh path"
+
+    local shell_target
+    shell_target=$(readlink -f "$HOME/.termux/shell" 2>/dev/null || echo "")
+    if [ -n "$shell_target" ] && [ -x "$shell_target" ]; then
+      log_success "Termux shell symlink resolves to an executable ($shell_target)"
       TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-      log_failure "Termux shell file does not contain valid zsh path"
+      log_failure "Termux shell symlink does not resolve to an executable"
       TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
+  elif [ -e "$HOME/.termux/shell" ]; then
+    log_failure "Termux shell configuration exists but is not a symlink — this locks the user out of Termux"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
   else
     log_skip "Termux shell configuration not found (may be normal if zsh already default)"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))

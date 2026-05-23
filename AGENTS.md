@@ -498,7 +498,7 @@ Termux testing runs in CI using GitHub's native ARM64 runners with the official 
 - Validates Termux-specific behaviors:
   - Platform detection (`is_termux()`)
   - Package installation via `pkg` command
-  - Shell setup via `~/.termux/shell` file
+  - Shell setup via `~/.termux/shell` symlink (Termux execs this path directly; it must be a symlink to the shell binary, not a text file)
   - Environment variables (`$PREFIX`, `termux-info`)
 
 **Why native ARM64 runners?**
