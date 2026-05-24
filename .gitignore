@@ -105,6 +105,7 @@
 !.potions/zellij/layouts
 !.potions/zellij/layouts/
 !.potions/zellij/layouts/*.kdl
+!.potions/zellij/CHEATSHEET.md
 
 # Allow Potions CLI
 !.potions/bin

@@ -2,6 +2,8 @@
 
 This document provides a unified reference for all keybindings across Zsh, Zellij, and Neovim to help understand and avoid conflicts.
 
+> Inside a session, press `Alt+/` (or `Ctrl+a` then `?`) for a floating quick cheatsheet.
+
 ---
 
 ## Quick Reference Table
