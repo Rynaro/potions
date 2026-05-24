@@ -53,6 +53,18 @@ keybinds clear-defaults=true {
         bind "Alt p" { GoToPreviousTab; }            // Cmd+Shift+[ → prev tab
         bind "Alt Enter" { ToggleFocusFullscreen; }  // Cmd+Return  → toggle fullscreen
 
+        // Floating cheatsheet (also bound to `?` in tmux mode).
+        // Wrapped in `sh -lc` so the shell expands `~` — zellij's Run does not.
+        // `less` exits on `q`; close_on_exit removes the floating pane so the
+        // same shortcut re-opens cleanly without stacking duplicates.
+        bind "Alt /" {
+            Run "sh" "-lc" "less -R ~/.potions/zellij/CHEATSHEET.md" {
+                floating true
+                name "Cheatsheet"
+                close_on_exit true
+            }
+        }
+
         // Block Ctrl+D from reaching the session-manager plugin.
         // Unbound keys in normal mode forward as raw bytes to the focused plugin.
         // The session-manager maps Ctrl+D (byte 0x04) to "kill all sessions except
@@ -137,6 +149,16 @@ keybinds clear-defaults=true {
         // Rename tab
         bind "R" { SwitchToMode "RenameTab"; }
 
+        // Floating cheatsheet
+        bind "?" {
+            Run "sh" "-lc" "less -R ~/.potions/zellij/CHEATSHEET.md" {
+                floating true
+                name "Cheatsheet"
+                close_on_exit true
+            }
+            SwitchToMode "Normal";
+        }
+
         // Send Ctrl+a to the application (press Ctrl+a twice)
         bind "Ctrl a" { Write 1; SwitchToMode "Normal"; }
 
@@ -208,7 +230,7 @@ serialization_interval 300
 serialize_pane_viewport true
 pane_frames false
 default_mode "normal"
-default_layout "default"
+default_layout "compact"
 // To switch between dark and light: change "potions-dark" to "potions-light" below.
 theme "potions-dark"
 
