@@ -367,7 +367,10 @@ install_packages() {
 
 # Main installation flow
 main() {
-  print_header
+  # Skip banner when invoked from drink.sh — it already showed the logo
+  if [ -z "${POTIONS_FROM_DRINK:-}" ]; then
+    print_header
+  fi
   
   # Handle test mode cleanup
   if [ "$TEST_MODE" = true ]; then

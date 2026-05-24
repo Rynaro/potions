@@ -313,6 +313,8 @@ log_info "Starting installation..."
 cd "$POTIONS_DIR"
 chmod +x install.sh
 
+export POTIONS_FROM_DRINK=1
+
 if [ "$TEST_MODE" = true ]; then
   ./install.sh --test
 else
