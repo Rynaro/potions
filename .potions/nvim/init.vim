@@ -112,10 +112,18 @@ function! s:SetThemeHighlights()
 
   " Barbar buffer tab highlights using Alchemists Orchid palette
   highlight BufferCurrent       guifg=#e0d7f5 guibg=#2d2640 gui=bold
-  highlight BufferCurrentMod    guifg=#c678dd guibg=#2d2640 gui=bold
-  highlight BufferInactive      guifg=#7a7094 guibg=#16121f
-  highlight BufferInactiveMod   guifg=#c678dd guibg=#16121f
-  highlight BufferTabpageFill   guibg=#16121f
+  highlight BufferCurrentMod    guifg=#f8d1e0 guibg=#2d2640 gui=bold
+  highlight BufferCurrentIndex  guifg=#cdb4db guibg=#2d2640 gui=bold
+  highlight BufferCurrentSign   guifg=#cdb4db guibg=#2d2640
+  highlight BufferVisible       guifg=#cdc0e0 guibg=#221c33
+  highlight BufferVisibleMod    guifg=#f8d1e0 guibg=#221c33
+  highlight BufferVisibleIndex  guifg=#9e93b8 guibg=#221c33
+  highlight BufferVisibleSign   guifg=#9e93b8 guibg=#221c33
+  highlight BufferInactive      guifg=#cdc0e0 guibg=#1a1527
+  highlight BufferInactiveMod   guifg=#f8d1e0 guibg=#1a1527
+  highlight BufferInactiveIndex guifg=#9e93b8 guibg=#1a1527
+  highlight BufferInactiveSign  guifg=#9e93b8 guibg=#1a1527
+  highlight BufferTabpageFill   guifg=#1a1527 guibg=#1a1527
 endfunction
 
 " Trigger immediately for the current colorscheme load
@@ -131,7 +139,7 @@ if ok then
     tabpages = true,
     clickable = true,
     icons = {
-      buffer_index = false,
+      buffer_index = true,
       buffer_number = false,
       button = '',
       filetype = {
@@ -142,7 +150,6 @@ if ok then
       separator_at_end = true,
       modified = { button = '●' },
       pinned = { button = '', filename = true },
-      current = { buffer_index = true },
     },
     sidebar_filetypes = {
       NERDTree = true,
