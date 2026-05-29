@@ -157,3 +157,13 @@
 
 # Screen configuration files
 !.screenrc
+
+# <!-- eidolon:gitignore start -->
+# Managed by eidolons. Recreated by `eidolons sync`. Do not edit between markers.
+/.eidolons/*
+!/.eidolons/cortex/
+!/.eidolons/cortex/**
+!/.eidolons/harness/
+!/.eidolons/harness/manifest.json
+# <!-- eidolon:gitignore end -->
+.atlas/
