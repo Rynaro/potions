@@ -673,3 +673,9 @@ Before implementing something new, check if a pattern already exists:
 ---
 
 *This document is the single source of truth for AI agents working on Potions. Keep it updated as the project evolves.*
+
+<!-- eidolon:dispatch-pointer start -->
+## Eidolons
+
+This project uses [Eidolons](https://github.com/Rynaro/eidolons). The canonical agent dispatch table, methodology references, and per-Eidolon hand-off contracts live at [`./EIDOLONS.md`](./EIDOLONS.md). Read that file first before responding to any prompt that mentions an Eidolon or matches a TRANCE complexity signal.
+<!-- eidolon:dispatch-pointer end -->
