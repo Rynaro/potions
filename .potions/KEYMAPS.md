@@ -2,7 +2,9 @@
 
 This document provides a unified reference for all keybindings across Zsh, Zellij, and Neovim to help understand and avoid conflicts.
 
-> Inside a session, press `Alt+/` (or `Ctrl+a` then `?`) for a floating quick cheatsheet. Inside Neovim, press `Space ?` for the Neovim cheatsheet.
+> Inside a session, press `F1` (or `Ctrl+a` then `?`) for a floating quick cheatsheet — both work on every platform with no setup. `Alt+/` also opens it wherever Option-as-Meta is enabled. Inside Neovim, press `Space ?` for the Neovim cheatsheet.
+>
+> **macOS note:** there is no "Alt" key — it is **Option (⌥)**. The `Alt+…` bindings below only fire after enabling "Use Option as Meta" (or Cmd→Alt forwarding); see [Terminal Setup](.potions/terminal-setup/TERMINAL_SETUP.md). The `Ctrl+a` prefix needs no setup and reaches every action.
 
 ---
 
@@ -16,7 +18,7 @@ This document provides a unified reference for all keybindings across Zsh, Zelli
 | `Ctrl+d` | EOF/Logout | - | - (removed override) | Vim default half-page down restored |
 | `Ctrl+e` | - | - | - (removed) | Use `$` in Neovim |
 | `Ctrl+n` | History next | - | NERDTree toggle | No conflict with zellij |
-| `Ctrl+s` | - | - | Quick save | Enable with `stty -ixon` |
+| `Ctrl+s` | - | - | Quick save | Works out of the box — `.zshrc` runs `stty -ixon` |
 | `Ctrl+u` | Clear line | - | - (removed override) | Vim default half-page up restored |
 | `Ctrl+v` | - | - | Paste | |
 | `Ctrl+Tab` | - | Next tab | - | May not work in all terminals |
@@ -52,6 +54,7 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 
 | Key | Action | macOS Notes |
 |-----|--------|-------------|
+| `F1` | Open floating cheatsheet | Works on every platform, no setup |
 | `Ctrl+Tab` | Next tab | Not forwarded by Terminal.app/iTerm2 — use `Alt+n` instead |
 | `Ctrl+Shift+Tab` | Previous tab | Not forwarded by Terminal.app/iTerm2 — use `Alt+p` instead |
 | `Alt+h/j/k/l` | Navigate panes | Press Alt directly on all platforms |

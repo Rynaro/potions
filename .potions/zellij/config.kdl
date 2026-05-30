@@ -65,6 +65,19 @@ keybinds clear-defaults=true {
             }
         }
 
+        // Universal, modifier-free cheatsheet key. F1 reaches the application on
+        // every platform with no terminal setup — unlike Alt+/ which needs
+        // Option-as-Meta on macOS. (Ctrl+a then ? also opens it everywhere.)
+        // This is the always-available "what do I press?" key the compact footer
+        // can't spell out on its own.
+        bind "F1" {
+            Run "sh" "-lc" "less -R ~/.potions/zellij/CHEATSHEET.md" {
+                floating true
+                name "Cheatsheet"
+                close_on_exit true
+            }
+        }
+
         // Block Ctrl+D from reaching the session-manager plugin.
         // Unbound keys in normal mode forward as raw bytes to the focused plugin.
         // The session-manager maps Ctrl+D (byte 0x04) to "kill all sessions except
