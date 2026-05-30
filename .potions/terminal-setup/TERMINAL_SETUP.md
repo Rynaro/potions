@@ -289,14 +289,17 @@ Try these alternatives:
 
 #### Ctrl+S freezes terminal
 
-This is the terminal's XON/XOFF flow control. Potions should disable it automatically, but if not:
+This is the terminal's XON/XOFF flow control. Potions disables it automatically
+for interactive shells (`stty -ixon` in `~/.potions/.zshrc`), so `Ctrl+S` is free
+for Neovim's "save". If you hit a frozen terminal in a shell that does not load
+Potions' `.zshrc`:
 
 ```bash
 # Add to your shell config
 stty -ixon
 ```
 
-To unfreeze: Press `Ctrl+Q`
+To unfreeze a terminal that is currently paused: press `Ctrl+Q`
 
 ---
 

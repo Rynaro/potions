@@ -201,19 +201,9 @@ POTIONS_HELP_SECTIONS=("zellij" "zsh" "neovim")
 help_section_zellij() {
   render_section_header "Zellij - Multiplexer"
 
+  render_note_row "The Ctrl+a prefix works on every platform with zero setup -- prefer it"
   render_keybind_row "Ctrl+a"           "Enter prefix mode (tmux style)"
-  echo ""
-
-  render_keybind_row "Alt+h/j/k/l"      "Navigate panes"
-  render_keybind_row "Alt+d"            "Split pane right"
-  render_keybind_row "Alt+t"            "New tab"
-  render_keybind_row "Alt+w"            "Close pane"
-  render_keybind_row "Alt+n"            "Next tab"
-  render_keybind_row "Alt+p"            "Previous tab"
-  render_keybind_row "Alt+Enter"        "Toggle fullscreen"
-  render_keybind_row "Ctrl+Tab"         "Next tab"
-  render_keybind_row "Ctrl+Shift+Tab"   "Previous tab"
-  render_note_row "macOS: Ctrl+Tab not forwarded by Terminal.app -- use Alt+n / Alt+p"
+  render_keybind_row "F1  /  Ctrl+a ?"  "Open the floating cheatsheet (universal)"
   echo ""
 
   render_keybind_row "Ctrl+a  |"        "Split pane right"
@@ -226,6 +216,16 @@ help_section_zellij() {
   render_keybind_row "Ctrl+a  r"        "Resize mode (then hjkl)"
   render_keybind_row "Ctrl+a  z"        "Toggle fullscreen"
   render_keybind_row "Ctrl+a  S"        "Session manager"
+  echo ""
+
+  render_keybind_row "Alt+h/j/k/l"      "Navigate panes (no prefix)"
+  render_keybind_row "Alt+d"            "Split pane right"
+  render_keybind_row "Alt+t"            "New tab"
+  render_keybind_row "Alt+w"            "Close pane"
+  render_keybind_row "Alt+n / Alt+p"    "Next / previous tab"
+  render_keybind_row "Alt+Enter"        "Toggle fullscreen"
+  render_note_row "macOS: Alt = the Option key; fires only with 'Use Option as Meta' -- otherwise use the Ctrl+a path above"
+  render_note_row "Ctrl+Tab / Ctrl+Shift+Tab also switch tabs but aren't forwarded by Terminal.app -- use Alt+n / Alt+p"
 }
 
 # ── Section: Zsh ──────────────────────────────────────────────────────────────

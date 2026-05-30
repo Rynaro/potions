@@ -205,7 +205,7 @@ EOF
 " NERDTree toggle
 nnoremap <silent> <C-n> :NERDTreeToggle<CR>
 
-" Quick save (Ctrl+S - works with stty -ixon in terminal)
+" Quick save (Ctrl+S; XON/XOFF flow control is disabled in .potions/.zshrc)
 nnoremap <C-s> :w<CR>
 inoremap <C-s> <C-o>:w<CR>
 vnoremap <C-s> <Esc>:w<CR>

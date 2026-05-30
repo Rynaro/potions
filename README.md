@@ -94,6 +94,7 @@ Run `./migrate.sh` to migrate from legacy to new structure.
 | `Ctrl+a n` | Next tab | or `Alt+n` |
 | `Ctrl+a p` | Previous tab | or `Alt+p` |
 | `Ctrl+a z` | Toggle fullscreen | or `Alt+Enter` |
+| `F1` | Open cheatsheet | Works everywhere, no setup |
 | `Ctrl+Tab` | Next tab | Not forwarded by Terminal.app — use `Alt+n` |
 
 ### Neovim (Leader: `Space`)
@@ -169,7 +170,7 @@ Some terminals require configuration for certain key combinations. See the [Term
 | `Ctrl+Tab` not working | Use `Alt+n` or `Ctrl+a n`; or configure terminal (see Terminal Setup Guide) |
 | `Cmd+D/T/W` does nothing in Zellij | These are intercepted by macOS. Use `Alt+d/t/w` or configure Cmd→Alt forwarding |
 | Word navigation broken | Check terminal key mappings, try Alt+f/Alt+b |
-| Ctrl+S freezes terminal | Potions should disable this; if not, run `stty -ixon` |
+| Ctrl+S freezes terminal | Potions disables this automatically (`stty -ixon` in `.zshrc`); if it persists in a non-Potions shell, run `stty -ixon` |
 
 ## 🗑️ Uninstalling
 

@@ -121,6 +121,15 @@ elif is_termux; then
   safe_source "$POTIONS_HOME/config/termux.zsh"
 fi
 
+# Disable XON/XOFF flow control so Ctrl+S and Ctrl+Q are free for applications.
+# Neovim binds Ctrl+S to "save"; without this, the terminal swallows Ctrl+S as
+# XOFF and freezes all output until Ctrl+Q — making the advertised save look
+# broken on every platform. Interactive TTY only; the [ -t 0 ] guard and the
+# 2>/dev/null keep it silent in non-tty contexts (CI, piped shells, editors).
+if [[ -o interactive ]] && [ -t 0 ]; then
+  stty -ixon 2>/dev/null
+fi
+
 # Enable word navigation with Ctrl + arrow keys
 # Terminal-specific key bindings for maximum compatibility
 case "$TERM_PROGRAM" in
