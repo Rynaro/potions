@@ -62,6 +62,36 @@ set incsearch
 " Set leader key to space (more ergonomic than backslash)
 let mapleader = " "
 
+" --- Quality-of-life options (curated; vim-sensible covers the basics) ---
+set ignorecase
+set smartcase
+set scrolloff=8
+set splitright
+set splitbelow
+set mouse=a
+
+" Persistent undo — Neovim state dir, never a hardcoded path
+lua << EOF
+local undodir = vim.fn.stdpath("state") .. "/undo"
+if vim.fn.isdirectory(undodir) == 0 then
+  vim.fn.mkdir(undodir, "p")
+end
+vim.opt.undodir = undodir
+vim.opt.undofile = true
+EOF
+
+" Flash yanked text (visual confirmation)
+augroup PotionsYankFlash
+  autocmd!
+  autocmd TextYankPost * silent! lua vim.hl.on_yank({ higroup = "Visual", timeout = 150 })
+augroup END
+
+" Restore cursor to last edit position when reopening a file
+augroup PotionsRestoreCursor
+  autocmd!
+  autocmd BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") && &filetype !~# 'commit' | execute "normal! g`\"" | endif
+augroup END
+
 " ============================================================
 " THEME
 " ============================================================
@@ -110,20 +140,27 @@ function! s:SetThemeHighlights()
   " Visual mode selection — survives colorscheme reloads
   highlight Visual guifg=#e0d7f5 guibg=#44395a ctermfg=White ctermbg=DarkGrey
 
-  " Barbar buffer tab highlights using Alchemists Orchid palette
-  highlight BufferCurrent       guifg=#e0d7f5 guibg=#2d2640 gui=bold
-  highlight BufferCurrentMod    guifg=#f8d1e0 guibg=#2d2640 gui=bold
-  highlight BufferCurrentIndex  guifg=#cdb4db guibg=#2d2640 gui=bold
-  highlight BufferCurrentSign   guifg=#cdb4db guibg=#2d2640
-  highlight BufferVisible       guifg=#cdc0e0 guibg=#221c33
-  highlight BufferVisibleMod    guifg=#f8d1e0 guibg=#221c33
-  highlight BufferVisibleIndex  guifg=#9e93b8 guibg=#221c33
-  highlight BufferVisibleSign   guifg=#9e93b8 guibg=#221c33
-  highlight BufferInactive      guifg=#cdc0e0 guibg=#1a1527
-  highlight BufferInactiveMod   guifg=#f8d1e0 guibg=#1a1527
-  highlight BufferInactiveIndex guifg=#9e93b8 guibg=#1a1527
-  highlight BufferInactiveSign  guifg=#9e93b8 guibg=#1a1527
-  highlight BufferTabpageFill   guifg=#1a1527 guibg=#1a1527
+  " Barbar buffer tab highlights using Alchemists Orchid palette.
+  " gui* drives truecolor terminals; cterm* keeps the active/inactive
+  " distinction visible on non-truecolor terms (Termux $TERM=screen|linux).
+  highlight BufferCurrent       guifg=#e0d7f5 guibg=#2d2640 gui=bold ctermfg=White        ctermbg=DarkGrey cterm=bold
+  highlight BufferCurrentMod    guifg=#f8d1e0 guibg=#2d2640 gui=bold ctermfg=LightMagenta ctermbg=DarkGrey cterm=bold
+  highlight BufferCurrentIndex  guifg=#cdb4db guibg=#2d2640 gui=bold ctermfg=Magenta      ctermbg=DarkGrey cterm=bold
+  highlight BufferCurrentSign   guifg=#f8d1e0 guibg=#2d2640 gui=bold ctermfg=LightMagenta ctermbg=DarkGrey cterm=bold
+  highlight BufferVisible       guifg=#cdc0e0 guibg=#221c33 ctermfg=Gray    ctermbg=Black
+  highlight BufferVisibleMod    guifg=#f8d1e0 guibg=#221c33 ctermfg=Magenta ctermbg=Black
+  highlight BufferVisibleIndex  guifg=#9e93b8 guibg=#221c33 ctermfg=DarkGray ctermbg=Black
+  highlight BufferVisibleSign   guifg=#9e93b8 guibg=#221c33 ctermfg=DarkGray ctermbg=Black
+  highlight BufferInactive      guifg=#cdc0e0 guibg=#1a1527 ctermfg=Gray    ctermbg=Black
+  highlight BufferInactiveMod   guifg=#f8d1e0 guibg=#1a1527 ctermfg=Magenta ctermbg=Black
+  highlight BufferInactiveIndex guifg=#9e93b8 guibg=#1a1527 ctermfg=DarkGray ctermbg=Black
+  highlight BufferInactiveSign  guifg=#9e93b8 guibg=#1a1527 ctermfg=DarkGray ctermbg=Black
+  highlight BufferTabpageFill   guifg=#1a1527 guibg=#1a1527 ctermfg=Black   ctermbg=Black
+
+  " Potions cheatsheet floating window
+  highlight PotionsCheatNormal  guifg=#e5d4f1 guibg=#1a1527 ctermfg=White        ctermbg=Black
+  highlight PotionsCheatBorder  guifg=#cdb4db guibg=#1a1527 ctermfg=Magenta      ctermbg=Black
+  highlight PotionsCheatTitle   guifg=#f8d1e0 guibg=#1a1527 gui=bold ctermfg=LightMagenta ctermbg=Black cterm=bold
 endfunction
 
 " Trigger immediately for the current colorscheme load
@@ -138,6 +175,8 @@ if ok then
     auto_hide = false,
     tabpages = true,
     clickable = true,
+    insert_at_end = true,
+    focus_on_close = 'previous',
     icons = {
       buffer_index = true,
       buffer_number = false,
@@ -236,6 +275,12 @@ nnoremap <silent> <Space>bn :BufferOrderByName<CR>
 nnoremap <silent> <Space>bd :BufferOrderByDirectory<CR>
 nnoremap <silent> <Space>bl :BufferOrderByLanguage<CR>
 nnoremap <silent> <Space>bw :BufferOrderByWindowNumber<CR>
+
+" --- Bulk buffer close (individual tab control) ---
+nnoremap <silent> <leader>bo :BufferCloseAllButCurrent<CR>
+nnoremap <silent> <leader>bP :BufferCloseAllButPinned<CR>
+nnoremap <silent> <leader>b[ :BufferCloseBuffersLeft<CR>
+nnoremap <silent> <leader>b] :BufferCloseBuffersRight<CR>
 
 " --- Move lines (replaces unreliable Ctrl+Shift+Arrow and Ctrl+k/j) ---
 nnoremap <leader>j :m .+1<CR>==
@@ -394,6 +439,116 @@ if ok then
   }
 end
 EOF
+
+" ============================================================
+" CHEATSHEET — floating quick reference (<leader>?)
+" ============================================================
+" Zero-dependency floating modal. Keep the `sections` table below in sync
+" with .potions/KEYMAPS.md (the canonical cross-tool keymap reference).
+lua << EOF
+local M = {}
+local state = { win = nil, buf = nil }
+
+local sections = {
+  { "Tier 1 — Universal Ctrl", {
+    { "Ctrl+s", "Save file" },
+    { "Ctrl+n", "Toggle NERDTree" },
+    { "Ctrl+c / Ctrl+x", "Copy / cut (visual) to clipboard" },
+    { "Ctrl+v", "Paste from system clipboard" },
+  }},
+  { "Tier 2 — Leader (Space)", {
+    { "<spc> ff/fg/fb", "Telescope files / live-grep / buffers" },
+    { "<spc> fh/fs/fc", "Telescope help / git-status / commits" },
+    { "<spc> fr/fd", "Telescope LSP refs / definitions" },
+    { "<spc> nf", "NERDTree reveal current file" },
+    { "<spc> yr / ya", "Yank relative / absolute path" },
+    { "<spc> h / l", "Previous / next buffer" },
+    { "<spc> H / L", "Move buffer left / right" },
+    { "Tab / S-Tab", "Cycle buffers (normal mode)" },
+    { "<spc> 1..9 / 0", "Go to buffer N / last buffer" },
+    { "<spc> bp / bx", "Buffer pick / pick-delete" },
+    { "<spc> bi / bc / br", "Pin / close / restore buffer" },
+    { "<spc> bo / bP", "Close all but current / but pinned" },
+    { "<spc> b[ / b]", "Close buffers to the left / right" },
+    { "<spc> bb/bn/bd/bl/bw", "Order by num/name/dir/lang/window" },
+    { "<spc> j / k", "Move line(s) down / up" },
+    { "<spc> d / D", "Multi-cursor word / all occurrences" },
+    { "<spc> x / X", "Multi-cursor skip / remove region" },
+    { "<spc> q / Q / w / wq", "Quit / quit! / write / write-quit" },
+    { "<spc> a", "Select all" },
+    { "<spc> <spc>", "Clear search highlight" },
+    { "<spc> tc / tl", "Theme cycle / list" },
+    { "<spc> ?", "Toggle this cheatsheet" },
+  }},
+  { "Tier 3 — Native motions (not overridden)", {
+    { "0 / ^ / $", "Line start / first non-blank / line end" },
+    { "w / b / e", "Next word / back word / end of word" },
+    { "ge / gE", "Backward to end of word" },
+    { "g_", "Last non-blank char of line" },
+    { "gg / G", "Top / bottom of file" },
+    { "{ / }", "Previous / next paragraph" },
+    { "%", "Jump to matching pair" },
+    { "H / M / L", "Top / middle / bottom of screen" },
+    { "gcc / gc{motion}", "Toggle comment (Neovim 0.10+)" },
+    { "Ctrl+o / Ctrl+i", "Jump list back / forward" },
+    { "Ctrl+u / Ctrl+d", "Scroll half-page up / down" },
+  }},
+}
+
+local function build_lines()
+  local lines, width = {}, 0
+  table.insert(lines, "  Potions — Neovim Cheatsheet")
+  table.insert(lines, "")
+  for _, sec in ipairs(sections) do
+    table.insert(lines, "  " .. sec[1])
+    for _, row in ipairs(sec[2]) do
+      table.insert(lines, string.format("    %-22s %s", row[1], row[2]))
+    end
+    table.insert(lines, "")
+  end
+  table.insert(lines, "  q / <Esc> / <leader>?  close")
+  for _, l in ipairs(lines) do width = math.max(width, #l) end
+  return lines, width
+end
+
+local function close()
+  if state.win and vim.api.nvim_win_is_valid(state.win) then
+    vim.api.nvim_win_close(state.win, true)
+  end
+  state.win, state.buf = nil, nil
+end
+
+function M.toggle()
+  if state.win and vim.api.nvim_win_is_valid(state.win) then close(); return end
+  local lines, width = build_lines()
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].filetype = "potions-cheatsheet"
+  local w = math.min(width + 4, vim.o.columns - 4)
+  local h = math.min(#lines, vim.o.lines - 6)
+  local border = vim.g.potions_cheat_border or "rounded"
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor", width = w, height = h,
+    row = math.floor((vim.o.lines - h) / 2),
+    col = math.floor((vim.o.columns - w) / 2),
+    style = "minimal", border = border,
+    title = " Potions ", title_pos = "center", zindex = 60,
+  })
+  vim.wo[win].winhl = "Normal:PotionsCheatNormal,FloatBorder:PotionsCheatBorder,FloatTitle:PotionsCheatTitle"
+  state.win, state.buf = win, buf
+  local opts = { buffer = buf, nowait = true, silent = true }
+  vim.keymap.set("n", "q", close, opts)
+  vim.keymap.set("n", "<Esc>", close, opts)
+  vim.keymap.set("n", "<leader>?", close, opts)
+end
+
+vim.api.nvim_create_user_command("PotionsCheatsheet", M.toggle, {})
+EOF
+
+" Cheatsheet toggle
+nnoremap <silent> <leader>? :PotionsCheatsheet<CR>
 
 " ============================================================
 " USER OVERRIDES

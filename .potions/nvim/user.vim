@@ -23,3 +23,16 @@
 "   - transparent_background
 "   - italic_comments
 "   - custom highlight overrides
+
+" ------------------------------------------------------------
+" Optional augments (opt-in — uncomment to enable)
+" ------------------------------------------------------------
+" Centered scrolling — keep the cursor centered on jumps/search:
+"   nnoremap <C-d> <C-d>zz
+"   nnoremap <C-u> <C-u>zz
+"   nnoremap n nzz
+"   nnoremap N Nzz
+"
+" Surround text objects (requires a plugin in init.vim's plug block):
+"   Plug 'kylechui/nvim-surround'   " then: lua require('nvim-surround').setup()
+"   Usage: ys{motion}{char}  cs{old}{new}  ds{char}

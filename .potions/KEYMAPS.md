@@ -2,7 +2,7 @@
 
 This document provides a unified reference for all keybindings across Zsh, Zellij, and Neovim to help understand and avoid conflicts.
 
-> Inside a session, press `Alt+/` (or `Ctrl+a` then `?`) for a floating quick cheatsheet.
+> Inside a session, press `Alt+/` (or `Ctrl+a` then `?`) for a floating quick cheatsheet. Inside Neovim, press `Space ?` for the Neovim cheatsheet.
 
 ---
 
@@ -184,6 +184,10 @@ All navigation, buffer management, file operations, and editing commands. Press 
 | `Space` `bd` | Order by directory |
 | `Space` `bl` | Order by language |
 | `Space` `bw` | Order by window number |
+| `Space` `bo` | Close all buffers but current |
+| `Space` `bP` | Close all buffers but pinned |
+| `Space` `b[` | Close all buffers to the left |
+| `Space` `b]` | Close all buffers to the right |
 
 #### Move Lines
 
@@ -224,6 +228,12 @@ All navigation, buffer management, file operations, and editing commands. Press 
 
 Note: `Add Cursor Down/Up` (formerly `Ctrl+Shift+Down/Up`) has been removed. Use repeated `Space` `d` to add cursors to additional occurrences.
 
+#### Cheatsheet
+
+| Key | Action |
+|-----|--------|
+| `Space` `?` | Toggle Neovim cheatsheet (floating) |
+
 ### Tier 3 — Standard Vim Motions (not overridden)
 
 These are native Vim bindings. They are intentionally NOT overridden in Potions — use them as-is.
@@ -240,6 +250,17 @@ These are native Vim bindings. They are intentionally NOT overridden in Potions 
 | `w` | Forward word |
 | `b` | Backward word |
 | `e` | End of word |
+| `ge` | Backward to end of previous word |
+| `gE` | Backward to end of previous WORD |
+| `g_` | Last non-blank character of line |
+| `%` | Jump to matching pair (`(`, `{`, `[`, etc.) |
+| `H` | Move cursor to top of screen |
+| `M` | Move cursor to middle of screen |
+| `L` | Move cursor to bottom of screen |
+| `gcc` | Toggle comment on current line (Neovim 0.10+) |
+| `gc{motion}` | Toggle comment over motion (Neovim 0.10+) |
+| `Ctrl+o` | Jump list — go back |
+| `Ctrl+i` | Jump list — go forward |
 | `Ctrl+u` | Scroll half-page up |
 | `Ctrl+d` | Scroll half-page down |
 
