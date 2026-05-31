@@ -117,6 +117,18 @@
 !.potions/lib/
 !.potions/lib/help.sh
 
+# Allow theme system library (resolver, state, registry, generator, manager)
+!.potions/lib/theme
+!.potions/lib/theme/
+!.potions/lib/theme/*.sh
+
+# Allow built-in themes: DTCG token sources, compiled .theme files, manifests
+!.potions/themes
+!.potions/themes/
+!.potions/themes/*
+!.potions/themes/*/
+!.potions/themes/*/*
+
 # Allow Potionfile template
 !.potions/Potionfile.template
 
