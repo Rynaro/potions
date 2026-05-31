@@ -5,7 +5,7 @@
 META_ID=alchemists-orchid
 META_NAME=Alchemist's Orchid
 META_AUTHOR=Potions
-META_VARIANTS=dark,white
+META_VARIANTS=dark,white,sepia
 META_SCHEMA_VERSION=1
 
 COLOR_PRIMARY_HEX=#CDB4DB

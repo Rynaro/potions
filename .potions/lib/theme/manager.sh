@@ -99,6 +99,9 @@ COMMANDS:
     list                    List installed themes and their variants
     set <theme> [variant]   Switch theme/variant and regenerate all targets
     cycle                   Cycle to the next variant of the active theme
+    verify <dir>            Validate a bring-your-own theme directory
+    install <dir>           Verify and install a bring-your-own theme
+    uninstall <id>          Remove an installed bring-your-own theme
     help                    Show this message
 EOF
 }
@@ -223,6 +226,78 @@ theme_cmd_regen() {
   theme_apply "$theme" "$variant" quiet
 }
 
+# Verify a bring-your-own theme directory without installing it.
+theme_cmd_verify() {
+  local dir="$1"
+  if [ -z "$dir" ]; then
+    log_error "Usage: potions theme verify <theme-dir>"
+    return 1
+  fi
+  if theme_verify_dir "$dir"; then
+    log_success "Theme at '$dir' is valid and safe to install."
+    return 0
+  fi
+  log_error "Theme at '$dir' failed verification."
+  return 1
+}
+
+# Install a verified bring-your-own theme into the user themes dir.
+# Only the manifest and *.theme files are copied; ids are sanitized.
+theme_cmd_install() {
+  local src="$1" id user_dir dest
+  if [ -z "$src" ]; then
+    log_error "Usage: potions theme install <theme-dir>"
+    return 1
+  fi
+  if ! theme_verify_dir "$src"; then
+    log_error "Theme failed verification; not installed."
+    return 1
+  fi
+
+  id="$(theme_registry_field "$src/manifest" META_ID 2>/dev/null || true)"
+  [ -n "$id" ] || id="$(basename "$src")"
+  case "$id" in
+    *[!A-Za-z0-9_-]* | "")
+      log_error "Invalid theme id '$id' (allowed: A-Z a-z 0-9 _ -)."
+      return 1
+      ;;
+  esac
+
+  user_dir="$(theme_registry_user_dir)"
+  dest="$user_dir/$id"
+  if [ -d "$dest" ]; then
+    log_warning "Overwriting existing BYO theme '$id'."
+  fi
+  mkdir -p "$dest"
+  cp "$src/manifest" "$dest/manifest"
+  cp "$src"/*.theme "$dest/" 2> /dev/null || true
+
+  log_success "Installed BYO theme '$id' (trust: byo)."
+  log_info "Activate with: potions theme set $id"
+}
+
+# Remove a bring-your-own theme. Built-in themes cannot be uninstalled.
+theme_cmd_uninstall() {
+  local id="$1" dir
+  if [ -z "$id" ]; then
+    log_error "Usage: potions theme uninstall <id>"
+    return 1
+  fi
+  case "$id" in
+    *[!A-Za-z0-9_-]* | "")
+      log_error "Invalid theme id '$id'."
+      return 1
+      ;;
+  esac
+  dir="$(theme_registry_user_dir)/$id"
+  if [ ! -d "$dir" ]; then
+    log_error "BYO theme '$id' not found (built-in themes cannot be uninstalled)."
+    return 1
+  fi
+  rm -rf "$dir"
+  log_success "Uninstalled BYO theme '$id'."
+}
+
 main() {
   local command="${1:-current}"
   shift || true
@@ -232,6 +307,9 @@ main() {
     set)            theme_cmd_set "$@" ;;
     cycle)          theme_cmd_cycle ;;
     regen)          theme_cmd_regen ;;
+    verify)         theme_cmd_verify "$@" ;;
+    install)        theme_cmd_install "$@" ;;
+    uninstall)      theme_cmd_uninstall "$@" ;;
     help|--help|-h) theme_cmd_help ;;
     *)
       log_error "Unknown theme command: $command"

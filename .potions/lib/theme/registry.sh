@@ -36,42 +36,61 @@ theme_registry_field() {
   printf '%s' "${line#*=}"
 }
 
-# Echo the directory of a theme by id, or return non-zero.
-# Usage: theme_registry_find <theme_id>
-theme_registry_find() {
-  local id="$1" root dir mid
-  root="$(theme_registry_root)"
-  [ -n "$root" ] || return 1
+# User (bring-your-own) themes live separately from built-ins so upgrades never
+# touch them and trust can be inferred from location.
+theme_registry_user_dir() {
+  echo "${POTIONS_HOME:-$HOME/.potions}/themes-user"
+}
 
-  for dir in "$root"/*/; do
-    [ -d "$dir" ] || continue
-    [ -f "${dir}manifest" ] || continue
-    mid="$(theme_registry_field "${dir}manifest" META_ID || true)"
-    [ -n "$mid" ] || mid="$(basename "$dir")"
+# Echo the directory of a theme with id <id> under <root>, or nothing.
+_theme_find_in_root() {
+  local root="$1" id="$2" d mid
+  [ -n "$root" ] && [ -d "$root" ] || return 0
+  for d in "$root"/*/; do
+    [ -d "$d" ] || continue
+    [ -f "${d}manifest" ] || continue
+    mid="$(theme_registry_field "${d}manifest" META_ID || true)"
+    [ -n "$mid" ] || mid="$(basename "$d")"
     if [ "$mid" = "$id" ]; then
-      printf '%s' "${dir%/}"
+      printf '%s' "${d%/}"
       return 0
     fi
   done
+  return 0
+}
+
+# Echo the directory of a theme by id (built-in first, then user), or non-zero.
+# Usage: theme_registry_find <theme_id>
+theme_registry_find() {
+  local id="$1" dir
+  dir="$(_theme_find_in_root "$(theme_registry_root)" "$id")"
+  [ -n "$dir" ] && { printf '%s' "$dir"; return 0; }
+  dir="$(_theme_find_in_root "$(theme_registry_user_dir)" "$id")"
+  [ -n "$dir" ] && { printf '%s' "$dir"; return 0; }
   return 1
 }
 
-# List installed themes as "id|name|variants|trust" lines.
-theme_registry_list() {
-  local root dir manifest id name variants trust
-  root="$(theme_registry_root)"
-  [ -n "$root" ] || return 0
-
-  for dir in "$root"/*/; do
-    [ -d "$dir" ] || continue
-    manifest="${dir}manifest"
+# List the themes under <root>, tagging each with the given trust label.
+# Trust is derived from LOCATION, never from a (potentially forged) manifest
+# META_TRUST claim.
+_theme_list_root() {
+  local root="$1" trust="$2" d manifest id name variants
+  [ -n "$root" ] && [ -d "$root" ] || return 0
+  for d in "$root"/*/; do
+    [ -d "$d" ] || continue
+    manifest="${d}manifest"
     [ -f "$manifest" ] || continue
-    id="$(theme_registry_field "$manifest" META_ID || basename "$dir")"
+    id="$(theme_registry_field "$manifest" META_ID || basename "$d")"
     name="$(theme_registry_field "$manifest" META_NAME || echo "$id")"
     variants="$(theme_registry_field "$manifest" META_VARIANTS || echo "")"
-    trust="$(theme_registry_field "$manifest" META_TRUST || echo "builtin")"
     printf '%s|%s|%s|%s\n' "$id" "$name" "$variants" "$trust"
   done
+}
+
+# List installed themes as "id|name|variants|trust" lines (built-in then user).
+theme_registry_list() {
+  _theme_list_root "$(theme_registry_root)" builtin
+  _theme_list_root "$(theme_registry_user_dir)" byo
 }
 
 # Echo the display name for a theme id (falls back to the id).

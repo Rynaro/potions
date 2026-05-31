@@ -664,6 +664,7 @@ ${BOLD}THEME COMMANDS:${NC}
     ${CYAN}theme list${NC}           List installed themes and variants
     ${CYAN}theme set${NC} <t> [v]    Switch theme/variant across all tools
     ${CYAN}theme cycle${NC}          Cycle to the next variant
+    ${CYAN}theme install${NC} <dir>  Verify and install a bring-your-own theme
 
 ${BOLD}PLUGIN COMMANDS:${NC}
     ${CYAN}plugin install${NC} [name]   Install plugins from Potionfile or specific plugin

@@ -45,6 +45,15 @@ potions theme cycle                         # next variant
 | `color.on-surface` | `#E5D4F1` | `189` |
 | `color.muted` | `#9E93B8` | `139` |
 
+### sepia
+
+| Token | Hex | cterm |
+|-------|-----|-------|
+| `color.surface` | `#F4ECD8` | `254` |
+| `color.surface-deep` | `#E6D6B8` | `187` |
+| `color.on-surface` | `#43381F` | `236` |
+| `color.muted` | `#8A7A5C` | `101` |
+
 ### white
 
 | Token | Hex | cterm |

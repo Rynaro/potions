@@ -4,26 +4,75 @@
     "id": "alchemists-orchid",
     "name": "Alchemist's Orchid",
     "author": "Potions",
-    "variants": ["dark", "white"],
+    "variants": [
+      "dark",
+      "white",
+      "sepia"
+    ],
     "schemaVersion": 1
   },
   "color": {
-    "primary":       { "$value": "#CDB4DB", "cterm": 182 },
-    "primary-mid":   { "$value": "#A88FBC", "cterm": 139 },
-    "primary-deep":  { "$value": "#6F4A8E", "cterm": 60 },
-    "secondary":     { "$value": "#E5D4F1", "cterm": 189 },
-    "accent-warm":   { "$value": "#F8D1E0", "cterm": 224 },
-    "accent-cool":   { "$value": "#B9C9E6", "cterm": 152 },
-    "accent-nature": { "$value": "#C8E7D5", "cterm": 188 },
-    "error":         { "$value": "#D32F2F", "cterm": 160 }
+    "primary": {
+      "$value": "#CDB4DB",
+      "cterm": 182
+    },
+    "primary-mid": {
+      "$value": "#A88FBC",
+      "cterm": 139
+    },
+    "primary-deep": {
+      "$value": "#6F4A8E",
+      "cterm": 60
+    },
+    "secondary": {
+      "$value": "#E5D4F1",
+      "cterm": 189
+    },
+    "accent-warm": {
+      "$value": "#F8D1E0",
+      "cterm": 224
+    },
+    "accent-cool": {
+      "$value": "#B9C9E6",
+      "cterm": 152
+    },
+    "accent-nature": {
+      "$value": "#C8E7D5",
+      "cterm": 188
+    },
+    "error": {
+      "$value": "#D32F2F",
+      "cterm": 160
+    }
   },
   "component": {
-    "nvim.tab.active":   { "$value": "#2D2640", "cterm": 236 },
-    "nvim.tab.visible":  { "$value": "#221C33", "cterm": 235 },
-    "nvim.tab.inactive": { "$value": "#1A1527", "cterm": 234 },
-    "nvim.fg.bright":    { "$value": "#E0D7F5", "cterm": 189 },
-    "nvim.fg.dim":       { "$value": "#CDC0E0", "cterm": 182 },
-    "nvim.muted":        { "$value": "#9E93B8", "cterm": 139 },
-    "nvim.visual":       { "$value": "#44395A", "cterm": 238 }
+    "nvim.tab.active": {
+      "$value": "#2D2640",
+      "cterm": 236
+    },
+    "nvim.tab.visible": {
+      "$value": "#221C33",
+      "cterm": 235
+    },
+    "nvim.tab.inactive": {
+      "$value": "#1A1527",
+      "cterm": 234
+    },
+    "nvim.fg.bright": {
+      "$value": "#E0D7F5",
+      "cterm": 189
+    },
+    "nvim.fg.dim": {
+      "$value": "#CDC0E0",
+      "cterm": 182
+    },
+    "nvim.muted": {
+      "$value": "#9E93B8",
+      "cterm": 139
+    },
+    "nvim.visual": {
+      "$value": "#44395A",
+      "cterm": 238
+    }
   }
 }

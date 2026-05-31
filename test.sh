@@ -805,14 +805,16 @@ test_theme_system() {
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
+  # cycle advances and wraps from the last variant back to the first
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" set alchemists-orchid sepia > /dev/null 2>&1 || true
   REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" cycle > /dev/null 2>&1 || true
   local cyc
   cyc=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_variant')
   if [ "$cyc" = "dark" ]; then
-    log_success "cycle: white -> dark wraps around"
+    log_success "cycle: sepia -> dark wraps to first variant"
     TESTS_PASSED=$((TESTS_PASSED + 1))
   else
-    log_failure "cycle: did not advance/wrap ('$cyc')"
+    log_failure "cycle: did not wrap to first variant ('$cyc')"
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
@@ -864,6 +866,66 @@ test_theme_system() {
   else
     log_skip "VG-DOCS check skipped (jq not installed)"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+
+  # --- Phase 2: sepia variant, terminal breadth, BYO verify/install ---
+
+  # sepia variant compiles and resolves to parchment surfaces
+  assert_file_exists "$theme_dir/sepia.theme" "sepia variant compiled"
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
+    set alchemists-orchid sepia > /dev/null 2>&1 || true
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#F4ECD8' "sepia parchment bg generated"
+
+  # all four terminal emulator color files generated
+  assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "terminal: alacritty colors generated"
+  assert_file_exists "$tmp/config/generated/kitty-colors.conf" "terminal: kitty colors generated"
+  assert_file_exists "$tmp/config/generated/ghostty-colors" "terminal: ghostty colors generated"
+  assert_file_exists "$tmp/config/generated/wezterm-colors.lua" "terminal: wezterm colors generated"
+
+  # BYO: a valid theme verifies, installs into themes-user, and lists as byo
+  local byo="$tmp/byo-src"
+  mkdir -p "$byo"
+  printf 'META_ID=tester\nMETA_NAME=Tester\nMETA_VARIANTS=dark\n' > "$byo/manifest"
+  printf 'META_ID=tester\nMETA_VARIANT=dark\nCOLOR_PRIMARY_HEX=#88C0D0\nCOLOR_PRIMARY_CTERM=110\nCOLOR_SURFACE_HEX=#2E3440\nCOLOR_SURFACE_CTERM=237\nCOLOR_ON_SURFACE_HEX=#ECEFF4\nCOLOR_ON_SURFACE_CTERM=255\n' > "$byo/dark.theme"
+  if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" verify "$byo" > /dev/null 2>&1; then
+    log_success "BYO: valid theme passes verification"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: valid theme failed verification"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" install "$byo" > /dev/null 2>&1 || true
+  assert_file_exists "$tmp/themes-user/tester/dark.theme" "BYO: install copies into themes-user"
+  if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" list 2>/dev/null | grep -q 'byo'; then
+    log_success "BYO: installed theme listed with byo trust"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: installed theme not listed as byo"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # BYO: hostile theme rejected at install — not copied, no side effect
+  local hbyo="$tmp/byo-evil" pwn2="$tmp/PWNED2"
+  mkdir -p "$hbyo"
+  printf 'META_ID=evil\n' > "$hbyo/manifest"
+  printf 'COLOR_X_HEX=$(touch %s)\n' "$pwn2" > "$hbyo/dark.theme"
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" install "$hbyo" > /dev/null 2>&1 || true
+  if [ ! -e "$pwn2" ] && [ ! -d "$tmp/themes-user/evil" ]; then
+    log_success "BYO: hostile theme rejected at install (no copy, no side effect)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: hostile theme not safely rejected at install"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # BYO: uninstall removes it
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" uninstall tester > /dev/null 2>&1 || true
+  if [ ! -d "$tmp/themes-user/tester" ]; then
+    log_success "BYO: uninstall removes the theme"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: uninstall did not remove the theme"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
   rm -rf "$tmp"

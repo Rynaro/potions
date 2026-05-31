@@ -111,3 +111,48 @@ theme_resolve() {
   theme_resolver_load "$vfile" || return 1
   return 0
 }
+
+# Verify a theme directory is safe to install: a manifest with only META lines,
+# and every *.theme passing the restricted parser. Loads run in subshells so no
+# token variables leak into the caller. Returns non-zero on the first problem.
+# Usage: theme_verify_dir <dir>
+theme_verify_dir() {
+  local dir="$1" f found=false line lineno
+
+  if [ ! -d "$dir" ]; then
+    echo "theme: not a directory: $dir" >&2
+    return 1
+  fi
+  if [ ! -f "$dir/manifest" ]; then
+    echo "theme: missing manifest in $dir" >&2
+    return 1
+  fi
+
+  # Manifest may contain only blank/comment lines and META_ assignments.
+  lineno=0
+  while IFS= read -r line || [ -n "$line" ]; do
+    lineno=$((lineno + 1))
+    line="${line%$'\r'}"
+    case "$line" in ''|\#*) continue ;; esac
+    if ! printf '%s\n' "$line" | grep -Eq "$THEME_META_RE"; then
+      echo "theme: manifest:$lineno rejected (not a META line): $line" >&2
+      return 1
+    fi
+  done < "$dir/manifest"
+
+  for f in "$dir"/*.theme; do
+    [ -f "$f" ] || continue
+    found=true
+    if ! ( theme_resolver_load "$f" ) > /dev/null 2>&1; then
+      echo "theme: invalid token file: $f" >&2
+      ( theme_resolver_load "$f" ) > /dev/null || true   # surface the offending line
+      return 1
+    fi
+  done
+
+  if [ "$found" != true ]; then
+    echo "theme: no .theme files found in $dir" >&2
+    return 1
+  fi
+  return 0
+}

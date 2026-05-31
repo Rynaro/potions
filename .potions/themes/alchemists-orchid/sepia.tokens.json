@@ -4,7 +4,7 @@
     "id": "alchemists-orchid",
     "name": "Alchemist's Orchid",
     "author": "Potions",
-    "variant": "dark",
+    "variant": "sepia",
     "variants": [
       "dark",
       "white",
@@ -15,20 +15,20 @@
   },
   "color": {
     "surface": {
-      "$value": "#1E1B2E",
-      "cterm": 235
+      "$value": "#F4ECD8",
+      "cterm": 254
     },
     "surface-deep": {
-      "$value": "#15121F",
-      "cterm": 233
+      "$value": "#E6D6B8",
+      "cterm": 187
     },
     "on-surface": {
-      "$value": "#E5D4F1",
-      "cterm": 189
+      "$value": "#43381F",
+      "cterm": 236
     },
     "muted": {
-      "$value": "#9E93B8",
-      "cterm": 139
+      "$value": "#8A7A5C",
+      "cterm": 101
     }
   }
 }
