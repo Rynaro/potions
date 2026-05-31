@@ -121,6 +121,15 @@ elif is_termux; then
   safe_source "$POTIONS_HOME/config/termux.zsh"
 fi
 
+# Potions theme — apply the active palette to the live terminal (best-effort).
+# The theme generator writes config/generated/ansi-map.sh (OSC repaint +
+# POTIONS_COLOR_* exports). Switch with: potions theme set <variant>.
+# Inside Zellij the generated Zellij theme owns the palette, so this self-skips.
+safe_source "$POTIONS_HOME/config/generated/ansi-map.sh"
+if [[ -o interactive ]] && command -v potions_apply_terminal_palette &> /dev/null; then
+  potions_apply_terminal_palette
+fi
+
 # Disable XON/XOFF flow control so Ctrl+S and Ctrl+Q are free for applications.
 # Neovim binds Ctrl+S to "save"; without this, the terminal swallows Ctrl+S as
 # XOFF and freezes all output until Ctrl+Q — making the advertised save look

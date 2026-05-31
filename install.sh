@@ -508,6 +508,17 @@ EOF
       log_warning "CLI script not found in repo, skipping CLI installation"
     fi
 
+    # Generate theme artifacts for the active theme (zellij/nvim/shell/terminal).
+    # REPO_ROOT is cleared so the theme registry resolves the installed themes.
+    if [ -f "$POTIONS_HOME/lib/theme/manager.sh" ]; then
+      log_info "Generating theme artifacts..."
+      if REPO_ROOT="" POTIONS_HOME="$POTIONS_HOME" bash "$POTIONS_HOME/lib/theme/manager.sh" regen > /dev/null 2>&1; then
+        log_success "Theme artifacts generated"
+      else
+        log_warning "Theme artifacts could not be generated (non-fatal)"
+      fi
+    fi
+
     # Success message
     echo ""
     if [ "$HAS_COLOR" = true ]; then

@@ -95,27 +95,143 @@ USAGE:
     potions theme <command>
 
 COMMANDS:
-    current            Show the active theme and variant
-    list               List installed themes and their variants
-    help               Show this message
-
-    set <theme> [variant]   (coming in Phase 1)
-    cycle                   (coming in Phase 1)
+    current                 Show the active theme and variant
+    list                    List installed themes and their variants
+    set <theme> [variant]   Switch theme/variant and regenerate all targets
+    cycle                   Cycle to the next variant of the active theme
+    help                    Show this message
 EOF
 }
 
-theme_cmd_pending() {
-  log_warning "'$1' arrives in Phase 1 (generator + adapters + hot-reload)."
-  log_info "Phase 0 provides: current, list."
-  return 2
+# Is <variant> available for the theme at <theme_dir>?
+theme_variant_valid() {
+  [ -f "$1/$2.theme" ]
+}
+
+# Repaint the running terminal live via OSC (best-effort; no-op inside Zellij).
+theme_apply_osc() {
+  local home ansi
+  home="${POTIONS_HOME:-$HOME/.potions}"
+  ansi="$home/config/generated/ansi-map.sh"
+  if [ -f "$ansi" ]; then
+    # shellcheck source=/dev/null
+    . "$ansi" 2>/dev/null || return 0
+    command -v potions_apply_terminal_palette > /dev/null 2>&1 && potions_apply_terminal_palette
+  fi
+}
+
+# Print which surfaces are live now vs need a restart for the current env.
+theme_print_reload_matrix() {
+  echo ""
+  log_info "Applied. Surface status:"
+  if [ -n "${ZELLIJ:-}" ]; then
+    echo "  - Zellij     persisted; reload config or start a new session to see it"
+    echo "  - Terminal   owned by Zellij in-session (palette set by the Zellij theme)"
+  else
+    echo "  - Terminal   repainted live via OSC (if your terminal supports it)"
+    echo "  - Zellij     persisted; applies on next Zellij start"
+  fi
+  echo "  - NeoVim     persisted; :source \$MYVIMRC or restart nvim to see it"
+  echo "  - Alacritty  persisted; reopen/reload the terminal to import it"
+}
+
+# Resolve + regenerate all artifacts for <theme> <variant>.
+# mode: "switch" (write state + osc + matrix) or "quiet" (regenerate only).
+theme_apply() {
+  local theme="$1" variant="$2" mode="${3:-switch}" theme_dir
+
+  theme_dir="$(theme_registry_find "$theme" 2>/dev/null || true)"
+  if [ -z "$theme_dir" ]; then
+    log_error "Theme not found: $theme"
+    log_info "Run 'potions theme list' to see installed themes."
+    return 1
+  fi
+  if ! theme_variant_valid "$theme_dir" "$variant"; then
+    log_error "Variant '$variant' not available for theme '$theme'."
+    return 1
+  fi
+
+  if ! theme_generate "$theme_dir" "$variant"; then
+    log_error "Theme generation failed; state unchanged."
+    return 1
+  fi
+
+  if [ "$mode" = "switch" ]; then
+    theme_state_write "$theme" "$variant"
+    theme_apply_osc
+    log_success "Theme set to: $(theme_registry_name "$theme") ($variant)"
+    theme_print_reload_matrix
+  fi
+  return 0
+}
+
+theme_cmd_set() {
+  local theme="$1" variant="$2" theme_dir
+  if [ -z "$theme" ]; then
+    log_error "Usage: potions theme set <theme> [variant]"
+    return 1
+  fi
+  theme_dir="$(theme_registry_find "$theme" 2>/dev/null || true)"
+  if [ -z "$theme_dir" ]; then
+    log_error "Theme not found: $theme"
+    log_info "Run 'potions theme list' to see installed themes."
+    return 1
+  fi
+  if [ -z "$variant" ]; then
+    # Default to the first declared variant, else 'dark'
+    variant="$(theme_registry_field "$theme_dir/manifest" META_VARIANTS 2>/dev/null | cut -d, -f1)"
+    [ -n "$variant" ] || variant="dark"
+  fi
+  theme_apply "$theme" "$variant" switch
+}
+
+theme_cmd_cycle() {
+  local theme variant variants next first found
+  theme="$(theme_state_theme)"
+  variant="$(theme_state_variant)"
+  local theme_dir
+  theme_dir="$(theme_registry_find "$theme" 2>/dev/null || true)"
+  if [ -z "$theme_dir" ]; then
+    log_error "Active theme '$theme' not found."
+    return 1
+  fi
+  variants="$(theme_registry_field "$theme_dir/manifest" META_VARIANTS 2>/dev/null | tr ',' ' ')"
+  [ -n "$variants" ] || variants="dark"
+
+  first=""
+  next=""
+  found=false
+  local v
+  for v in $variants; do
+    [ -n "$first" ] || first="$v"
+    if [ "$found" = true ]; then
+      next="$v"
+      break
+    fi
+    [ "$v" = "$variant" ] && found=true
+  done
+  [ -n "$next" ] || next="$first"  # wrap around
+
+  theme_apply "$theme" "$next" switch
+}
+
+# Internal: regenerate artifacts for the active theme (used by install/upgrade).
+theme_cmd_regen() {
+  local theme variant
+  theme="$(theme_state_theme)"
+  variant="$(theme_state_variant)"
+  theme_apply "$theme" "$variant" quiet
 }
 
 main() {
   local command="${1:-current}"
+  shift || true
   case "$command" in
     current)        theme_cmd_current ;;
     list|ls)        theme_cmd_list ;;
-    set|cycle)      theme_cmd_pending "$command" ;;
+    set)            theme_cmd_set "$@" ;;
+    cycle)          theme_cmd_cycle ;;
+    regen)          theme_cmd_regen ;;
     help|--help|-h) theme_cmd_help ;;
     *)
       log_error "Unknown theme command: $command"

@@ -23,8 +23,12 @@ if [ -z "${THEME_RESOLVER_SOURCED:-}" ]; then
   # shellcheck source=/dev/null
   . "$_THEME_GEN_DIR/resolver.sh"
 fi
+if [ -z "${THEME_ADAPTERS_SOURCED:-}" ]; then
+  # shellcheck source=/dev/null
+  . "$_THEME_GEN_DIR/adapters.sh"
+fi
 
-# Per-tool adapter targets. Phase 1 implements theme_gen_adapter_<target>.
+# Per-tool adapter targets (theme_gen_adapter_<target> defined in adapters.sh).
 THEME_GENERATOR_TARGETS="shell zellij nvim terminal"
 
 # Default location for generated artifacts (gitignored, regenerable).

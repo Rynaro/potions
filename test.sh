@@ -782,6 +782,90 @@ test_theme_system() {
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
+  # --- Phase 1: adapters, set/cycle, config wiring, VG-SOT, VG-DOCS ---
+
+  # set regenerates all four target artifacts under POTIONS_HOME
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
+    set alchemists-orchid white > /dev/null 2>&1 || true
+  assert_file_exists "$tmp/zellij/themes/potions-active.kdl" "adapter: zellij theme generated"
+  assert_file_exists "$tmp/nvim/generated/palette.vim" "adapter: nvim palette generated"
+  assert_file_exists "$tmp/config/generated/ansi-map.sh" "adapter: shell ansi-map generated"
+  assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "adapter: terminal colors generated"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#F8F5F2' "zellij white bg correct"
+  assert_file_contains "$tmp/config/generated/ansi-map.sh" '033]4;1;' "shell ansi-map emits OSC palette"
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "alchemists-orchid-light" "nvim white uses light colorscheme"
+
+  local st
+  st=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_read')
+  if [ "$st" = "alchemists-orchid:white" ]; then
+    log_success "set: state updated to white"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "set: state not updated ('$st')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" cycle > /dev/null 2>&1 || true
+  local cyc
+  cyc=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_variant')
+  if [ "$cyc" = "dark" ]; then
+    log_success "cycle: white -> dark wraps around"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "cycle: did not advance/wrap ('$cyc')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # VG-SOT: no palette hex / inline themes block in tracked tool configs
+  if ! grep -qE '#[0-9A-Fa-f]{6}' "$SCRIPT_DIR/.potions/zellij/config.kdl" \
+     && ! grep -q 'themes {' "$SCRIPT_DIR/.potions/zellij/config.kdl"; then
+    log_success "VG-SOT: config.kdl free of palette hex and inline themes block"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-SOT: config.kdl still contains hex or a themes block"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if ! grep -qE 'gui(fg|bg)=#[0-9A-Fa-f]{6}' "$SCRIPT_DIR/.potions/nvim/init.vim"; then
+    log_success "VG-SOT: init.vim free of hardcoded gui hex"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-SOT: init.vim still has hardcoded gui hex"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Config wiring (includes/references point at generated artifacts)
+  assert_file_contains "$SCRIPT_DIR/.potions/zellij/config.kdl" 'potions-active' "config.kdl references generated theme"
+  assert_file_contains "$SCRIPT_DIR/.potions/nvim/init.vim" "generated/palette.vim" "init.vim sources generated nvim palette"
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "config/generated/ansi-map.sh" ".zshrc sources generated ansi-map"
+  assert_file_contains "$SCRIPT_DIR/.potions/terminal-setup/alacritty.toml" "alacritty-colors.toml" "alacritty.toml imports generated colors"
+  assert_file_contains "$SCRIPT_DIR/install.sh" "manager.sh.* regen" "install.sh regenerates theme artifacts"
+  assert_file_contains "$SCRIPT_DIR/upgrade.sh" "manager.sh.* regen" "upgrade.sh regenerates theme artifacts"
+
+  # dead parallel nvim mechanism removed
+  if [ ! -f "$SCRIPT_DIR/.potions/nvim/theme.vim" ]; then
+    log_success "nvim/theme.vim (dead parallel mechanism) removed"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "nvim/theme.vim should be removed (folded into potions theme)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # VG-DOCS: docs/color-palette.md in sync with token sources
+  if command -v jq > /dev/null 2>&1; then
+    cp "$SCRIPT_DIR/docs/color-palette.md" "$tmp/doc.before" 2>/dev/null || true
+    "$SCRIPT_DIR/scripts/compile-themes.sh" --docs > /dev/null 2>&1 || true
+    if diff -q "$tmp/doc.before" "$SCRIPT_DIR/docs/color-palette.md" > /dev/null 2>&1; then
+      log_success "VG-DOCS: color-palette.md in sync with token sources"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "VG-DOCS: color-palette.md drift — run scripts/compile-themes.sh --docs"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+  else
+    log_skip "VG-DOCS check skipped (jq not installed)"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+
   rm -rf "$tmp"
 }
 
