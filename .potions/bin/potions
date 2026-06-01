@@ -659,6 +659,13 @@ ${BOLD}COMMANDS:${NC}
     ${CYAN}doctor${NC}            Run health check on installation
     ${CYAN}help${NC}              Show this help message
 
+${BOLD}THEME COMMANDS:${NC}
+    ${CYAN}theme current${NC}        Show the active theme and variant
+    ${CYAN}theme list${NC}           List installed themes and variants
+    ${CYAN}theme set${NC} <t> [v]    Switch theme/variant across all tools
+    ${CYAN}theme cycle${NC}          Cycle to the next variant
+    ${CYAN}theme install${NC} <dir>  Verify and install a bring-your-own theme
+
 ${BOLD}PLUGIN COMMANDS:${NC}
     ${CYAN}plugin install${NC} [name]   Install plugins from Potionfile or specific plugin
     ${CYAN}plugin uninstall${NC} <name> Uninstall a plugin
@@ -702,6 +709,29 @@ cmd_plugin() {
   exec "$plugins_script" "$subcommand" "$@"
 }
 
+# Command: theme (delegates to the theme manager)
+cmd_theme() {
+  local subcommand="${1:-current}"
+
+  # Find the theme manager (repo checkout first, then installed location)
+  local manager=""
+  if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.potions/lib/theme/manager.sh" ]; then
+    manager="$REPO_ROOT/.potions/lib/theme/manager.sh"
+  elif [ -f "$POTIONS_HOME/lib/theme/manager.sh" ]; then
+    manager="$POTIONS_HOME/lib/theme/manager.sh"
+  fi
+
+  if [ -z "$manager" ] || [ ! -f "$manager" ]; then
+    log_error "Theme manager not found."
+    log_info "Please upgrade Potions to get the theme system."
+    exit 1
+  fi
+
+  # Invoke via bash so the theme system works even if the executable bit
+  # was not preserved when .potions was copied to the install location.
+  exec bash "$manager" "$@"
+}
+
 # Main command router
 main() {
   local command="${1:-help}"
@@ -732,6 +762,10 @@ main() {
     plugin|plugins)
       shift
       cmd_plugin "$@"
+      ;;
+    theme|themes)
+      shift
+      cmd_theme "$@"
       ;;
     help|--help|-h)
       cmd_help

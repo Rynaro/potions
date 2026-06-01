@@ -103,68 +103,17 @@ if $COLORTERM == 'truecolor' || $COLORTERM == '24bit'
   set termguicolors
 endif
 
-" Load Alchemists Orchid theme configuration
-" Theme preferences can be customized in ~/.potions/nvim/lua/theme/alchemists-orchid.lua
-lua << EOF
-local ok, theme_config = pcall(require, 'theme.alchemists-orchid')
-if ok and theme_config.setup then
-  theme_config.setup()
+" Theme is managed by the Potions theme system. The generator compiles the
+" active Alchemist's Orchid variant — colorscheme load + barbar/Visual/cheat
+" highlight overrides (gui from tokens, cterm fallbacks for non-truecolor) —
+" into nvim/generated/palette.vim. Regenerate/switch with:
+"   potions theme set alchemists-orchid <dark|white>   (or: potions theme cycle)
+" Falls back to the plain colorscheme if the generated palette is absent.
+if filereadable(expand("~/.potions/nvim/generated/palette.vim"))
+  source ~/.potions/nvim/generated/palette.vim
 else
-  -- Fallback: set colorscheme directly if config not found
-  vim.cmd('colorscheme alchemists-orchid')
-end
-EOF
-
-" Persist highlight overrides across colorscheme reloads via autocmd ColorScheme.
-" Alchemists Orchid Papyrus palette reference (https://github.com/Rynaro/alchemists-orchid-papyrus)
-" Full canonical token table: docs/color-palette.md
-"   bg (surface.dark):     #1E1B2E  orchid-tinted deep dark   (color.surface.dark)
-"   fg (secondary):        #E5D4F1  soft lavender white       (color.secondary / lavender.300)
-"   primary:               #CDB4DB  orchid.500                (color.primary)
-"   primary-deep:          #6F4A8E  orchid.700                (color.primary-deep)
-"   accent.cool:           #B9C9E6  blue.400                  (color.accent.cool)
-"   accent.nature:         #C8E7D5  mint.400                  (color.accent.nature)
-"   accent.warm:           #F8D1E0  pink.400                  (color.accent.warm)
-"   error:                 #D32F2F  input.border.error
-"   muted-orchid:          #9E93B8  desaturated lavender
-"   selection bg:          #44395a  deep orchid selection      (plugin-internal)
-"   tab active bg:         #2d2640  slightly lighter dark       (plugin-internal)
-"   tab fill bg:           #16121f  very dark purple            (plugin-internal)
-
-augroup ThemeHighlights
-  autocmd!
-  autocmd ColorScheme * call s:SetThemeHighlights()
-augroup END
-
-function! s:SetThemeHighlights()
-  " Visual mode selection — survives colorscheme reloads
-  highlight Visual guifg=#e0d7f5 guibg=#44395a ctermfg=White ctermbg=DarkGrey
-
-  " Barbar buffer tab highlights using Alchemists Orchid palette.
-  " gui* drives truecolor terminals; cterm* keeps the active/inactive
-  " distinction visible on non-truecolor terms (Termux $TERM=screen|linux).
-  highlight BufferCurrent       guifg=#e0d7f5 guibg=#2d2640 gui=bold ctermfg=White        ctermbg=DarkGrey cterm=bold
-  highlight BufferCurrentMod    guifg=#f8d1e0 guibg=#2d2640 gui=bold ctermfg=LightMagenta ctermbg=DarkGrey cterm=bold
-  highlight BufferCurrentIndex  guifg=#cdb4db guibg=#2d2640 gui=bold ctermfg=Magenta      ctermbg=DarkGrey cterm=bold
-  highlight BufferCurrentSign   guifg=#f8d1e0 guibg=#2d2640 gui=bold ctermfg=LightMagenta ctermbg=DarkGrey cterm=bold
-  highlight BufferVisible       guifg=#cdc0e0 guibg=#221c33 ctermfg=Gray    ctermbg=Black
-  highlight BufferVisibleMod    guifg=#f8d1e0 guibg=#221c33 ctermfg=Magenta ctermbg=Black
-  highlight BufferVisibleIndex  guifg=#9e93b8 guibg=#221c33 ctermfg=DarkGray ctermbg=Black
-  highlight BufferVisibleSign   guifg=#9e93b8 guibg=#221c33 ctermfg=DarkGray ctermbg=Black
-  highlight BufferInactive      guifg=#cdc0e0 guibg=#1a1527 ctermfg=Gray    ctermbg=Black
-  highlight BufferInactiveMod   guifg=#f8d1e0 guibg=#1a1527 ctermfg=Magenta ctermbg=Black
-  highlight BufferInactiveIndex guifg=#9e93b8 guibg=#1a1527 ctermfg=DarkGray ctermbg=Black
-  highlight BufferInactiveSign  guifg=#9e93b8 guibg=#1a1527 ctermfg=DarkGray ctermbg=Black
-  highlight BufferTabpageFill   guifg=#1a1527 guibg=#1a1527 ctermfg=Black   ctermbg=Black
-
-  " Potions cheatsheet floating window
-  highlight PotionsCheatNormal  guifg=#e5d4f1 guibg=#1a1527 ctermfg=White        ctermbg=Black
-  highlight PotionsCheatBorder  guifg=#cdb4db guibg=#1a1527 ctermfg=Magenta      ctermbg=Black
-  highlight PotionsCheatTitle   guifg=#f8d1e0 guibg=#1a1527 gui=bold ctermfg=LightMagenta ctermbg=Black cterm=bold
-endfunction
-
-" Trigger immediately for the current colorscheme load
-call s:SetThemeHighlights()
+  silent! colorscheme alchemists-orchid
+endif
 
 " Barbar Lua setup — explicit icon and separator configuration
 lua << EOF

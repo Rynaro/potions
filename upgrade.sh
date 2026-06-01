@@ -637,6 +637,17 @@ update_dotfiles() {
     chmod +x "$POTIONS_HOME/bin/potions"
     log_success "Potions CLI updated"
   fi
+
+  # Regenerate theme artifacts for the active theme so the upgrade re-applies
+  # the colorscheme across zellij/nvim/shell/terminal. Non-fatal on failure.
+  if [ -f "$POTIONS_HOME/lib/theme/manager.sh" ]; then
+    log_info "Regenerating theme artifacts..."
+    if REPO_ROOT="" POTIONS_HOME="$POTIONS_HOME" bash "$POTIONS_HOME/lib/theme/manager.sh" regen > /dev/null 2>&1; then
+      log_success "Theme artifacts regenerated"
+    else
+      log_warning "Theme artifacts could not be regenerated (non-fatal)"
+    fi
+  fi
 }
 
 # Clean up old backups (keep last 5 backups)

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://github.com/Rynaro/potions/themes/dtcg",
+  "meta": {
+    "id": "alchemists-orchid",
+    "name": "Alchemist's Orchid",
+    "author": "Potions",
+    "variant": "sepia",
+    "variants": [
+      "dark",
+      "white",
+      "sepia"
+    ],
+    "base": "base",
+    "schemaVersion": 1
+  },
+  "color": {
+    "surface": {
+      "$value": "#F4ECD8",
+      "cterm": 254
+    },
+    "surface-deep": {
+      "$value": "#E6D6B8",
+      "cterm": 187
+    },
+    "on-surface": {
+      "$value": "#43381F",
+      "cterm": 236
+    },
+    "muted": {
+      "$value": "#8A7A5C",
+      "cterm": 101
+    }
+  }
+}

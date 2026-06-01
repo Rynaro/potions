@@ -648,6 +648,289 @@ print_summary() {
   return $TESTS_FAILED
 }
 
+test_theme_system() {
+  log_step "Theme System Tests (Phase 0)"
+
+  local theme_lib="$SCRIPT_DIR/.potions/lib/theme"
+  local theme_dir="$SCRIPT_DIR/.potions/themes/alchemists-orchid"
+
+  # Structure
+  assert_file_exists "$theme_lib/resolver.sh" "theme/resolver.sh exists"
+  assert_file_exists "$theme_lib/state.sh" "theme/state.sh exists"
+  assert_file_exists "$theme_lib/registry.sh" "theme/registry.sh exists"
+  assert_file_exists "$theme_lib/generator.sh" "theme/generator.sh exists"
+  assert_file_exists "$theme_lib/manager.sh" "theme/manager.sh exists"
+  assert_file_exists "$SCRIPT_DIR/scripts/compile-themes.sh" "compile-themes.sh exists"
+  assert_file_exists "$theme_dir/manifest" "orchid manifest exists"
+  assert_file_exists "$theme_dir/base.tokens.json" "orchid base.tokens.json exists"
+  assert_file_exists "$theme_dir/base.theme" "orchid base.theme exists"
+  assert_file_exists "$theme_dir/dark.theme" "orchid dark.theme exists"
+  assert_file_exists "$theme_dir/white.theme" "orchid white.theme exists"
+
+  # Syntax + discipline for every theme module
+  local f
+  for f in "$theme_lib"/*.sh; do
+    [ -f "$f" ] || continue
+    assert_syntax_valid "$f" "theme/$(basename "$f") syntax"
+    assert_no_local_outside_function "$f" "theme/$(basename "$f"): no local outside functions"
+  done
+  assert_syntax_valid "$SCRIPT_DIR/scripts/compile-themes.sh" "compile-themes.sh syntax"
+
+  # manager.sh must be executable (the potions bin exec's it)
+  if [ -x "$theme_lib/manager.sh" ]; then
+    log_success "theme/manager.sh is executable"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "theme/manager.sh must be executable"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # potions bin wires the theme command
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_theme" "potions bin has cmd_theme"
+
+  # VG-PAIR: every HEX token has a matching CTERM in each .theme
+  local pair_ok=true tf hexes cterms
+  for tf in "$theme_dir"/*.theme; do
+    [ -f "$tf" ] || continue
+    hexes=$(grep -Eo '^(COLOR|COMPONENT)_[A-Z0-9_]+_HEX' "$tf" | sed 's/_HEX$//' | sort)
+    cterms=$(grep -Eo '^(COLOR|COMPONENT)_[A-Z0-9_]+_CTERM' "$tf" | sed 's/_CTERM$//' | sort)
+    [ "$hexes" = "$cterms" ] || pair_ok=false
+  done
+  if [ "$pair_ok" = true ]; then
+    log_success "VG-PAIR: every token has both HEX and CTERM"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-PAIR: HEX/CTERM mismatch in a .theme file"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Compiler drift gate: committed .theme files in sync with sources (needs jq)
+  if command -v jq > /dev/null 2>&1; then
+    if "$SCRIPT_DIR/scripts/compile-themes.sh" --check > /dev/null 2>&1; then
+      log_success "compiler drift check: .theme files in sync with sources"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "compiler drift: run scripts/compile-themes.sh and commit"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+  else
+    log_skip "compiler drift check skipped (jq not installed)"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+
+  local tmp
+  tmp=$(mktemp -d)
+
+  # Functional: variant overrides base, base tokens shared across variants
+  if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash -c '
+      . "'"$theme_lib"'/generator.sh"
+      theme_generate "'"$theme_dir"'" dark "'"$tmp"'/dark" > /dev/null 2>&1 || exit 1
+      theme_generate "'"$theme_dir"'" white "'"$tmp"'/white" > /dev/null 2>&1 || exit 1
+      ds=$(grep "^COLOR_SURFACE_HEX=" "'"$tmp"'/dark/resolved.env")
+      ws=$(grep "^COLOR_SURFACE_HEX=" "'"$tmp"'/white/resolved.env")
+      dp=$(grep "^COLOR_PRIMARY_HEX=" "'"$tmp"'/dark/resolved.env")
+      wp=$(grep "^COLOR_PRIMARY_HEX=" "'"$tmp"'/white/resolved.env")
+      [ "$ds" != "$ws" ] && [ "$dp" = "$wp" ]
+    '; then
+    log_success "resolver: variant overrides base; base tokens shared"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "resolver: base/variant merge incorrect"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Security VG-BYO-SAFE: hostile theme rejected, never executed
+  local pwn="$tmp/pwned" rc=0
+  printf 'COLOR_X_HEX=$(touch %s)\n' "$pwn" > "$tmp/evil.theme"
+  if REPO_ROOT="$SCRIPT_DIR" bash -c '
+      . "'"$theme_lib"'/resolver.sh"
+      theme_resolver_load "'"$tmp"'/evil.theme"
+    ' > /dev/null 2>&1; then
+    rc=0
+  else
+    rc=1
+  fi
+  if [ "$rc" -ne 0 ] && [ ! -e "$pwn" ]; then
+    log_success "VG-BYO-SAFE: hostile theme rejected, no side effect"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-BYO-SAFE: hostile theme not safely rejected (rc=$rc)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # State: legacy single-token form migrates to default variant
+  mkdir -p "$tmp/config"
+  printf 'alchemists-orchid\n' > "$tmp/config/theme.conf"
+  local legacy
+  legacy=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_read')
+  if [ "$legacy" = "alchemists-orchid:dark" ]; then
+    log_success "state: legacy single-token form migrates to default variant"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "state: legacy migration wrong ('$legacy')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # CLI: theme current renders the active theme name
+  local cur
+  cur=$(REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" current 2>/dev/null)
+  if echo "$cur" | grep -q "Alchemist's Orchid"; then
+    log_success "CLI: theme current renders the active theme"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "CLI: theme current output unexpected ('$cur')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # --- Phase 1: adapters, set/cycle, config wiring, VG-SOT, VG-DOCS ---
+
+  # set regenerates all four target artifacts under POTIONS_HOME
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
+    set alchemists-orchid white > /dev/null 2>&1 || true
+  assert_file_exists "$tmp/zellij/themes/potions-active.kdl" "adapter: zellij theme generated"
+  assert_file_exists "$tmp/nvim/generated/palette.vim" "adapter: nvim palette generated"
+  assert_file_exists "$tmp/config/generated/ansi-map.sh" "adapter: shell ansi-map generated"
+  assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "adapter: terminal colors generated"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#F8F5F2' "zellij white bg correct"
+  assert_file_contains "$tmp/config/generated/ansi-map.sh" '033]4;1;' "shell ansi-map emits OSC palette"
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "alchemists-orchid-light" "nvim white uses light colorscheme"
+
+  local st
+  st=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_read')
+  if [ "$st" = "alchemists-orchid:white" ]; then
+    log_success "set: state updated to white"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "set: state not updated ('$st')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # cycle advances and wraps from the last variant back to the first
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" set alchemists-orchid sepia > /dev/null 2>&1 || true
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" cycle > /dev/null 2>&1 || true
+  local cyc
+  cyc=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_variant')
+  if [ "$cyc" = "dark" ]; then
+    log_success "cycle: sepia -> dark wraps to first variant"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "cycle: did not wrap to first variant ('$cyc')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # VG-SOT: no palette hex / inline themes block in tracked tool configs
+  if ! grep -qE '#[0-9A-Fa-f]{6}' "$SCRIPT_DIR/.potions/zellij/config.kdl" \
+     && ! grep -q 'themes {' "$SCRIPT_DIR/.potions/zellij/config.kdl"; then
+    log_success "VG-SOT: config.kdl free of palette hex and inline themes block"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-SOT: config.kdl still contains hex or a themes block"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if ! grep -qE 'gui(fg|bg)=#[0-9A-Fa-f]{6}' "$SCRIPT_DIR/.potions/nvim/init.vim"; then
+    log_success "VG-SOT: init.vim free of hardcoded gui hex"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-SOT: init.vim still has hardcoded gui hex"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Config wiring (includes/references point at generated artifacts)
+  assert_file_contains "$SCRIPT_DIR/.potions/zellij/config.kdl" 'potions-active' "config.kdl references generated theme"
+  assert_file_contains "$SCRIPT_DIR/.potions/nvim/init.vim" "generated/palette.vim" "init.vim sources generated nvim palette"
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "config/generated/ansi-map.sh" ".zshrc sources generated ansi-map"
+  assert_file_contains "$SCRIPT_DIR/.potions/terminal-setup/alacritty.toml" "alacritty-colors.toml" "alacritty.toml imports generated colors"
+  assert_file_contains "$SCRIPT_DIR/install.sh" "manager.sh.* regen" "install.sh regenerates theme artifacts"
+  assert_file_contains "$SCRIPT_DIR/upgrade.sh" "manager.sh.* regen" "upgrade.sh regenerates theme artifacts"
+
+  # dead parallel nvim mechanism removed
+  if [ ! -f "$SCRIPT_DIR/.potions/nvim/theme.vim" ]; then
+    log_success "nvim/theme.vim (dead parallel mechanism) removed"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "nvim/theme.vim should be removed (folded into potions theme)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # VG-DOCS: docs/color-palette.md in sync with token sources
+  if command -v jq > /dev/null 2>&1; then
+    cp "$SCRIPT_DIR/docs/color-palette.md" "$tmp/doc.before" 2>/dev/null || true
+    "$SCRIPT_DIR/scripts/compile-themes.sh" --docs > /dev/null 2>&1 || true
+    if diff -q "$tmp/doc.before" "$SCRIPT_DIR/docs/color-palette.md" > /dev/null 2>&1; then
+      log_success "VG-DOCS: color-palette.md in sync with token sources"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "VG-DOCS: color-palette.md drift — run scripts/compile-themes.sh --docs"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+  else
+    log_skip "VG-DOCS check skipped (jq not installed)"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+
+  # --- Phase 2: sepia variant, terminal breadth, BYO verify/install ---
+
+  # sepia variant compiles and resolves to parchment surfaces
+  assert_file_exists "$theme_dir/sepia.theme" "sepia variant compiled"
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
+    set alchemists-orchid sepia > /dev/null 2>&1 || true
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#F4ECD8' "sepia parchment bg generated"
+
+  # all four terminal emulator color files generated
+  assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "terminal: alacritty colors generated"
+  assert_file_exists "$tmp/config/generated/kitty-colors.conf" "terminal: kitty colors generated"
+  assert_file_exists "$tmp/config/generated/ghostty-colors" "terminal: ghostty colors generated"
+  assert_file_exists "$tmp/config/generated/wezterm-colors.lua" "terminal: wezterm colors generated"
+
+  # BYO: a valid theme verifies, installs into themes-user, and lists as byo
+  local byo="$tmp/byo-src"
+  mkdir -p "$byo"
+  printf 'META_ID=tester\nMETA_NAME=Tester\nMETA_VARIANTS=dark\n' > "$byo/manifest"
+  printf 'META_ID=tester\nMETA_VARIANT=dark\nCOLOR_PRIMARY_HEX=#88C0D0\nCOLOR_PRIMARY_CTERM=110\nCOLOR_SURFACE_HEX=#2E3440\nCOLOR_SURFACE_CTERM=237\nCOLOR_ON_SURFACE_HEX=#ECEFF4\nCOLOR_ON_SURFACE_CTERM=255\n' > "$byo/dark.theme"
+  if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" verify "$byo" > /dev/null 2>&1; then
+    log_success "BYO: valid theme passes verification"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: valid theme failed verification"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" install "$byo" > /dev/null 2>&1 || true
+  assert_file_exists "$tmp/themes-user/tester/dark.theme" "BYO: install copies into themes-user"
+  if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" list 2>/dev/null | grep -q 'byo'; then
+    log_success "BYO: installed theme listed with byo trust"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: installed theme not listed as byo"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # BYO: hostile theme rejected at install — not copied, no side effect
+  local hbyo="$tmp/byo-evil" pwn2="$tmp/PWNED2"
+  mkdir -p "$hbyo"
+  printf 'META_ID=evil\n' > "$hbyo/manifest"
+  printf 'COLOR_X_HEX=$(touch %s)\n' "$pwn2" > "$hbyo/dark.theme"
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" install "$hbyo" > /dev/null 2>&1 || true
+  if [ ! -e "$pwn2" ] && [ ! -d "$tmp/themes-user/evil" ]; then
+    log_success "BYO: hostile theme rejected at install (no copy, no side effect)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: hostile theme not safely rejected at install"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # BYO: uninstall removes it
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" uninstall tester > /dev/null 2>&1 || true
+  if [ ! -d "$tmp/themes-user/tester" ]; then
+    log_success "BYO: uninstall removes the theme"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: uninstall did not remove the theme"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  rm -rf "$tmp"
+}
+
 # Main function
 main() {
   echo ""
@@ -667,6 +950,7 @@ main() {
   test_upgrade_script
   test_documentation
   test_platform_detection
+  test_theme_system
 
   # Run Termux-specific tests if in Termux environment
   source "$SCRIPT_DIR/packages/accessories.sh" 2>/dev/null || true

@@ -4,6 +4,34 @@ This guide helps you configure your terminal emulator for optimal compatibility 
 
 ---
 
+## Theme Colors (Alchemist's Orchid)
+
+Potions manages your colorscheme centrally. Switch it any time — the change
+propagates to Zellij, NeoVim, the shell, and your terminal emulator at once:
+
+```sh
+potions theme set alchemists-orchid white   # variants: dark | white | sepia
+potions theme cycle                          # next variant
+potions theme list                           # installed themes
+```
+
+The generator writes an importable color file per emulator into
+`~/.potions/config/generated/`. Add the matching include to your emulator's own
+config (it lives outside Potions), then reload or restart the emulator:
+
+| Emulator | Generated file | Add to your emulator config |
+|----------|----------------|-----------------------------|
+| Alacritty | `alacritty-colors.toml` | already imported by the bundled `alacritty.toml` |
+| Kitty | `kitty-colors.conf` | `include ~/.potions/config/generated/kitty-colors.conf` |
+| Ghostty | `ghostty-colors` | `config-file = ~/.potions/config/generated/ghostty-colors` |
+| WezTerm | `wezterm-colors.lua` | `config.colors = dofile(os.getenv('HOME')..'/.potions/config/generated/wezterm-colors.lua')` |
+
+Inside Zellij the generated Zellij theme drives the palette directly, so an
+emulator import is only needed for the bare shell or when Zellij is disabled.
+Bring your own theme with `potions theme install <dir>` (verified before install).
+
+---
+
 ## macOS: Cmd vs Ctrl Key Interception
 
 macOS terminal emulators intercept `Cmd+<key>` at the application (Cocoa) layer before input reaches the PTY. Zellij — running inside the PTY — never sees `Cmd` shortcuts.
