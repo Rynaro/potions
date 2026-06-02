@@ -721,16 +721,18 @@ test_theme_system() {
   local tmp
   tmp=$(mktemp -d)
 
-  # Functional: variant overrides base, base tokens shared across variants
+  # Functional: variant overrides base; un-overridden base tokens stay shared.
+  # (Light variants override brand accents for legibility, so a non-overridden
+  # token like error is the stable witness that base inheritance still works.)
   if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash -c '
       . "'"$theme_lib"'/generator.sh"
       theme_generate "'"$theme_dir"'" dark "'"$tmp"'/dark" > /dev/null 2>&1 || exit 1
       theme_generate "'"$theme_dir"'" white "'"$tmp"'/white" > /dev/null 2>&1 || exit 1
       ds=$(grep "^COLOR_SURFACE_HEX=" "'"$tmp"'/dark/resolved.env")
       ws=$(grep "^COLOR_SURFACE_HEX=" "'"$tmp"'/white/resolved.env")
-      dp=$(grep "^COLOR_PRIMARY_HEX=" "'"$tmp"'/dark/resolved.env")
-      wp=$(grep "^COLOR_PRIMARY_HEX=" "'"$tmp"'/white/resolved.env")
-      [ "$ds" != "$ws" ] && [ "$dp" = "$wp" ]
+      de=$(grep "^COLOR_ERROR_HEX=" "'"$tmp"'/dark/resolved.env")
+      we=$(grep "^COLOR_ERROR_HEX=" "'"$tmp"'/white/resolved.env")
+      [ "$ds" != "$ws" ] && [ "$de" = "$we" ]
     '; then
     log_success "resolver: variant overrides base; base tokens shared"
     TESTS_PASSED=$((TESTS_PASSED + 1))

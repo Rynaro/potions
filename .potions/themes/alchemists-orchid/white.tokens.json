@@ -29,6 +29,26 @@
     "muted": {
       "$value": "#6D6D6D",
       "cterm": 242
+    },
+    "primary": {
+      "$value": "#8A3A7D",
+      "cterm": 90
+    },
+    "primary-mid": {
+      "$value": "#7A4C8E",
+      "cterm": 97
+    },
+    "accent-warm": {
+      "$value": "#A66A1E",
+      "cterm": 130
+    },
+    "accent-cool": {
+      "$value": "#2C5F8A",
+      "cterm": 24
+    },
+    "accent-nature": {
+      "$value": "#4F7A3F",
+      "cterm": 64
     }
   }
 }

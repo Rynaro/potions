@@ -53,6 +53,11 @@ potions theme cycle                         # next variant
 | `color.surface-deep` | `#E6D6B8` | `187` |
 | `color.on-surface` | `#43381F` | `236` |
 | `color.muted` | `#8A7A5C` | `101` |
+| `color.primary` | `#8A3A7D` | `90` |
+| `color.primary-mid` | `#7A4C8E` | `97` |
+| `color.accent-warm` | `#A66A1E` | `130` |
+| `color.accent-cool` | `#2C5F8A` | `24` |
+| `color.accent-nature` | `#4F7A3F` | `64` |
 
 ### white
 
@@ -62,6 +67,11 @@ potions theme cycle                         # next variant
 | `color.surface-deep` | `#E5E1DD` | `254` |
 | `color.on-surface` | `#4A4A4A` | `239` |
 | `color.muted` | `#6D6D6D` | `242` |
+| `color.primary` | `#8A3A7D` | `90` |
+| `color.primary-mid` | `#7A4C8E` | `97` |
+| `color.accent-warm` | `#A66A1E` | `130` |
+| `color.accent-cool` | `#2C5F8A` | `24` |
+| `color.accent-nature` | `#4F7A3F` | `64` |
 
 ## ANSI slot mapping
 
