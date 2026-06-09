@@ -134,5 +134,35 @@
       "$value": "#2e3440",
       "cterm": 236
     }
+  },
+  "component": {
+    "nvim.tab.active": {
+      "$value": "#fafbfc",
+      "cterm": 231
+    },
+    "nvim.tab.visible": {
+      "$value": "#e9edf3",
+      "cterm": 255
+    },
+    "nvim.tab.inactive": {
+      "$value": "#dde3ec",
+      "cterm": 253
+    },
+    "nvim.fg.bright": {
+      "$value": "#2e3440",
+      "cterm": 236
+    },
+    "nvim.fg.dim": {
+      "$value": "#4c566a",
+      "cterm": 240
+    },
+    "nvim.muted": {
+      "$value": "#8893a6",
+      "cterm": 103
+    },
+    "nvim.visual": {
+      "$value": "#d3dae6",
+      "cterm": 252
+    }
   }
 }

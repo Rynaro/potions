@@ -99,6 +99,13 @@ potions theme cycle                         # next variant
 | `color.cursor-text` | `#f5f0e6` | `230` |
 | `color.selection-bg` | `#e5dfd5` | `254` |
 | `color.selection-fg` | `#3b3228` | `236` |
+| `component.nvim.tab.active` | `#f5f0e6` | `230` |
+| `component.nvim.tab.visible` | `#ece2cc` | `187` |
+| `component.nvim.tab.inactive` | `#e2d4b4` | `180` |
+| `component.nvim.fg.bright` | `#3b3228` | `236` |
+| `component.nvim.fg.dim` | `#5a5045` | `240` |
+| `component.nvim.muted` | `#8a7d68` | `101` |
+| `component.nvim.visual` | `#e0d2b0` | `187` |
 
 ### white
 
@@ -134,6 +141,13 @@ potions theme cycle                         # next variant
 | `color.cursor-text` | `#fafbfc` | `255` |
 | `color.selection-bg` | `#d8dee9` | `188` |
 | `color.selection-fg` | `#2e3440` | `236` |
+| `component.nvim.tab.active` | `#fafbfc` | `231` |
+| `component.nvim.tab.visible` | `#e9edf3` | `255` |
+| `component.nvim.tab.inactive` | `#dde3ec` | `253` |
+| `component.nvim.fg.bright` | `#2e3440` | `236` |
+| `component.nvim.fg.dim` | `#4c566a` | `240` |
+| `component.nvim.muted` | `#8893a6` | `103` |
+| `component.nvim.visual` | `#d3dae6` | `252` |
 
 ## ANSI slot mapping
 

@@ -795,7 +795,8 @@ test_theme_system() {
   assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "adapter: terminal colors generated"
   assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#fafbfc' "zellij white bg correct"
   assert_file_contains "$tmp/config/generated/ansi-map.sh" '033]4;1;' "shell ansi-map emits OSC palette"
-  assert_file_contains "$tmp/nvim/generated/palette.vim" "alchemists-orchid-light" "nvim white uses light colorscheme"
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "mode = 'light'" "nvim white drives the plugin light mode"
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "bg = '#fafbfc'" "nvim white pins surface bg via plugin overrides"
 
   local st
   st=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_read')
@@ -804,6 +805,25 @@ test_theme_system() {
     TESTS_PASSED=$((TESTS_PASSED + 1))
   else
     log_failure "set: state not updated ('$st')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # nvim variant -> plugin palette mode: dark=dark; white/sepia ride the plugin's
+  # light mode (Potions' sepia is light parchment, the plugin's own sepia is dark)
+  # and each pins the editor surface to the active variant's bg via overrides.
+  if REPO_ROOT="$SCRIPT_DIR" bash -c '
+      . "'"$theme_lib"'/generator.sh"
+      ( export POTIONS_HOME="'"$tmp"'/nd"; theme_generate "'"$theme_dir"'" dark )  > /dev/null 2>&1 || exit 1
+      ( export POTIONS_HOME="'"$tmp"'/ns"; theme_generate "'"$theme_dir"'" sepia ) > /dev/null 2>&1 || exit 1
+      grep -q "mode = .dark."  "'"$tmp"'/nd/nvim/generated/palette.vim" || exit 1
+      grep -q "bg = .#2e3440."  "'"$tmp"'/nd/nvim/generated/palette.vim" || exit 1
+      grep -q "mode = .light." "'"$tmp"'/ns/nvim/generated/palette.vim" || exit 1
+      grep -q "bg = .#f5f0e6."  "'"$tmp"'/ns/nvim/generated/palette.vim" || exit 1
+    '; then
+    log_success "nvim: variant maps to plugin mode (dark->dark, sepia->light parchment)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "nvim: variant->plugin-mode mapping incorrect"
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
