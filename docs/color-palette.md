@@ -20,74 +20,138 @@ potions theme cycle                         # next variant
 
 | Token | Hex | cterm |
 |-------|-----|-------|
-| `color.primary` | `#CDB4DB` | `182` |
-| `color.primary-mid` | `#A88FBC` | `139` |
-| `color.primary-deep` | `#6F4A8E` | `60` |
-| `color.secondary` | `#E5D4F1` | `189` |
-| `color.accent-warm` | `#F8D1E0` | `224` |
-| `color.accent-cool` | `#B9C9E6` | `152` |
-| `color.accent-nature` | `#C8E7D5` | `188` |
-| `color.error` | `#D32F2F` | `160` |
-| `component.nvim.tab.active` | `#2D2640` | `236` |
-| `component.nvim.tab.visible` | `#221C33` | `235` |
-| `component.nvim.tab.inactive` | `#1A1527` | `234` |
-| `component.nvim.fg.bright` | `#E0D7F5` | `189` |
-| `component.nvim.fg.dim` | `#CDC0E0` | `182` |
-| `component.nvim.muted` | `#9E93B8` | `139` |
-| `component.nvim.visual` | `#44395A` | `238` |
+| `color.primary` | `#c89bd0` | `176` |
+| `color.primary-mid` | `#dac0f2` | `183` |
+| `color.primary-deep` | `#6f4a8e` | `60` |
+| `color.secondary` | `#d8dee9` | `188` |
+| `color.accent-warm` | `#dfca9a` | `222` |
+| `color.accent-cool` | `#81a1c1` | `110` |
+| `color.accent-nature` | `#a3be8c` | `108` |
+| `color.error` | `#bf616a` | `167` |
+| `component.nvim.tab.active` | `#434c5e` | `240` |
+| `component.nvim.tab.visible` | `#3b4252` | `238` |
+| `component.nvim.tab.inactive` | `#2e3440` | `236` |
+| `component.nvim.fg.bright` | `#eceff4` | `255` |
+| `component.nvim.fg.dim` | `#d8dee9` | `188` |
+| `component.nvim.muted` | `#7b88a1` | `103` |
+| `component.nvim.visual` | `#434c5e` | `240` |
 
 ### dark
 
 | Token | Hex | cterm |
 |-------|-----|-------|
-| `color.surface` | `#1E1B2E` | `235` |
-| `color.surface-deep` | `#15121F` | `233` |
-| `color.on-surface` | `#E5D4F1` | `189` |
-| `color.muted` | `#9E93B8` | `139` |
+| `color.surface` | `#2e3440` | `236` |
+| `color.surface-deep` | `#3b4252` | `238` |
+| `color.on-surface` | `#e5e9f0` | `254` |
+| `color.muted` | `#4c566a` | `240` |
+| `color.ansi-0` | `#3b4252` | `0` |
+| `color.ansi-1` | `#e8a4cc` | `1` |
+| `color.ansi-2` | `#a3be8c` | `2` |
+| `color.ansi-3` | `#dfca9a` | `3` |
+| `color.ansi-4` | `#81a1c1` | `4` |
+| `color.ansi-5` | `#c89bd0` | `5` |
+| `color.ansi-6` | `#8fbcbb` | `6` |
+| `color.ansi-7` | `#d8dee9` | `7` |
+| `color.ansi-8` | `#4c566a` | `8` |
+| `color.ansi-9` | `#f0c0dd` | `9` |
+| `color.ansi-10` | `#c3e4a8` | `10` |
+| `color.ansi-11` | `#ebd9af` | `11` |
+| `color.ansi-12` | `#a3c2e8` | `12` |
+| `color.ansi-13` | `#dac0f2` | `13` |
+| `color.ansi-14` | `#9eece8` | `14` |
+| `color.ansi-15` | `#eceff4` | `15` |
+| `color.cursor` | `#d9a8dd` | `182` |
+| `color.cursor-text` | `#2e3440` | `236` |
+| `color.selection-bg` | `#4c566a` | `240` |
+| `color.selection-fg` | `#e5e9f0` | `254` |
 
 ### sepia
 
 | Token | Hex | cterm |
 |-------|-----|-------|
-| `color.surface` | `#F4ECD8` | `254` |
-| `color.surface-deep` | `#E6D6B8` | `187` |
-| `color.on-surface` | `#43381F` | `236` |
-| `color.muted` | `#8A7A5C` | `101` |
-| `color.primary` | `#8A3A7D` | `90` |
-| `color.primary-mid` | `#7A4C8E` | `97` |
-| `color.accent-warm` | `#A66A1E` | `130` |
-| `color.accent-cool` | `#2C5F8A` | `24` |
-| `color.accent-nature` | `#4F7A3F` | `64` |
+| `color.surface` | `#f5f0e6` | `254` |
+| `color.surface-deep` | `#e6d6b8` | `187` |
+| `color.on-surface` | `#3b3228` | `236` |
+| `color.muted` | `#5a5045` | `240` |
+| `color.primary` | `#7b3399` | `90` |
+| `color.primary-mid` | `#9440b3` | `97` |
+| `color.accent-warm` | `#806000` | `94` |
+| `color.accent-cool` | `#2e5e8a` | `24` |
+| `color.accent-nature` | `#4a6a28` | `64` |
+| `color.error` | `#a4232c` | `124` |
+| `color.ansi-0` | `#3b3228` | `0` |
+| `color.ansi-1` | `#b52080` | `1` |
+| `color.ansi-2` | `#4a6a28` | `2` |
+| `color.ansi-3` | `#806000` | `3` |
+| `color.ansi-4` | `#2e5e8a` | `4` |
+| `color.ansi-5` | `#7b3399` | `5` |
+| `color.ansi-6` | `#1a6b69` | `6` |
+| `color.ansi-7` | `#e5e0d6` | `7` |
+| `color.ansi-8` | `#5a5045` | `8` |
+| `color.ansi-9` | `#d42995` | `9` |
+| `color.ansi-10` | `#5c8432` | `10` |
+| `color.ansi-11` | `#997300` | `11` |
+| `color.ansi-12` | `#3972a8` | `12` |
+| `color.ansi-13` | `#9440b3` | `13` |
+| `color.ansi-14` | `#238280` | `14` |
+| `color.ansi-15` | `#f5f0e6` | `15` |
+| `color.cursor` | `#a35ba3` | `133` |
+| `color.cursor-text` | `#f5f0e6` | `230` |
+| `color.selection-bg` | `#e5dfd5` | `254` |
+| `color.selection-fg` | `#3b3228` | `236` |
 
 ### white
 
 | Token | Hex | cterm |
 |-------|-----|-------|
-| `color.surface` | `#F8F5F2` | `255` |
-| `color.surface-deep` | `#E5E1DD` | `254` |
-| `color.on-surface` | `#4A4A4A` | `239` |
-| `color.muted` | `#6D6D6D` | `242` |
-| `color.primary` | `#8A3A7D` | `90` |
-| `color.primary-mid` | `#7A4C8E` | `97` |
-| `color.accent-warm` | `#A66A1E` | `130` |
-| `color.accent-cool` | `#2C5F8A` | `24` |
-| `color.accent-nature` | `#4F7A3F` | `64` |
+| `color.surface` | `#fafbfc` | `255` |
+| `color.surface-deep` | `#e5e9f0` | `254` |
+| `color.on-surface` | `#2e3440` | `236` |
+| `color.muted` | `#4c566a` | `240` |
+| `color.primary` | `#8839aa` | `91` |
+| `color.primary-mid` | `#9f47c4` | `98` |
+| `color.accent-warm` | `#8a6000` | `94` |
+| `color.accent-cool` | `#2d6299` | `25` |
+| `color.accent-nature` | `#4d7028` | `64` |
+| `color.error` | `#bf303c` | `160` |
+| `color.ansi-0` | `#2e3440` | `0` |
+| `color.ansi-1` | `#c41585` | `1` |
+| `color.ansi-2` | `#4d7028` | `2` |
+| `color.ansi-3` | `#8a6000` | `3` |
+| `color.ansi-4` | `#2d6299` | `4` |
+| `color.ansi-5` | `#8839aa` | `5` |
+| `color.ansi-6` | `#1d7a78` | `6` |
+| `color.ansi-7` | `#e5e9f0` | `7` |
+| `color.ansi-8` | `#4c566a` | `8` |
+| `color.ansi-9` | `#e31c97` | `9` |
+| `color.ansi-10` | `#5e8a32` | `10` |
+| `color.ansi-11` | `#a57800` | `11` |
+| `color.ansi-12` | `#3a7ab8` | `12` |
+| `color.ansi-13` | `#9f47c4` | `13` |
+| `color.ansi-14` | `#248e8b` | `14` |
+| `color.ansi-15` | `#fafbfc` | `15` |
+| `color.cursor` | `#b266b2` | `133` |
+| `color.cursor-text` | `#fafbfc` | `255` |
+| `color.selection-bg` | `#d8dee9` | `188` |
+| `color.selection-fg` | `#2e3440` | `236` |
 
 ## ANSI slot mapping
 
-The Zellij theme, the Alacritty color file, and the shell OSC repaint map
-ANSI slots to semantic tokens consistently across variants:
+Every terminal surface (Ghostty, Termux, Alacritty, Kitty, WezTerm), the
+Zellij theme, and the shell OSC repaint read the **explicit** `color.ansi-0..15`
+tokens, so the 16-color palette is byte-faithful to the active variant:
 
 | ANSI slot | Token |
 |-----------|-------|
-| `fg` | `color.on-surface` |
-| `bg` | `color.surface` |
-| `black` | `color.surface-deep` |
-| `red` | `color.error` |
-| `green` | `color.accent-nature` |
-| `yellow` | `color.accent-warm` |
-| `blue` | `color.accent-cool` |
-| `magenta` | `color.primary` |
-| `cyan` | `color.primary-deep` |
-| `white` | `color.muted` |
-| `orange` (zellij) | `color.primary-mid` |
+| `foreground` | `color.on-surface` |
+| `background` | `color.surface` |
+| `cursor` | `color.cursor` |
+| `cursor-text` | `color.cursor-text` |
+| `selection-bg` | `color.selection-bg` |
+| `selection-fg` | `color.selection-fg` |
+| `color0`..`color15` | `color.ansi-0`..`color.ansi-15` |
+
+The semantic tokens (`color.primary`, `color.accent-*`, `color.error`, the
+`component.nvim.*` shades) drive UI chrome — the NeoVim overrides, Zellij
+`fg`/`bg`, and the `POTIONS_COLOR_*` prompt exports — and are tuned to the
+same hue family as the ANSI palette.

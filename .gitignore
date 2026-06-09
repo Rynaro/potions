@@ -122,6 +122,11 @@
 !.potions/lib/theme/
 !.potions/lib/theme/*.sh
 
+# Allow terminal-emulator support library (Ghostty/Termux setup manager)
+!.potions/lib/terminal
+!.potions/lib/terminal/
+!.potions/lib/terminal/*.sh
+
 # Allow built-in themes: DTCG token sources, compiled .theme files, manifests
 !.potions/themes
 !.potions/themes/

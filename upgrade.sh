@@ -648,6 +648,17 @@ update_dotfiles() {
       log_warning "Theme artifacts could not be regenerated (non-fatal)"
     fi
   fi
+
+  # Re-wire detected terminal emulators (Ghostty/Termux). Idempotent and
+  # configure-only — a no-op when no supported emulator is present.
+  if [ -f "$POTIONS_HOME/lib/terminal/manager.sh" ]; then
+    log_info "Reconfiguring terminal emulators..."
+    if REPO_ROOT="" POTIONS_HOME="$POTIONS_HOME" bash "$POTIONS_HOME/lib/terminal/manager.sh" setup --auto > /dev/null 2>&1; then
+      log_success "Terminal emulators reconfigured"
+    else
+      log_warning "Terminal emulator setup skipped (non-fatal)"
+    fi
+  fi
 }
 
 # Clean up old backups (keep last 5 backups)

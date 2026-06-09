@@ -519,6 +519,17 @@ EOF
       fi
     fi
 
+    # Wire detected terminal emulators (Ghostty/Termux). Configure-only and
+    # idempotent — it touches nothing when no supported emulator is present.
+    if [ -f "$POTIONS_HOME/lib/terminal/manager.sh" ]; then
+      log_info "Configuring terminal emulators..."
+      if REPO_ROOT="" POTIONS_HOME="$POTIONS_HOME" bash "$POTIONS_HOME/lib/terminal/manager.sh" setup --auto > /dev/null 2>&1; then
+        log_success "Terminal emulators configured"
+      else
+        log_warning "Terminal emulator setup skipped (non-fatal)"
+      fi
+    fi
+
     # Success message
     echo ""
     if [ "$HAS_COLOR" = true ]; then

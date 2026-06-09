@@ -15,20 +15,111 @@ potions theme cycle                          # next variant
 potions theme list                           # installed themes
 ```
 
-The generator writes an importable color file per emulator into
-`~/.potions/config/generated/`. Add the matching include to your emulator's own
-config (it lives outside Potions), then reload or restart the emulator:
+The palette is **byte-faithful** to the upstream WCAG-AAA, astigmatism-friendly
+[Alchemist's Orchid](https://github.com/Rynaro/alchemists-orchid.ghostty) brand
+theme: one source of truth (`~/.potions/themes/`) feeds every surface, including
+the explicit 16-color ANSI palette plus cursor and selection colors.
+
+### First-class emulators — wired for you
+
+**Ghostty** (Linux & macOS) and **Termux** (Android) are managed automatically.
+Install or upgrade Potions, or run:
+
+```sh
+potions terminal setup        # wire every detected emulator (backs up first)
+potions terminal status       # show what is detected and wired
+```
+
+- **Ghostty** — Potions adds one `config-file` include to your
+  `~/.config/ghostty/config` (backing up the original) pointing at a managed
+  fragment with the palette + QoL companion settings. Potions never installs
+  Ghostty; it only configures it when present.
+- **Termux** — Potions writes `~/.termux/colors.properties` and applies it live
+  via `termux-reload-settings` on every theme switch, and adds a touch-friendly
+  `extra-keys` row to `~/.termux/termux.properties`.
+
+### Other emulators — one include line
+
+For emulators Potions does not manage, add the matching include to your own
+config (it lives outside Potions), then reload/restart the emulator:
 
 | Emulator | Generated file | Add to your emulator config |
 |----------|----------------|-----------------------------|
 | Alacritty | `alacritty-colors.toml` | already imported by the bundled `alacritty.toml` |
 | Kitty | `kitty-colors.conf` | `include ~/.potions/config/generated/kitty-colors.conf` |
-| Ghostty | `ghostty-colors` | `config-file = ~/.potions/config/generated/ghostty-colors` |
 | WezTerm | `wezterm-colors.lua` | `config.colors = dofile(os.getenv('HOME')..'/.potions/config/generated/wezterm-colors.lua')` |
 
 Inside Zellij the generated Zellij theme drives the palette directly, so an
 emulator import is only needed for the bare shell or when Zellij is disabled.
 Bring your own theme with `potions theme install <dir>` (verified before install).
+
+---
+
+## Ghostty (Recommended — Linux & macOS)
+
+[Ghostty](https://ghostty.org) is a fast, native, GPU-accelerated terminal and
+the recommended desktop choice for Potions.
+
+### Install Ghostty yourself
+
+Potions configures Ghostty but never installs it:
+
+- **macOS:** `brew install --cask ghostty`
+- **Linux:** use your distro package (e.g. Fedora `dnf install ghostty`) or the
+  builds linked from <https://ghostty.org/download>.
+
+### Let Potions wire it
+
+```sh
+potions terminal setup ghostty
+```
+
+This backs up `~/.config/ghostty/config`, then appends a single optional include:
+
+```
+config-file = ?~/.potions/config/generated/ghostty.conf
+```
+
+The managed `ghostty.conf` pulls in the active palette and sets QoL companions:
+`cursor-style = block`, `unfocused-split-opacity = 0.85`,
+`shell-integration = detect`, `macos-option-as-alt = left` (so Zellij `Alt+<key>`
+bindings fire on macOS), and Zellij tab-navigation keybindings.
+
+### Live theme changes
+
+- In a **bare shell**, `potions theme cycle` repaints Ghostty instantly via OSC
+  escape sequences — no reload needed.
+- **Structural** changes (cursor style, keybindings) need a config reload:
+  press **Cmd/Ctrl+Shift+,** or restart Ghostty.
+- Inside **Zellij**, the Zellij theme owns the palette while attached.
+
+---
+
+## Termux (Android)
+
+On Android, Termux *is* the terminal, so Potions themes it directly.
+
+### Automatic
+
+`potions terminal setup termux` (run for you on install/upgrade) writes the
+colors and a touch-friendly `extra-keys` row, then reloads Termux live.
+
+### What Potions manages
+
+- **`~/.termux/colors.properties`** — the active Alchemist's Orchid palette
+  (`background`/`foreground`/`cursor`/`color0..15`). Rewritten and applied live
+  via `termux-reload-settings` on every `potions theme set|cycle`.
+- **`~/.termux/termux.properties`** — adds (only if you have not set one) an
+  `extra-keys` row giving ESC, TAB, CTRL, ALT, `-`, `/`, arrows, HOME/END, and
+  PgUp/PgDn — essential for Zellij and NeoVim on a touch keyboard. Your existing
+  `termux.properties` is backed up and never overwritten.
+
+### Notes
+
+- Live repaint uses `termux-reload-settings` (bundled with Termux). If a change
+  does not show, run it manually: `termux-reload-settings`.
+- Truecolor is supported by Termux, so the palette is exact; the `cterm`
+  fallbacks only matter on 256-color hosts.
 
 ---
 
