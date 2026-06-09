@@ -669,6 +669,10 @@ ${BOLD}THEME COMMANDS:${NC}
 ${BOLD}TERMINAL COMMANDS:${NC}
     ${CYAN}terminal status${NC}         Show detected emulators and wiring
     ${CYAN}terminal setup${NC} [target] Wire Ghostty/Termux (target: ghostty|termux|all)
+    ${CYAN}terminal reload${NC}         Regenerate + push live (= potions reload terminal)
+
+${BOLD}RELOAD COMMANDS:${NC}
+    ${CYAN}reload${NC} [target]         Regenerate artifacts and push live (all|terminal|shell|nvim|zellij)
 
 ${BOLD}PLUGIN COMMANDS:${NC}
     ${CYAN}plugin install${NC} [name]   Install plugins from Potionfile or specific plugin
@@ -736,6 +740,27 @@ cmd_theme() {
   exec bash "$manager" "$@"
 }
 
+# Command: reload (delegates to the reload manager)
+cmd_reload() {
+  # Find the reload manager (repo checkout first, then installed location)
+  local manager=""
+  if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.potions/lib/reload/manager.sh" ]; then
+    manager="$REPO_ROOT/.potions/lib/reload/manager.sh"
+  elif [ -f "$POTIONS_HOME/lib/reload/manager.sh" ]; then
+    manager="$POTIONS_HOME/lib/reload/manager.sh"
+  fi
+
+  if [ -z "$manager" ] || [ ! -f "$manager" ]; then
+    log_error "Reload manager not found."
+    log_info "Please upgrade Potions to get the reload system."
+    exit 1
+  fi
+
+  # Invoke via bash so it works even if the executable bit was not preserved
+  # when .potions was copied to the install location.
+  exec bash "$manager" "$@"
+}
+
 # Command: terminal (delegates to the terminal manager)
 cmd_terminal() {
   # Find the terminal manager (repo checkout first, then installed location)
@@ -795,6 +820,10 @@ main() {
     terminal|terminals)
       shift
       cmd_terminal "$@"
+      ;;
+    reload)
+      shift
+      cmd_reload "$@"
       ;;
     help|--help|-h)
       cmd_help

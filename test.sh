@@ -1062,6 +1062,175 @@ test_terminal_emulator_support() {
   rm -rf "$tmp"
 }
 
+test_reload_system() {
+  log_step "Reload System Tests"
+
+  local reload_lib="$SCRIPT_DIR/.potions/lib/reload"
+  local theme_lib="$SCRIPT_DIR/.potions/lib/theme"
+  local theme_dir="$SCRIPT_DIR/.potions/themes/alchemists-orchid"
+
+  # Structure: reload manager exists
+  assert_file_exists "$reload_lib/manager.sh" "reload/manager.sh exists"
+
+  # Syntax valid
+  assert_syntax_valid "$reload_lib/manager.sh" "reload/manager.sh syntax"
+
+  # No local outside functions
+  assert_no_local_outside_function "$reload_lib/manager.sh" "reload/manager.sh: no local outside functions"
+
+  # bin/potions wires the reload command
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_reload" "potions bin has cmd_reload"
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "reload)" "potions bin router has reload case"
+
+  # lib/help.sh mentions reload
+  assert_file_contains "$SCRIPT_DIR/.potions/lib/help.sh" "reload" "lib/help.sh mentions reload"
+
+  local tmp
+  tmp=$(mktemp -d)
+
+  # Set up a minimal temp POTIONS_HOME with config/theme.conf and themes dir.
+  # Mirrors the setup pattern from test_theme_system.
+  mkdir -p "$tmp/config"
+  printf 'alchemists-orchid:dark\n' > "$tmp/config/theme.conf"
+
+  # Functional: TERM=dumb reload all in temp home exits 0 and regenerates.
+  local reload_rc=0
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" all > /dev/null 2>&1 || reload_rc=$?
+  if [ "$reload_rc" -eq 0 ]; then
+    log_success "reload all: exits 0 with TERM=dumb"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload all: expected exit 0, got $reload_rc"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Regeneration produced ansi-map.sh
+  assert_file_exists "$tmp/config/generated/ansi-map.sh" "reload: ansi-map.sh generated (regen happened)"
+
+  # reload_bounded_exec sanity: sleep 5 with timeout 1 -> returns 124
+  local be_rc=0
+  bash -c '
+    . "'"$reload_lib"'/manager.sh"
+    reload_bounded_exec 1 sleep 5
+  ' > /dev/null 2>&1 || be_rc=$?
+  if [ "$be_rc" -eq 124 ]; then
+    log_success "reload_bounded_exec: sleep 5 with 1s timeout returns 124"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload_bounded_exec: expected 124 (timeout), got $be_rc"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # reload_bounded_exec sanity: true with timeout 2 -> returns 0
+  local be_rc2=0
+  bash -c '
+    . "'"$reload_lib"'/manager.sh"
+    reload_bounded_exec 2 true
+  ' > /dev/null 2>&1 || be_rc2=$?
+  if [ "$be_rc2" -eq 0 ]; then
+    log_success "reload_bounded_exec: true with 2s timeout returns 0"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload_bounded_exec: expected 0, got $be_rc2"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Idempotency: run reload twice, both should exit 0
+  local idem_rc1=0 idem_rc2=0
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" all > /dev/null 2>&1 || idem_rc1=$?
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" all > /dev/null 2>&1 || idem_rc2=$?
+  if [ "$idem_rc1" -eq 0 ] && [ "$idem_rc2" -eq 0 ]; then
+    log_success "reload idempotency: two consecutive runs both exit 0"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload idempotency: rc1=$idem_rc1 rc2=$idem_rc2"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Unknown target exits 2 (usage error)
+  local bad_rc=0
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" badtarget > /dev/null 2>&1 || bad_rc=$?
+  if [ "$bad_rc" -eq 2 ]; then
+    log_success "reload: unknown target exits 2"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload: expected exit 2 for bad target, got $bad_rc"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  rm -rf "$tmp"
+}
+
+test_terminal_reload() {
+  log_step "Terminal Reload Tests"
+
+  local reload_lib="$SCRIPT_DIR/.potions/lib/reload"
+  local term_lib="$SCRIPT_DIR/.potions/lib/terminal"
+
+  # terminal/manager.sh mentions reload
+  assert_file_contains "$term_lib/manager.sh" "reload" "terminal/manager.sh mentions reload"
+
+  local tmp
+  tmp=$(mktemp -d)
+  mkdir -p "$tmp/config"
+  printf 'alchemists-orchid:dark\n' > "$tmp/config/theme.conf"
+
+  # `potions terminal reload` (= reload terminal scope) exits 0
+  local trl_rc=0
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$term_lib/manager.sh" reload > /dev/null 2>&1 || trl_rc=$?
+  if [ "$trl_rc" -eq 0 ]; then
+    log_success "terminal reload: exits 0"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal reload: expected exit 0, got $trl_rc"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # terminal scope matrix must NOT contain NeoVim or Zellij lines
+  local trl_out
+  trl_out=$(REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$term_lib/manager.sh" reload 2>&1 || true)
+  if echo "$trl_out" | grep -q "NeoVim"; then
+    log_failure "terminal reload: matrix must not contain NeoVim"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "terminal reload: matrix does not contain NeoVim"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+  if echo "$trl_out" | grep -q "Zellij"; then
+    log_failure "terminal reload: matrix must not contain Zellij"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "terminal reload: matrix does not contain Zellij"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # Equivalence: `reload terminal` matrix == `terminal reload` matrix
+  local rel_out trl_out2
+  rel_out=$(REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" terminal 2>&1 || true)
+  trl_out2=$(REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$term_lib/manager.sh" reload 2>&1 || true)
+  # Compare matrix lines only (strip leading info/success log lines that may differ).
+  local rel_matrix trl_matrix
+  rel_matrix=$(echo "$rel_out" | grep -E '^\s+(Shell|Termux|Alacritty|WezTerm|Kitty|Ghostty|Zellij|NeoVim)' || true)
+  trl_matrix=$(echo "$trl_out2" | grep -E '^\s+(Shell|Termux|Alacritty|WezTerm|Kitty|Ghostty|Zellij|NeoVim)' || true)
+  if [ "$rel_matrix" = "$trl_matrix" ]; then
+    log_success "terminal reload equivalence: reload terminal == terminal reload matrix"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal reload equivalence: matrix differs"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  rm -rf "$tmp"
+}
+
 # Main function
 main() {
   echo ""
@@ -1083,6 +1252,8 @@ main() {
   test_platform_detection
   test_theme_system
   test_terminal_emulator_support
+  test_reload_system
+  test_terminal_reload
 
   # Run Termux-specific tests if in Termux environment
   source "$SCRIPT_DIR/packages/accessories.sh" 2>/dev/null || true

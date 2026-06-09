@@ -189,11 +189,36 @@ COMMANDS:
     setup [ghostty|termux|all]   Wire the active theme + QoL into the emulator
     setup --auto                 Wire only emulators that are present (safe anywhere)
     status                       Show detected emulators and whether each is wired
+    reload                       Regenerate theme artifacts and push live (= potions reload terminal)
     help                         Show this message
 
 Potions never installs an emulator; it only configures one that is present.
 Colors follow `potions theme set|cycle` automatically.
 EOF
+}
+
+# Resolve the reload manager path (repo checkout first, then installed location).
+_terminal_reload_manager() {
+  if [ -n "${REPO_ROOT:-}" ] && [ -f "$REPO_ROOT/.potions/lib/reload/manager.sh" ]; then
+    echo "$REPO_ROOT/.potions/lib/reload/manager.sh"
+  elif [ -f "$POTIONS_HOME/lib/reload/manager.sh" ]; then
+    echo "$POTIONS_HOME/lib/reload/manager.sh"
+  fi
+}
+
+# `potions terminal reload` is identical to `potions reload terminal`.
+# Source the reload engine so it shares the same process; call reload_main.
+terminal_cmd_reload() {
+  local mgr
+  mgr="$(_terminal_reload_manager)"
+  if [ -z "$mgr" ] || [ ! -f "$mgr" ]; then
+    log_error "Reload manager not found."
+    log_info "Please upgrade Potions to get the reload system."
+    exit 1
+  fi
+  # shellcheck source=/dev/null
+  . "$mgr"
+  reload_main terminal "$@"
 }
 
 main() {
@@ -202,6 +227,7 @@ main() {
   case "$command" in
     setup)          terminal_cmd_setup "$@" ;;
     status)         terminal_cmd_status ;;
+    reload)         terminal_cmd_reload "$@" ;;
     help|--help|-h) terminal_cmd_help ;;
     *)
       log_error "Unknown terminal command: $command"

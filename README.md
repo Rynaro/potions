@@ -51,6 +51,9 @@ potions theme cycle      # Cycle the colorscheme (dark | white | sepia)
 potions theme set alchemists-orchid white
 potions terminal setup   # Wire detected terminals (Ghostty/Termux)
 potions terminal status  # Show detected emulators and wiring
+
+potions reload           # Re-apply config everywhere (regenerate + live-push)
+potions reload terminal  # Re-apply terminal surfaces only (= potions terminal reload)
 ```
 
 ### Theming & Terminals
@@ -61,6 +64,15 @@ emulator. **Ghostty** (Linux/macOS) and **Termux** (Android) are configured
 automatically — palette, cursor/selection, and quality-of-life settings — with
 live theme switching. See the
 [Terminal Setup Guide](.potions/terminal-setup/TERMINAL_SETUP.md).
+
+**`potions reload`** re-applies your current config across every surface in one
+command: it regenerates all artifacts, then live-pushes wherever it safely can
+(the current terminal's palette via OSC, Termux via `termux-reload-settings`,
+Kitty when remote control is on). Surfaces that can't be hot-reloaded from
+outside (Zellij, NeoVim, Ghostty) are reported with the exact one-line action to
+finish. Scope it with `potions reload [all|terminal|shell|nvim|zellij]`;
+`potions terminal reload` is shorthand for the terminal surfaces. Nothing ever
+hangs and nothing is over-promised — the printed status matrix is the truth.
 
 ## 📝 Configuration
 

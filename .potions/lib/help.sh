@@ -288,7 +288,8 @@ help_section_commands() {
   render_keybind_row "info"         "Show system information"
   render_keybind_row "doctor"       "Run health check"
   render_keybind_row "theme"        "Switch/cycle the colorscheme (set, cycle, list)"
-  render_keybind_row "terminal"     "Configure terminals (Ghostty/Termux): setup, status"
+  render_keybind_row "terminal"     "Configure terminals (Ghostty/Termux): setup, status, reload"
+  render_keybind_row "reload"       "Regenerate artifacts and push live (all|terminal|shell|nvim|zellij)"
   render_keybind_row "plugin"       "Plugin management (install, list, ...)"
   render_keybind_row "help"         "Show this help"
 }
