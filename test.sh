@@ -1017,12 +1017,16 @@ test_terminal_emulator_support() {
   mkdir -p "$ghome/.config/ghostty" "$ghome/.potions/config/generated"
   printf '# managed fragment\n' > "$ghome/.potions/config/generated/ghostty.conf"
   printf 'font-size = 14\n' > "$ghome/.config/ghostty/config"
-  HOME="$ghome" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+  # Pin XDG_CONFIG_HOME so the manager resolves the config to the test fixture
+  # regardless of the runner's environment (Ubuntu CI presets XDG_CONFIG_HOME).
+  local gxdg="$ghome/.config"
+  HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
     bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
-  HOME="$ghome" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+  HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
     bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
   local inc_count
-  inc_count=$(grep -c "config/generated/ghostty.conf" "$ghome/.config/ghostty/config" 2>/dev/null || echo 0)
+  inc_count=$(grep -Fc "config/generated/ghostty.conf" "$ghome/.config/ghostty/config" 2>/dev/null || true)
+  inc_count=${inc_count:-0}
   if [ "$inc_count" = "1" ] && [ -f "$ghome/.config/ghostty/config.bak" ]; then
     log_success "terminal: Ghostty include added once, original backed up"
     TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -1035,7 +1039,7 @@ test_terminal_emulator_support() {
   # Ghostty setup is a no-op when Ghostty is absent (no config dir, not on PATH)
   local ahome="$tmp/absent"
   mkdir -p "$ahome"
-  HOME="$ahome" POTIONS_HOME="$ahome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+  HOME="$ahome" XDG_CONFIG_HOME="$ahome/.config" POTIONS_HOME="$ahome/.potions" REPO_ROOT="$SCRIPT_DIR" \
     PATH="/usr/bin:/bin" bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
   if [ ! -e "$ahome/.config/ghostty/config" ]; then
     log_success "terminal: Ghostty setup no-ops when emulator absent"
@@ -1046,7 +1050,7 @@ test_terminal_emulator_support() {
   fi
 
   # status renders without error
-  if HOME="$ghome" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+  if HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
        bash "$term_lib/manager.sh" status > /dev/null 2>&1; then
     log_success "terminal: status runs cleanly"
     TESTS_PASSED=$((TESTS_PASSED + 1))
