@@ -722,16 +722,16 @@ test_theme_system() {
   tmp=$(mktemp -d)
 
   # Functional: variant overrides base; un-overridden base tokens stay shared.
-  # (Light variants override brand accents for legibility, so a non-overridden
-  # token like error is the stable witness that base inheritance still works.)
+  # (Light variants override brand accents/error for legibility, so secondary —
+  # which no variant overrides — is the stable witness that inheritance works.)
   if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash -c '
       . "'"$theme_lib"'/generator.sh"
       theme_generate "'"$theme_dir"'" dark "'"$tmp"'/dark" > /dev/null 2>&1 || exit 1
       theme_generate "'"$theme_dir"'" white "'"$tmp"'/white" > /dev/null 2>&1 || exit 1
       ds=$(grep "^COLOR_SURFACE_HEX=" "'"$tmp"'/dark/resolved.env")
       ws=$(grep "^COLOR_SURFACE_HEX=" "'"$tmp"'/white/resolved.env")
-      de=$(grep "^COLOR_ERROR_HEX=" "'"$tmp"'/dark/resolved.env")
-      we=$(grep "^COLOR_ERROR_HEX=" "'"$tmp"'/white/resolved.env")
+      de=$(grep "^COLOR_SECONDARY_HEX=" "'"$tmp"'/dark/resolved.env")
+      we=$(grep "^COLOR_SECONDARY_HEX=" "'"$tmp"'/white/resolved.env")
       [ "$ds" != "$ws" ] && [ "$de" = "$we" ]
     '; then
     log_success "resolver: variant overrides base; base tokens shared"
@@ -793,7 +793,7 @@ test_theme_system() {
   assert_file_exists "$tmp/nvim/generated/palette.vim" "adapter: nvim palette generated"
   assert_file_exists "$tmp/config/generated/ansi-map.sh" "adapter: shell ansi-map generated"
   assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "adapter: terminal colors generated"
-  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#F8F5F2' "zellij white bg correct"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#fafbfc' "zellij white bg correct"
   assert_file_contains "$tmp/config/generated/ansi-map.sh" '033]4;1;' "shell ansi-map emits OSC palette"
   assert_file_contains "$tmp/nvim/generated/palette.vim" "alchemists-orchid-light" "nvim white uses light colorscheme"
 
@@ -876,7 +876,7 @@ test_theme_system() {
   assert_file_exists "$theme_dir/sepia.theme" "sepia variant compiled"
   REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
     set alchemists-orchid sepia > /dev/null 2>&1 || true
-  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#F4ECD8' "sepia parchment bg generated"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#f5f0e6' "sepia parchment bg generated"
 
   # all four terminal emulator color files generated
   assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "terminal: alacritty colors generated"
@@ -930,6 +930,135 @@ test_theme_system() {
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
+  # --- Phase 3: explicit ANSI-16 + cursor/selection, Ghostty/Termux ---
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
+    set alchemists-orchid dark > /dev/null 2>&1 || true
+
+  # Token SoT carries the explicit ANSI layer + cursor/selection, byte-faithful
+  # to upstream alchemists-orchid.ghostty (dark ANSI red is the brand pink).
+  assert_file_contains "$theme_dir/dark.theme" "COLOR_ANSI_1_HEX=#e8a4cc" "tokens: dark ANSI red is brand pink"
+  assert_file_contains "$theme_dir/dark.theme" "COLOR_CURSOR_HEX=#d9a8dd" "tokens: dark cursor present"
+  assert_file_contains "$theme_dir/dark.theme" "COLOR_SELECTION_BG_HEX=#4c566a" "tokens: dark selection present"
+
+  # Ghostty palette file: cursor + selection + byte-faithful ANSI
+  assert_file_contains "$tmp/config/generated/ghostty-colors" "cursor-color = #d9a8dd" "ghostty: cursor-color emitted"
+  assert_file_contains "$tmp/config/generated/ghostty-colors" "selection-background = #4c566a" "ghostty: selection emitted"
+  assert_file_contains "$tmp/config/generated/ghostty-colors" "palette = 1=#e8a4cc" "ghostty: ANSI palette byte-faithful"
+
+  # Ghostty managed fragment: palette include + QoL companion settings
+  assert_file_exists "$tmp/config/generated/ghostty.conf" "ghostty: managed config fragment generated"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "ghostty-colors" "ghostty.conf includes the palette file"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "macos-option-as-alt" "ghostty.conf sets QoL keys"
+
+  # Zellij + shell now consume the explicit ANSI tokens
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#e8a4cc' "zellij red uses explicit ANSI token"
+  assert_file_contains "$tmp/config/generated/ansi-map.sh" '#e8a4cc' "shell ansi-map uses explicit ANSI token"
+
+  # Termux adapter writes a faithful colors.properties when the gate is on
+  local thome="$tmp/thome"
+  mkdir -p "$thome"
+  HOME="$thome" bash -c '
+      . "'"$theme_lib"'/resolver.sh"; . "'"$theme_lib"'/adapters.sh"
+      _theme_is_termux() { return 0; }
+      theme_resolve "'"$theme_dir"'" dark >/dev/null 2>&1 || exit 1
+      theme_gen_adapter_termux "" >/dev/null 2>&1
+    '
+  if grep -q '^color1=#e8a4cc' "$thome/.termux/colors.properties" 2>/dev/null \
+     && grep -q '^background=#2e3440' "$thome/.termux/colors.properties" 2>/dev/null; then
+    log_success "termux: colors.properties written with faithful palette"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "termux: colors.properties not written correctly"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Termux adapter is a strict no-op when the gate is off (deterministic)
+  local nhome="$tmp/nothome"
+  mkdir -p "$nhome"
+  HOME="$nhome" bash -c '
+      . "'"$theme_lib"'/resolver.sh"; . "'"$theme_lib"'/adapters.sh"
+      _theme_is_termux() { return 1; }
+      theme_resolve "'"$theme_dir"'" dark >/dev/null 2>&1
+      theme_gen_adapter_termux "" >/dev/null 2>&1
+    '
+  if [ ! -f "$nhome/.termux/colors.properties" ]; then
+    log_success "termux: adapter is a no-op off-Termux"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "termux: adapter wrote colors.properties off-Termux"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  rm -rf "$tmp"
+}
+
+test_terminal_emulator_support() {
+  log_step "Terminal Emulator Support Tests"
+
+  local term_lib="$SCRIPT_DIR/.potions/lib/terminal"
+
+  assert_file_exists "$term_lib/manager.sh" "terminal/manager.sh exists"
+  assert_syntax_valid "$term_lib/manager.sh" "terminal/manager.sh syntax"
+  assert_no_local_outside_function "$term_lib/manager.sh" "terminal/manager.sh: no local outside functions"
+
+  # potions bin wires the terminal command; install/upgrade auto-run setup
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_terminal" "potions bin has cmd_terminal"
+  assert_file_contains "$SCRIPT_DIR/install.sh" "terminal/manager.sh.* setup" "install.sh wires terminal setup"
+  assert_file_contains "$SCRIPT_DIR/upgrade.sh" "terminal/manager.sh.* setup" "upgrade.sh wires terminal setup"
+
+  # generator dispatches the termux adapter target
+  assert_file_contains "$SCRIPT_DIR/.potions/lib/theme/generator.sh" "termux" "generator targets include termux"
+
+  local tmp
+  tmp=$(mktemp -d)
+
+  # Ghostty wiring: backs up an existing config, appends the include exactly once
+  local ghome="$tmp/ghome"
+  mkdir -p "$ghome/.config/ghostty" "$ghome/.potions/config/generated"
+  printf '# managed fragment\n' > "$ghome/.potions/config/generated/ghostty.conf"
+  printf 'font-size = 14\n' > "$ghome/.config/ghostty/config"
+  # Pin XDG_CONFIG_HOME so the manager resolves the config to the test fixture
+  # regardless of the runner's environment (Ubuntu CI presets XDG_CONFIG_HOME).
+  local gxdg="$ghome/.config"
+  HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+    bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
+  HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+    bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
+  local inc_count
+  inc_count=$(grep -Fc "config/generated/ghostty.conf" "$ghome/.config/ghostty/config" 2>/dev/null || true)
+  inc_count=${inc_count:-0}
+  if [ "$inc_count" = "1" ] && [ -f "$ghome/.config/ghostty/config.bak" ]; then
+    log_success "terminal: Ghostty include added once, original backed up"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal: Ghostty wiring not idempotent or no backup (count=$inc_count)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  assert_file_contains "$ghome/.config/ghostty/config" "font-size = 14" "terminal: Ghostty original config preserved"
+
+  # Ghostty setup is a no-op when Ghostty is absent (no config dir, not on PATH)
+  local ahome="$tmp/absent"
+  mkdir -p "$ahome"
+  HOME="$ahome" XDG_CONFIG_HOME="$ahome/.config" POTIONS_HOME="$ahome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+    PATH="/usr/bin:/bin" bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
+  if [ ! -e "$ahome/.config/ghostty/config" ]; then
+    log_success "terminal: Ghostty setup no-ops when emulator absent"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal: Ghostty setup created config when emulator absent"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # status renders without error
+  if HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+       bash "$term_lib/manager.sh" status > /dev/null 2>&1; then
+    log_success "terminal: status runs cleanly"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal: status errored"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
   rm -rf "$tmp"
 }
 
@@ -953,6 +1082,7 @@ main() {
   test_documentation
   test_platform_detection
   test_theme_system
+  test_terminal_emulator_support
 
   # Run Termux-specific tests if in Termux environment
   source "$SCRIPT_DIR/packages/accessories.sh" 2>/dev/null || true

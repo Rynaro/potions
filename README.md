@@ -10,6 +10,8 @@ Potions transforms your fresh macOS, WSL, Termux, or Fedora installation into a 
 
 - **Cross-Platform**: macOS, WSL (Windows), Termux (Android), Debian/Linux, Fedora
 - **Pre-configured Tools**: Zsh, Git, NeoVim, Zellij, and more
+- **One-Switch Theming**: WCAG-AAA Alchemist's Orchid palette across shell, NeoVim, Zellij, and your terminal — switch or cycle with `potions theme`
+- **First-class Terminals**: Ghostty (Linux/macOS) and Termux (Android) wired automatically, with live theme changes
 - **Professional CLI**: Manage your installation with `potions` commands
 - **Plugin System**: Extend functionality with custom plugins
 - **User Customization**: Preserved settings that survive upgrades
@@ -44,7 +46,21 @@ potions status           # Show installation status
 potions info             # Show system information
 potions doctor           # Run health check
 potions help             # Show help message
+
+potions theme cycle      # Cycle the colorscheme (dark | white | sepia)
+potions theme set alchemists-orchid white
+potions terminal setup   # Wire detected terminals (Ghostty/Termux)
+potions terminal status  # Show detected emulators and wiring
 ```
+
+### Theming & Terminals
+
+Potions ships the **Alchemist's Orchid** palette (WCAG-AAA, astigmatism-friendly)
+as one source of truth across the shell, NeoVim, Zellij, and your terminal
+emulator. **Ghostty** (Linux/macOS) and **Termux** (Android) are configured
+automatically — palette, cursor/selection, and quality-of-life settings — with
+live theme switching. See the
+[Terminal Setup Guide](.potions/terminal-setup/TERMINAL_SETUP.md).
 
 ## 📝 Configuration
 

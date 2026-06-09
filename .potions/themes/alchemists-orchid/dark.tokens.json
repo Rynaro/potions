@@ -15,20 +15,100 @@
   },
   "color": {
     "surface": {
-      "$value": "#1E1B2E",
-      "cterm": 235
+      "$value": "#2e3440",
+      "cterm": 236
     },
     "surface-deep": {
-      "$value": "#15121F",
-      "cterm": 233
+      "$value": "#3b4252",
+      "cterm": 238
     },
     "on-surface": {
-      "$value": "#E5D4F1",
-      "cterm": 189
+      "$value": "#e5e9f0",
+      "cterm": 254
     },
     "muted": {
-      "$value": "#9E93B8",
-      "cterm": 139
+      "$value": "#4c566a",
+      "cterm": 240
+    },
+    "ansi-0": {
+      "$value": "#3b4252",
+      "cterm": 0
+    },
+    "ansi-1": {
+      "$value": "#e8a4cc",
+      "cterm": 1
+    },
+    "ansi-2": {
+      "$value": "#a3be8c",
+      "cterm": 2
+    },
+    "ansi-3": {
+      "$value": "#dfca9a",
+      "cterm": 3
+    },
+    "ansi-4": {
+      "$value": "#81a1c1",
+      "cterm": 4
+    },
+    "ansi-5": {
+      "$value": "#c89bd0",
+      "cterm": 5
+    },
+    "ansi-6": {
+      "$value": "#8fbcbb",
+      "cterm": 6
+    },
+    "ansi-7": {
+      "$value": "#d8dee9",
+      "cterm": 7
+    },
+    "ansi-8": {
+      "$value": "#4c566a",
+      "cterm": 8
+    },
+    "ansi-9": {
+      "$value": "#f0c0dd",
+      "cterm": 9
+    },
+    "ansi-10": {
+      "$value": "#c3e4a8",
+      "cterm": 10
+    },
+    "ansi-11": {
+      "$value": "#ebd9af",
+      "cterm": 11
+    },
+    "ansi-12": {
+      "$value": "#a3c2e8",
+      "cterm": 12
+    },
+    "ansi-13": {
+      "$value": "#dac0f2",
+      "cterm": 13
+    },
+    "ansi-14": {
+      "$value": "#9eece8",
+      "cterm": 14
+    },
+    "ansi-15": {
+      "$value": "#eceff4",
+      "cterm": 15
+    },
+    "cursor": {
+      "$value": "#d9a8dd",
+      "cterm": 182
+    },
+    "cursor-text": {
+      "$value": "#2e3440",
+      "cterm": 236
+    },
+    "selection-bg": {
+      "$value": "#4c566a",
+      "cterm": 240
+    },
+    "selection-fg": {
+      "$value": "#e5e9f0",
+      "cterm": 254
     }
   }
 }

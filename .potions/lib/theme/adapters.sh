@@ -21,6 +21,9 @@ _tct() { local k="${1}_CTERM"; printf '%s' "${!k}"; }
 
 _theme_potions_home() { echo "${POTIONS_HOME:-$HOME/.potions}"; }
 
+# Self-contained Termux detection (accessories.sh is not sourced here).
+_theme_is_termux() { [ -n "${PREFIX:-}" ] && [ -x "${PREFIX}/bin/termux-info" ]; }
+
 _theme_write_atomic() {
   # _theme_write_atomic <dest> < content-on-stdin
   local dest="$1" dir tmp
@@ -43,17 +46,18 @@ theme_gen_adapter_shell() {
   home="$(_theme_potions_home)"
   dest="$home/config/generated/ansi-map.sh"
 
-  # ANSI slot -> token (consistent across variants)
-  local s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 sfg sbg
-  s0="$(_thx COLOR_SURFACE_DEEP)";  s1="$(_thx COLOR_ERROR)"
-  s2="$(_thx COLOR_ACCENT_NATURE)"; s3="$(_thx COLOR_ACCENT_WARM)"
-  s4="$(_thx COLOR_ACCENT_COOL)";   s5="$(_thx COLOR_PRIMARY)"
-  s6="$(_thx COLOR_PRIMARY_DEEP)";  s7="$(_thx COLOR_MUTED)"
-  s8="$(_thx COLOR_MUTED)";         s9="$(_thx COLOR_ERROR)"
-  s10="$(_thx COLOR_ACCENT_NATURE)"; s11="$(_thx COLOR_ACCENT_WARM)"
-  s12="$(_thx COLOR_ACCENT_COOL)";  s13="$(_thx COLOR_PRIMARY_MID)"
-  s14="$(_thx COLOR_PRIMARY)";      s15="$(_thx COLOR_ON_SURFACE)"
-  sfg="$(_thx COLOR_ON_SURFACE)";   sbg="$(_thx COLOR_SURFACE)"
+  # ANSI slot -> explicit ANSI token (byte-faithful to the active variant).
+  local s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 sfg sbg scur
+  s0="$(_thx COLOR_ANSI_0)";   s1="$(_thx COLOR_ANSI_1)"
+  s2="$(_thx COLOR_ANSI_2)";   s3="$(_thx COLOR_ANSI_3)"
+  s4="$(_thx COLOR_ANSI_4)";   s5="$(_thx COLOR_ANSI_5)"
+  s6="$(_thx COLOR_ANSI_6)";   s7="$(_thx COLOR_ANSI_7)"
+  s8="$(_thx COLOR_ANSI_8)";   s9="$(_thx COLOR_ANSI_9)"
+  s10="$(_thx COLOR_ANSI_10)"; s11="$(_thx COLOR_ANSI_11)"
+  s12="$(_thx COLOR_ANSI_12)"; s13="$(_thx COLOR_ANSI_13)"
+  s14="$(_thx COLOR_ANSI_14)"; s15="$(_thx COLOR_ANSI_15)"
+  sfg="$(_thx COLOR_ON_SURFACE)";  sbg="$(_thx COLOR_SURFACE)"
+  scur="$(_thx COLOR_CURSOR)"
 
   _theme_write_atomic "$dest" <<EOF
 #!/bin/sh
@@ -70,6 +74,7 @@ potions_apply_terminal_palette() {
   case "\${TERM:-}" in dumb|linux|'') return 0 ;; esac
   printf '\033]10;%s\007' '$sfg'
   printf '\033]11;%s\007' '$sbg'
+  printf '\033]12;%s\007' '$scur'
   printf '\033]4;0;%s\007'  '$s0'
   printf '\033]4;1;%s\007'  '$s1'
   printf '\033]4;2;%s\007'  '$s2'
@@ -112,15 +117,15 @@ themes {
     potions-active {
         fg "$(_thx COLOR_ON_SURFACE)"
         bg "$(_thx COLOR_SURFACE)"
-        black "$(_thx COLOR_SURFACE_DEEP)"
-        red "$(_thx COLOR_ERROR)"
-        green "$(_thx COLOR_ACCENT_NATURE)"
-        yellow "$(_thx COLOR_ACCENT_WARM)"
-        blue "$(_thx COLOR_ACCENT_COOL)"
-        magenta "$(_thx COLOR_PRIMARY)"
-        cyan "$(_thx COLOR_PRIMARY_DEEP)"
-        white "$(_thx COLOR_MUTED)"
-        orange "$(_thx COLOR_PRIMARY_MID)"
+        black "$(_thx COLOR_ANSI_0)"
+        red "$(_thx COLOR_ANSI_1)"
+        green "$(_thx COLOR_ANSI_2)"
+        yellow "$(_thx COLOR_ANSI_3)"
+        blue "$(_thx COLOR_ANSI_4)"
+        magenta "$(_thx COLOR_ANSI_5)"
+        cyan "$(_thx COLOR_ANSI_6)"
+        white "$(_thx COLOR_ANSI_7)"
+        orange "$(_thx COLOR_ANSI_11)"
     }
 }
 EOF
@@ -180,28 +185,32 @@ EOF
 }
 
 # --- Terminal emulator color files -----------------------------------------
-# Emits an importable color file for each supported emulator into
-# config/generated/. The 16-slot ANSI mapping matches the shell/Zellij adapters.
-# Emulator configs live outside Potions, so the user imports these (see
-# terminal-setup/TERMINAL_SETUP.md). Switch with: potions theme set <variant>.
+# Emits an importable color file for each supported desktop emulator into
+# config/generated/. The 16 ANSI slots come from the explicit COLOR_ANSI_*
+# tokens (byte-faithful to the active variant), matching the shell/Zellij/Termux
+# adapters. Emulator configs live outside Potions, so the user imports these via
+# the include line each block documents (or `potions terminal setup`). Switch
+# with: potions theme set <variant>.
 theme_gen_adapter_terminal() {
-  local home gen fg bg
+  local home gen fg bg cur curtext selbg selfg
   home="$(_theme_potions_home)"
   gen="$home/config/generated"
 
-  fg="$(_thx COLOR_ON_SURFACE)"; bg="$(_thx COLOR_SURFACE)"
+  fg="$(_thx COLOR_ON_SURFACE)";  bg="$(_thx COLOR_SURFACE)"
+  cur="$(_thx COLOR_CURSOR)";     curtext="$(_thx COLOR_CURSOR_TEXT)"
+  selbg="$(_thx COLOR_SELECTION_BG)"; selfg="$(_thx COLOR_SELECTION_FG)"
   # normal 0-7
   local n0 n1 n2 n3 n4 n5 n6 n7
-  n0="$(_thx COLOR_SURFACE_DEEP)";  n1="$(_thx COLOR_ERROR)"
-  n2="$(_thx COLOR_ACCENT_NATURE)"; n3="$(_thx COLOR_ACCENT_WARM)"
-  n4="$(_thx COLOR_ACCENT_COOL)";   n5="$(_thx COLOR_PRIMARY)"
-  n6="$(_thx COLOR_PRIMARY_DEEP)";  n7="$(_thx COLOR_MUTED)"
+  n0="$(_thx COLOR_ANSI_0)"; n1="$(_thx COLOR_ANSI_1)"
+  n2="$(_thx COLOR_ANSI_2)"; n3="$(_thx COLOR_ANSI_3)"
+  n4="$(_thx COLOR_ANSI_4)"; n5="$(_thx COLOR_ANSI_5)"
+  n6="$(_thx COLOR_ANSI_6)"; n7="$(_thx COLOR_ANSI_7)"
   # bright 8-15
   local b0 b1 b2 b3 b4 b5 b6 b7
-  b0="$(_thx COLOR_MUTED)";         b1="$(_thx COLOR_ERROR)"
-  b2="$(_thx COLOR_ACCENT_NATURE)"; b3="$(_thx COLOR_ACCENT_WARM)"
-  b4="$(_thx COLOR_ACCENT_COOL)";   b5="$(_thx COLOR_PRIMARY_MID)"
-  b6="$(_thx COLOR_PRIMARY)";       b7="$(_thx COLOR_ON_SURFACE)"
+  b0="$(_thx COLOR_ANSI_8)";  b1="$(_thx COLOR_ANSI_9)"
+  b2="$(_thx COLOR_ANSI_10)"; b3="$(_thx COLOR_ANSI_11)"
+  b4="$(_thx COLOR_ANSI_12)"; b5="$(_thx COLOR_ANSI_13)"
+  b6="$(_thx COLOR_ANSI_14)"; b7="$(_thx COLOR_ANSI_15)"
 
   # Alacritty (TOML) — imported via alacritty.toml [general] import
   _theme_write_atomic "$gen/alacritty-colors.toml" <<EOF
@@ -210,6 +219,14 @@ theme_gen_adapter_terminal() {
 [colors.primary]
 foreground = "$fg"
 background = "$bg"
+
+[colors.cursor]
+text   = "$curtext"
+cursor = "$cur"
+
+[colors.selection]
+text       = "$selfg"
+background = "$selbg"
 
 [colors.normal]
 black   = "$n0"
@@ -238,6 +255,10 @@ EOF
 # In kitty.conf: include ~/.potions/config/generated/kitty-colors.conf
 foreground $fg
 background $bg
+cursor $cur
+cursor_text_color $curtext
+selection_foreground $selfg
+selection_background $selbg
 color0 $n0
 color1 $n1
 color2 $n2
@@ -256,12 +277,17 @@ color14 $b6
 color15 $b7
 EOF
 
-  # Ghostty — config-file = ~/.potions/config/generated/ghostty-colors
+  # Ghostty palette — pure colors (regenerated per theme), pulled in by ghostty.conf.
   _theme_write_atomic "$gen/ghostty-colors" <<EOF
 # Generated by the Potions theme generator — DO NOT EDIT.
-# In ghostty config: config-file = ~/.potions/config/generated/ghostty-colors
+# Active Alchemist's Orchid palette. Pulled in by ghostty.conf; switch with:
+#   potions theme set <variant>
 foreground = $fg
 background = $bg
+cursor-color = $cur
+cursor-text = $curtext
+selection-background = $selbg
+selection-foreground = $selfg
 palette = 0=$n0
 palette = 1=$n1
 palette = 2=$n2
@@ -280,6 +306,33 @@ palette = 14=$b6
 palette = 15=$b7
 EOF
 
+  # Ghostty managed config — QoL companion settings + the palette include.
+  # Wired into ~/.config/ghostty/config by `potions terminal setup ghostty`.
+  # Variant-independent (palette lives in ghostty-colors), so it is stable
+  # across theme switches.
+  _theme_write_atomic "$gen/ghostty.conf" <<EOF
+# Generated by the Potions theme generator — DO NOT EDIT.
+# Managed Ghostty config fragment. Wire it in with:
+#   potions terminal setup ghostty
+# It is also added automatically by install/upgrade when Ghostty is present.
+
+# Active Alchemist's Orchid palette (regenerated per theme switch).
+config-file = $gen/ghostty-colors
+
+# --- Quality-of-life companion settings (Alchemist's Orchid) ---
+cursor-style = block
+unfocused-split-opacity = 0.85
+shell-integration = detect
+shell-integration-features = cursor,sudo,title
+
+# macOS: send the left Option key as Alt so Zellij Alt+<key> bindings fire.
+macos-option-as-alt = left
+
+# Zellij tab navigation (mirrors terminal-setup/TERMINAL_SETUP.md).
+keybind = ctrl+tab=csi:27;5;9~
+keybind = ctrl+shift+tab=csi:27;6;9~
+EOF
+
   # WezTerm (Lua) — config.colors = dofile('~/.potions/config/generated/wezterm-colors.lua')
   _theme_write_atomic "$gen/wezterm-colors.lua" <<EOF
 -- Generated by the Potions theme generator — DO NOT EDIT.
@@ -287,8 +340,53 @@ EOF
 return {
   foreground = "$fg",
   background = "$bg",
+  cursor_bg = "$cur",
+  cursor_fg = "$curtext",
+  cursor_border = "$cur",
+  selection_bg = "$selbg",
+  selection_fg = "$selfg",
   ansi = { "$n0", "$n1", "$n2", "$n3", "$n4", "$n5", "$n6", "$n7" },
   brights = { "$b0", "$b1", "$b2", "$b3", "$b4", "$b5", "$b6", "$b7" },
 }
 EOF
+}
+
+# --- Termux colors -----------------------------------------------------------
+# Termux IS the terminal on Android and exposes no include mechanism, so this
+# adapter writes ~/.termux/colors.properties directly (the deliberate exception
+# to "adapters only write under config/generated/"), then live-reloads via
+# termux-reload-settings. Self-gates to a no-op everywhere except Termux.
+theme_gen_adapter_termux() {
+  _theme_is_termux || return 0
+  local dest
+  dest="$HOME/.termux/colors.properties"
+
+  _theme_write_atomic "$dest" <<EOF
+# Generated by the Potions theme generator — DO NOT EDIT.
+# Termux colors for the active Alchemist's Orchid variant.
+# Switch with: potions theme set <variant>  (auto-reloads via termux-reload-settings)
+background=$(_thx COLOR_SURFACE)
+foreground=$(_thx COLOR_ON_SURFACE)
+cursor=$(_thx COLOR_CURSOR)
+color0=$(_thx COLOR_ANSI_0)
+color1=$(_thx COLOR_ANSI_1)
+color2=$(_thx COLOR_ANSI_2)
+color3=$(_thx COLOR_ANSI_3)
+color4=$(_thx COLOR_ANSI_4)
+color5=$(_thx COLOR_ANSI_5)
+color6=$(_thx COLOR_ANSI_6)
+color7=$(_thx COLOR_ANSI_7)
+color8=$(_thx COLOR_ANSI_8)
+color9=$(_thx COLOR_ANSI_9)
+color10=$(_thx COLOR_ANSI_10)
+color11=$(_thx COLOR_ANSI_11)
+color12=$(_thx COLOR_ANSI_12)
+color13=$(_thx COLOR_ANSI_13)
+color14=$(_thx COLOR_ANSI_14)
+color15=$(_thx COLOR_ANSI_15)
+EOF
+
+  # Apply live, best-effort (no-op if the helper is unavailable).
+  command -v termux-reload-settings > /dev/null 2>&1 && \
+    termux-reload-settings > /dev/null 2>&1 || true
 }

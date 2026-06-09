@@ -29,7 +29,8 @@ if [ -z "${THEME_ADAPTERS_SOURCED:-}" ]; then
 fi
 
 # Per-tool adapter targets (theme_gen_adapter_<target> defined in adapters.sh).
-THEME_GENERATOR_TARGETS="shell zellij nvim terminal"
+# The termux adapter self-gates to a no-op off-Termux.
+THEME_GENERATOR_TARGETS="shell zellij nvim terminal termux"
 
 # Default location for generated artifacts (gitignored, regenerable).
 theme_generator_out_dir() {
