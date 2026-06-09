@@ -127,6 +127,11 @@
 !.potions/lib/terminal/
 !.potions/lib/terminal/*.sh
 
+# Allow reload engine library (regenerate + live-apply orchestrator)
+!.potions/lib/reload
+!.potions/lib/reload/
+!.potions/lib/reload/*.sh
+
 # Allow built-in themes: DTCG token sources, compiled .theme files, manifests
 !.potions/themes
 !.potions/themes/
