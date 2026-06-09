@@ -167,17 +167,28 @@ theme_gen_adapter_nvim() {
 "   :source ~/.potions/nvim/generated/palette.vim
 
 lua << LUA
-local ok, orchid = pcall(require, 'alchemists-orchid')
-if ok and type(orchid.setup) == 'function' then
-  -- Plugin ≥ 2.0: pick the palette mode + pin the surface to the active variant.
-  orchid.setup({
-    mode = '$mode',
-    overrides = { bg = '$bg', fg = '$fg' },
-  })
-else
-  -- Plugin missing or pre-2.0: best-effort fallback to the bundled colorscheme.
-  pcall(vim.cmd, 'colorscheme alchemists-orchid')
+-- Apply the active Potions variant to the Alchemist's Orchid body palette.
+-- Exposed as a global so the VimEnter guard below can re-assert it: the plugin
+-- ships plugin/*.lua that eagerly runs setup() (DARK) + 'colorscheme
+-- alchemists-orchid', and Vim sources plugin/ scripts AFTER init.vim — so that
+-- default clobbers the variant we apply here, leaving only the tabline
+-- (repainted on the ColorScheme event) tracking it while the editor body
+-- reverts to dark. Re-running this after startup makes the body match.
+function _G.PotionsApplyOrchid()
+  local ok, orchid = pcall(require, 'alchemists-orchid')
+  if ok and type(orchid.setup) == 'function' then
+    -- Plugin ≥ 2.0: pick the palette mode + pin the surface to the active variant.
+    orchid.setup({
+      mode = '$mode',
+      overrides = { bg = '$bg', fg = '$fg' },
+    })
+  else
+    -- Plugin missing or pre-2.0: best-effort fallback to the bundled colorscheme.
+    pcall(vim.cmd, 'colorscheme alchemists-orchid')
+  end
 end
+
+PotionsApplyOrchid()
 LUA
 
 function! s:PotionsThemeHighlights() abort
@@ -205,6 +216,20 @@ augroup PotionsThemeHighlights
   autocmd ColorScheme * call s:PotionsThemeHighlights()
 augroup END
 call s:PotionsThemeHighlights()
+
+" Re-assert the variant after Vim finishes sourcing plugin/ scripts, which run
+" AFTER init.vim. The Alchemist's Orchid plugin eagerly applies its dark default
+" there; without this guard the editor body reverts to dark while only the
+" tabline tracks the chosen variant. Body first, then component highlights on
+" top. Guarded to startup so a live re-source (potions reload) — where the
+" immediate apply above already wins, with no later plugin pass — skips it.
+if has('vim_starting')
+  augroup PotionsThemeApply
+    autocmd!
+    autocmd VimEnter * lua PotionsApplyOrchid()
+    autocmd VimEnter * call s:PotionsThemeHighlights()
+  augroup END
+endif
 EOF
 }
 

@@ -797,6 +797,11 @@ test_theme_system() {
   assert_file_contains "$tmp/config/generated/ansi-map.sh" '033]4;1;' "shell ansi-map emits OSC palette"
   assert_file_contains "$tmp/nvim/generated/palette.vim" "mode = 'light'" "nvim white drives the plugin light mode"
   assert_file_contains "$tmp/nvim/generated/palette.vim" "bg = '#fafbfc'" "nvim white pins surface bg via plugin overrides"
+  # The plugin's plugin/*.lua eagerly applies its dark default AFTER init.vim;
+  # the palette must re-assert the variant on VimEnter or the body reverts to
+  # dark while only the tabline tracks the variant (regression guard).
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "PotionsApplyOrchid" "nvim palette exposes a re-callable variant apply"
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "autocmd VimEnter \\* lua PotionsApplyOrchid()" "nvim palette re-asserts variant after plugin/ scripts load"
 
   local st
   st=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_read')
