@@ -339,7 +339,7 @@ reload_print_matrix() {
 
   # nvim
   if reload_in_scope "$scope" nvim; then
-    echo "  NeoVim: needs action — run :source \$MYVIMRC in nvim (or restart)"
+    echo "  NeoVim: needs action — :source ~/.potions/nvim/generated/palette.vim in nvim (or restart)"
   fi
 }
 
