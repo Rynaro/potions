@@ -372,7 +372,11 @@ config-file = $gen/ghostty-colors
 cursor-style = block
 unfocused-split-opacity = 0.85
 shell-integration = detect
-shell-integration-features = cursor,sudo,title
+# ssh-terminfo auto-installs the xterm-ghostty terminfo on remote hosts, fixing
+# "'xterm-ghostty': unknown terminal type" (and the garbled line editing it
+# causes) over ssh. ssh-env is the TERM=xterm-256color fallback for hosts where
+# that install can't run.
+shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
 
 # macOS: send the left Option key as Alt so Zellij Alt+<key> bindings fire.
 macos-option-as-alt = left

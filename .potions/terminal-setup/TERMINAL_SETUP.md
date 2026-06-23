@@ -82,8 +82,12 @@ config-file = ?~/.potions/config/generated/ghostty.conf
 
 The managed `ghostty.conf` pulls in the active palette and sets QoL companions:
 `cursor-style = block`, `unfocused-split-opacity = 0.85`,
-`shell-integration = detect`, `macos-option-as-alt = left` (so Zellij `Alt+<key>`
-bindings fire on macOS), and Zellij tab-navigation keybindings.
+`shell-integration = detect`,
+`shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo` (the
+`ssh-*` features auto-install the `xterm-ghostty` terminfo on remote hosts, so
+`ssh` doesn't break with `'xterm-ghostty': unknown terminal type`),
+`macos-option-as-alt = left` (so Zellij `Alt+<key>` bindings fire on macOS), and
+Zellij tab-navigation keybindings.
 
 ### Live theme changes
 

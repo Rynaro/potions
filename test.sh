@@ -974,6 +974,7 @@ test_theme_system() {
   assert_file_exists "$tmp/config/generated/ghostty.conf" "ghostty: managed config fragment generated"
   assert_file_contains "$tmp/config/generated/ghostty.conf" "ghostty-colors" "ghostty.conf includes the palette file"
   assert_file_contains "$tmp/config/generated/ghostty.conf" "macos-option-as-alt" "ghostty.conf sets QoL keys"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "ssh-terminfo" "ghostty.conf enables ssh terminfo integration"
 
   # Zellij + shell now consume the explicit ANSI tokens
   assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#e8a4cc' "zellij red uses explicit ANSI token"
