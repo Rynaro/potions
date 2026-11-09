@@ -1,0 +1,1 @@
+../../../.eidolons/ramza/skills/methodology/SKILL.md

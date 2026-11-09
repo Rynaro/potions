@@ -189,3 +189,32 @@
 !/.eidolons/harness/manifest.json
 # <!-- eidolon:gitignore end -->
 .atlas/
+
+# Eidolons manifest, cortex, and host adapters. MCP configs stay local:
+# they embed absolute paths and the invoking uid.
+!.eidolons
+!eidolons.yaml
+!eidolons.lock
+!eidolons.mcp.lock
+!EIDOLONS.md
+!CLAUDE.md
+!methodology
+!methodology/
+!methodology/**
+
+!.eidolons/harness/
+!.eidolons/harness/**
+
+!.claude
+!.claude/
+!.claude/**
+
+!.cursor
+!.cursor/
+!.cursor/**
+.cursor/mcp.json
+
+!.codex
+!.codex/
+!.codex/**
+.codex/config.toml

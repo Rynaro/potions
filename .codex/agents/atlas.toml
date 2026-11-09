@@ -1,0 +1,8 @@
+name = "atlas"
+description = "ATLAS methodology agent; canonical content is installed under .eidolons/atlas."
+developer_instructions = "Load .eidolons/atlas/PERSONA.md and .eidolons/atlas/SPEC.md. Eidolon display identity: ATLAS. Before work, load `.eidolons/cortex/agent-naming.md` and apply its task naming policy to supported display/title controls."
+# generated_by: eidolons
+# eidolons:managed model
+model = "gpt-6.1-sol"
+# eidolons:managed model_reasoning_effort
+model_reasoning_effort = "medium"

@@ -1,0 +1,1 @@
+../../../.eidolons/vivi/skills/context-engineering/SKILL.md

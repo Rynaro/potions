@@ -1,0 +1,1 @@
+../../../.eidolons/ramza/skills/esl-hop/SKILL.md

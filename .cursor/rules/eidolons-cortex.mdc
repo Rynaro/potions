@@ -1,0 +1,33 @@
+---
+description: Eidolons routing cortex — read before any non-trivial prompt.
+alwaysApply: true
+---
+
+<!-- eidolon:cortex start -->
+## Roster
+
+| Name | Class | Triggers | Refuses | Handoff |
+|------|-------|----------|---------|---------|
+| ATLAS | scout | map, trace, where does, how does, investigate, analyze, audit (read-only) | implement, fix, edit, write, commit | RAMZA, Vivi, IDG |
+| RAMZA | planner (default) | spec, plan, decompose, clarify requirements, decision-ready | implement code, modify files | Vivi, IDG |
+| SPECTRA | planner (opt-in) | named dispatch only | implement code, modify files | Vivi, IDG |
+| Vivi | coder (default) | implement, build, fix, refactor, optimize, migrate, make tests pass | design from scratch, novel architecture | IDG |
+| APIVR-Δ | coder (opt-in) | named dispatch only | design from scratch, novel architecture | IDG |
+| IDG | scriber | document, ADR, runbook, write up, summarize | explore repo, find calls, retrieve | (terminal) |
+| FORGE | reasoner | trade-off, compare, evaluate, which approach | implement, retrieve, synthesize prose | (lateral) |
+| VIGIL | debugger | diagnose, debug, root cause, flaky, why does X fail | build new feature, plan from scratch | (lateral) |
+| Kupo | executor | rename, import/path fix, lockfile bump, lint autofix, one-line edit, search-replace | design, plan, cross-cutting refactor | (orchestrator-dispatched) |
+| Gilgamesh | generalist (fallback-only; zero triggers—Step-2(a) only) | | design, plan, deploy, migrate, route, spawn, underspecified | (orchestrator-dispatched; PROPOSEs upward) |
+
+## Dispatch
+
+**Default:** delegate via pipeline; orchestrator does not implement, spec, or scout directly. Direct answer only for trivial/conversational/single-fact. Tier default `standard`; TRANCE gated, never automatic.
+
+1. **Classify** — extract verbs, match triggers, score 0–1.
+2. **Gate** — ≥0.8 one Eidolon, ≤1 verb class: dispatch standard. ≥0.6 for ≥2 OR spans ≥2 classes: chain (`chain-templates.md`). <0.6 all (`dispatch-predicate.md`): (a) actionable → Gilgamesh; (b) underspecified → `clarification_request` (1–3 questions), do NOT dispatch. Gilgamesh never enters Step 1, never outranks specialist ≥τ.
+3. **Refusal** — top Eidolon refuses → reroute + emit `[DECISION]`.
+4. **Tier** — default `standard`; `trance` only with complexity AND stakes flags (`trance-matrix.md`).
+5. **Artifact** — emit (`routing-artifact.md`): `{selected, tier, chain:[{eidolon, role, hand_off_artifact_path, edge_origin}], model_tier_per_step, confidence, assumptions, clarification_request?, refusal_rerouting}`.
+
+> Deep tables: `.eidolons/cortex/trance-matrix.md`, `.eidolons/cortex/handoff-graph.md`, `.eidolons/cortex/validation-gates.md`
+<!-- eidolon:cortex end -->
