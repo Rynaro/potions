@@ -1,0 +1,1 @@
+../../../.eidolons/atlas/skills/scatter/SKILL.md

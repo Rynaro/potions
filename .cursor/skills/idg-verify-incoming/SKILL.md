@@ -1,0 +1,1 @@
+../../../.eidolons/idg/skills/verify-incoming/SKILL.md

@@ -1,0 +1,1 @@
+../../../.eidolons/atlas/skills/locate/SKILL.md

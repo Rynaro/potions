@@ -1,0 +1,1 @@
+../../../.eidolons/vivi/skills/esl-hop/SKILL.md

@@ -1,0 +1,1 @@
+../../../.eidolons/vivi/skills/loop-native/SKILL.md
