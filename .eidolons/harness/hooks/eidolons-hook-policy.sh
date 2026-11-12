@@ -22,9 +22,13 @@ _eidolons_hook_fail() {
 }
 _eidolons_hook_valid() {
   local event="$1" output="$2"
+  # Claude/Codex/Copilot: hookSpecificOutput.{hookEventName,additionalContext}
+  # Cursor sessionStart: top-level additional_context (no hookEventName).
   printf '%s' "$output" | jq -e --arg e "$event" \
-    '.hookSpecificOutput.hookEventName == $e and
-     (.hookSpecificOutput.additionalContext | type == "string" and length > 0)' >/dev/null 2>&1
+    '(.hookSpecificOutput.hookEventName == $e and
+      (.hookSpecificOutput.additionalContext | type == "string" and length > 0))
+     or
+     (.additional_context | type == "string" and length > 0)' >/dev/null 2>&1
 }
 _eidolons_hook_qualified() {
   local normalized
