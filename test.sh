@@ -906,6 +906,9 @@ test_theme_system() {
   REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
     set alchemists-orchid sepia > /dev/null 2>&1 || true
   assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#f5f0e6' "sepia parchment bg generated"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" 'text_unselected' "zellij sepia defines compact-bar text"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" 'background "#f5f0e6"' "zellij sepia bar fill is the parchment surface"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" 'ribbon_selected' "zellij sepia defines the selected ribbon"
 
   # all four terminal emulator color files generated
   assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "terminal: alacritty colors generated"
