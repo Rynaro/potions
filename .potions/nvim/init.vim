@@ -99,7 +99,8 @@ augroup END
 " Truecolor detection guard — only enable termguicolors when the terminal
 " supports 24-bit color. This prevents text disappearance on terminals
 " (e.g. Termux with $TERM='screen' or 'linux') that lack truecolor support.
-if $COLORTERM == 'truecolor' || $COLORTERM == '24bit'
+" SSH typically drops COLORTERM; xterm-ghostty still has truecolor.
+if $COLORTERM == 'truecolor' || $COLORTERM == '24bit' || $TERM == 'xterm-ghostty'
   set termguicolors
 endif
 

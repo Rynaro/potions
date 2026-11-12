@@ -549,6 +549,24 @@ cmd_doctor() {
   else
     log_success "Potions bin directory in PATH"
   fi
+
+  # Ghostty managed include (skip quietly if Ghostty is absent).
+  # Detection matches terminal_has_ghostty: binary on PATH or a config dir.
+  local ghostty_dir ghostty_cfg ghostty_present=false
+  ghostty_dir="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
+  ghostty_cfg="$ghostty_dir/config"
+  if command -v ghostty > /dev/null 2>&1 || [ -d "$ghostty_dir" ]; then
+    ghostty_present=true
+  fi
+  if [ "$ghostty_present" = true ]; then
+    if [ -f "$ghostty_cfg" ] && grep -Fq "config/generated/ghostty.conf" "$ghostty_cfg" 2>/dev/null; then
+      log_success "Ghostty config includes the managed fragment"
+    else
+      log_warning "Ghostty is present but the managed include is missing"
+      log_info "Fix with: potions terminal setup ghostty"
+      # Advisory only — do not fail unrelated health checks.
+    fi
+  fi
   
   echo ""
   if [ $issues -eq 0 ]; then

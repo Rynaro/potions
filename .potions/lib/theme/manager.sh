@@ -123,13 +123,21 @@ theme_apply_osc() {
   fi
 }
 
+# True when Ghostty is the outer terminal (local or over ssh-terminfo).
+_theme_in_ghostty() {
+  [ -n "${GHOSTTY_RESOURCES_DIR:-}" ] || [ "${TERM:-}" = "xterm-ghostty" ]
+}
+
 # Print which surfaces are live now vs need a restart for the current env.
 theme_print_reload_matrix() {
   echo ""
   log_info "Applied. Surface status:"
-  if [ -n "${ZELLIJ:-}" ]; then
-    echo "  - Zellij     persisted; reload config or start a new session to see it"
-    echo "  - Terminal   owned by Zellij in-session (palette set by the Zellij theme)"
+  if [ -n "${ZELLIJ:-}" ] || _theme_in_ghostty; then
+    echo "  - Ghostty    reload config (Cmd/Ctrl+Shift+,) or restart — owns the window background"
+    echo "  - Zellij     start a new session — owns pane colors until then"
+    if [ -z "${ZELLIJ:-}" ]; then
+      echo "  - Terminal   repainted live via OSC (if your terminal supports it)"
+    fi
   else
     echo "  - Terminal   repainted live via OSC (if your terminal supports it)"
     echo "  - Zellij     persisted; applies on next Zellij start"

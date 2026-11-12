@@ -30,7 +30,7 @@ is_macos() {
   [ "$(uname -s)" = "Darwin" ]
 }
 
-# Function to check if running in an AI code editor terminal (VSCode, Cursor, etc.)
+# Function to check if running in an AI code editor terminal (VSCode, Cursor, Claude Code, etc.)
 # These terminals should not auto-start the multiplexer to avoid terminal output capture issues
 is_ai_code_editor() {
   # Check for VSCode environment variables
@@ -43,6 +43,10 @@ is_ai_code_editor() {
   fi
   # Check for other common AI editor indicators
   if [ -n "$INTELLIJ_TERMINAL" ] || [ "$TERM_PROGRAM" = "jetbrains" ]; then
+    return 0
+  fi
+  # Claude Code sets CLAUDECODE=1; any non-empty value counts.
+  if [ -n "$CLAUDECODE" ]; then
     return 0
   fi
   return 1
