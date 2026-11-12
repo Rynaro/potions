@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Eidolons harness shim — UserPromptSubmit
 # Hook failure policy is generated from eidolons.yaml at install time.
-# R21: #16952 guard — skip kernel when prompt is a task-completion notification.
+# Empty prompt and R21 (#16952) task-completion notifications skip the kernel.
 # (Claude bug: UserPromptSubmit also fires on Task/subagent completion; conservative
 #  best-effort heuristic; fail-open: false-positive = one skipped inject, harmless.)
 set -euo pipefail
@@ -26,7 +26,8 @@ if ! command -v jq >/dev/null 2>&1 || ! printf '%s' "$_input" | jq -e 'type == "
   _eidolons_hook_fail UserPromptSubmit malformed-input; exit 0
 fi
 _prompt="$(printf '%s' "$_input" | jq -r '.prompt')"
-[[ -n "$_prompt" ]] || { _eidolons_hook_fail UserPromptSubmit empty-prompt; exit 0; }
+# Empty prompt: skip kernel, fail-open, no receipt (same as the R21 skip).
+[[ -n "$_prompt" ]] || exit 0
 # #16952 guard: skip kernel when the prompt is a task-completion notification.
 case "$_prompt" in
   "Agent "*" completed"*) exit 0 ;;
