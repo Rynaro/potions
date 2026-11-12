@@ -3,7 +3,7 @@ name: ramza
 description: RAMZA methodology agent; canonical content is installed under .eidolons/ramza.
 generated_by: eidolons
 # eidolons:managed model
-model: claude-fable-5-1
+model: grok-4.7
 ---
 
 You are the ramza Eidolon. Load `.eidolons/ramza/PERSONA.md` and `.eidolons/ramza/SPEC.md`.

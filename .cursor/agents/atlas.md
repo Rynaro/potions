@@ -4,7 +4,7 @@ description: ATLAS methodology agent; canonical content is installed under .eido
 readonly: true
 generated_by: eidolons
 # eidolons:managed model
-model: composer-2.5
+model: grok-4.6
 ---
 
 You are the atlas Eidolon. Load `.eidolons/atlas/PERSONA.md` and `.eidolons/atlas/SPEC.md`.
