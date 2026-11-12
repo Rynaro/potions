@@ -1105,11 +1105,18 @@ test_terminal_emulator_support() {
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
+  # Doctor fixtures must keep coreutils on PATH. Termux ships them in
+  # $PREFIX/bin, not /usr/bin; Fedora's container image has no git.
+  local fixture_path="/usr/bin:/bin"
+  if [ -n "${PREFIX:-}" ] && [ -d "${PREFIX}/bin" ]; then
+    fixture_path="${PREFIX}/bin:${fixture_path}"
+  fi
+
   # doctor: skip Ghostty include check when Ghostty is absent
   local dabs="$tmp/doctor-absent" dabs_out
   mkdir -p "$dabs/.potions"
   dabs_out=$(HOME="$dabs" XDG_CONFIG_HOME="$dabs/.config" POTIONS_HOME="$dabs/.potions" \
-    PATH="/nonexistent" bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1 || true)
+    PATH="$fixture_path" bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1 || true)
   if echo "$dabs_out" | grep -qi ghostty; then
     log_failure "doctor: mentioned Ghostty when emulator is absent"
     TESTS_FAILED=$((TESTS_FAILED + 1))
@@ -1124,10 +1131,10 @@ test_terminal_emulator_support() {
   printf '0.0.0\n' > "$dmiss/.potions/.version"
   printf '# zshrc\n' > "$dmiss/.potions/.zshrc"
   printf '# aliases\n' > "$dmiss/.potions/.zsh_aliases"
-  local dmiss_path="$dmiss/.potions/bin:/usr/bin:/bin"
-  if command -v git >/dev/null 2>&1; then
-    dmiss_path="$dmiss/.potions/bin:$(dirname "$(command -v git)"):/usr/bin:/bin"
-  fi
+  # Stub git so doctor does not fail on images that omit it (Fedora CI).
+  printf '#!/bin/sh\nexit 0\n' > "$dmiss/.potions/bin/git"
+  chmod +x "$dmiss/.potions/bin/git"
+  local dmiss_path="$dmiss/.potions/bin:${fixture_path}"
   dmiss_out=$(HOME="$dmiss" XDG_CONFIG_HOME="$dmiss/.config" POTIONS_HOME="$dmiss/.potions" \
     PATH="$dmiss_path" NO_COLOR=1 \
     bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1) || dmiss_rc=$?
@@ -1152,7 +1159,7 @@ test_terminal_emulator_support() {
   printf 'config-file = ?%s/.potions/config/generated/ghostty.conf\n' "$dwire" \
     > "$dwire/.config/ghostty/config"
   dwire_out=$(HOME="$dwire" XDG_CONFIG_HOME="$dwire/.config" POTIONS_HOME="$dwire/.potions" \
-    PATH="/usr/bin:/bin" NO_COLOR=1 bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1 || true)
+    PATH="$fixture_path" NO_COLOR=1 bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1 || true)
   if echo "$dwire_out" | grep -q "Ghostty config includes the managed fragment" \
      && ! echo "$dwire_out" | grep -q "managed include is missing"; then
     log_success "doctor: reports Ghostty managed include when present"
