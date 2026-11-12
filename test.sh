@@ -312,6 +312,8 @@ test_config_validity() {
 
   # Check init.vim has user extension
   assert_file_contains "$SCRIPT_DIR/.potions/nvim/init.vim" "user.vim" "init.vim sources user.vim"
+  assert_file_contains "$SCRIPT_DIR/.potions/nvim/init.vim" "xterm-ghostty" "init.vim enables termguicolors for xterm-ghostty"
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "CLAUDECODE" ".zshrc treats Claude Code as an AI editor"
 
   # Check zellij config uses clear-defaults
   assert_file_contains "$SCRIPT_DIR/.potions/zellij/config.kdl" "clear-defaults=true" "config.kdl uses clear-defaults"
@@ -687,6 +689,8 @@ test_theme_system() {
 
   # potions bin wires the theme command
   assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_theme" "potions bin has cmd_theme"
+  assert_file_contains "$SCRIPT_DIR/.potions/lib/theme/manager.sh" "owns the window background" "theme apply tells the truth about Ghostty reload"
+  assert_file_contains "$SCRIPT_DIR/.potions/lib/theme/manager.sh" "owns pane colors until then" "theme apply tells the truth about Zellij pane colors"
 
   # VG-PAIR: every HEX token has a matching CTERM in each .theme
   local pair_ok=true tf hexes cterms
@@ -974,7 +978,22 @@ test_theme_system() {
   assert_file_exists "$tmp/config/generated/ghostty.conf" "ghostty: managed config fragment generated"
   assert_file_contains "$tmp/config/generated/ghostty.conf" "ghostty-colors" "ghostty.conf includes the palette file"
   assert_file_contains "$tmp/config/generated/ghostty.conf" "macos-option-as-alt" "ghostty.conf sets QoL keys"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "shell-integration-features = sudo,title,ssh-terminfo" "ghostty.conf uses sudo,title,ssh-terminfo features"
   assert_file_contains "$tmp/config/generated/ghostty.conf" "ssh-terminfo" "ghostty.conf enables ssh terminfo integration"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+d=send_key:alt+d" "ghostty.conf forwards cmd+d to alt+d"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+t=send_key:alt+t" "ghostty.conf forwards cmd+t to alt+t"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+w=send_key:alt+w" "ghostty.conf forwards cmd+w to alt+w"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+n=send_key:alt+n" "ghostty.conf forwards cmd+n to alt+n"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+p=send_key:alt+p" "ghostty.conf forwards cmd+p to alt+p"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+enter=send_key:alt+enter" "ghostty.conf forwards cmd+enter to alt+enter"
+  _ghostty_feat=$(grep -E '^shell-integration-features =' "$tmp/config/generated/ghostty.conf" || true)
+  if [ "$_ghostty_feat" = "shell-integration-features = sudo,title,ssh-terminfo" ]; then
+    log_success "ghostty.conf feature line is exact (no ssh-env, no cursor)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "ghostty.conf feature line unexpected: '$_ghostty_feat'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
 
   # Zellij + shell now consume the explicit ANSI tokens
   assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#e8a4cc' "zellij red uses explicit ANSI token"
@@ -1029,6 +1048,7 @@ test_terminal_emulator_support() {
 
   # potions bin wires the terminal command; install/upgrade auto-run setup
   assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_terminal" "potions bin has cmd_terminal"
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "potions terminal setup ghostty" "doctor suggests potions terminal setup ghostty"
   assert_file_contains "$SCRIPT_DIR/install.sh" "terminal/manager.sh.* setup" "install.sh wires terminal setup"
   assert_file_contains "$SCRIPT_DIR/upgrade.sh" "terminal/manager.sh.* setup" "upgrade.sh wires terminal setup"
 
@@ -1082,6 +1102,63 @@ test_terminal_emulator_support() {
     TESTS_PASSED=$((TESTS_PASSED + 1))
   else
     log_failure "terminal: status errored"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # doctor: skip Ghostty include check when Ghostty is absent
+  local dabs="$tmp/doctor-absent" dabs_out
+  mkdir -p "$dabs/.potions"
+  dabs_out=$(HOME="$dabs" XDG_CONFIG_HOME="$dabs/.config" POTIONS_HOME="$dabs/.potions" \
+    PATH="/nonexistent" bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1 || true)
+  if echo "$dabs_out" | grep -qi ghostty; then
+    log_failure "doctor: mentioned Ghostty when emulator is absent"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "doctor: skips Ghostty include check when emulator is absent"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # doctor: warn (not a hard failure of unrelated checks) when include is missing
+  local dmiss="$tmp/doctor-miss" dmiss_out dmiss_rc=0
+  mkdir -p "$dmiss/.potions/bin" "$dmiss/.config/ghostty"
+  printf '0.0.0\n' > "$dmiss/.potions/.version"
+  printf '# zshrc\n' > "$dmiss/.potions/.zshrc"
+  printf '# aliases\n' > "$dmiss/.potions/.zsh_aliases"
+  local dmiss_path="$dmiss/.potions/bin:/usr/bin:/bin"
+  if command -v git >/dev/null 2>&1; then
+    dmiss_path="$dmiss/.potions/bin:$(dirname "$(command -v git)"):/usr/bin:/bin"
+  fi
+  dmiss_out=$(HOME="$dmiss" XDG_CONFIG_HOME="$dmiss/.config" POTIONS_HOME="$dmiss/.potions" \
+    PATH="$dmiss_path" NO_COLOR=1 \
+    bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1) || dmiss_rc=$?
+  if echo "$dmiss_out" | grep -q "potions terminal setup ghostty"; then
+    log_success "doctor: warns to run potions terminal setup ghostty when include is missing"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "doctor: missing Ghostty include did not suggest setup"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if [ "$dmiss_rc" -eq 0 ]; then
+    log_success "doctor: missing Ghostty include is not a hard failure"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "doctor: missing Ghostty include failed unrelated checks (rc=$dmiss_rc)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # doctor: reports the include when wired
+  local dwire="$tmp/doctor-wire" dwire_out
+  mkdir -p "$dwire/.potions" "$dwire/.config/ghostty"
+  printf 'config-file = ?%s/.potions/config/generated/ghostty.conf\n' "$dwire" \
+    > "$dwire/.config/ghostty/config"
+  dwire_out=$(HOME="$dwire" XDG_CONFIG_HOME="$dwire/.config" POTIONS_HOME="$dwire/.potions" \
+    PATH="/usr/bin:/bin" NO_COLOR=1 bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1 || true)
+  if echo "$dwire_out" | grep -q "Ghostty config includes the managed fragment" \
+     && ! echo "$dwire_out" | grep -q "managed include is missing"; then
+    log_success "doctor: reports Ghostty managed include when present"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "doctor: did not report wired Ghostty include"
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 

@@ -83,11 +83,22 @@ config-file = ?~/.potions/config/generated/ghostty.conf
 The managed `ghostty.conf` pulls in the active palette and sets QoL companions:
 `cursor-style = block`, `unfocused-split-opacity = 0.85`,
 `shell-integration = detect`,
-`shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo` (the
-`ssh-*` features auto-install the `xterm-ghostty` terminfo on remote hosts, so
-`ssh` doesn't break with `'xterm-ghostty': unknown terminal type`),
-`macos-option-as-alt = left` (so Zellij `Alt+<key>` bindings fire on macOS), and
-Zellij tab-navigation keybindings.
+`shell-integration-features = sudo,title,ssh-terminfo`,
+`macos-option-as-alt = left` (so Zellij `Alt+<key>` bindings fire on macOS),
+Zellij tab-navigation keybindings, and macOS Cmd→Alt forwards so Zellij's
+`Alt+d/t/w/n/p/Enter` bindings fire from Cmd (you do not add these yourself).
+
+`ssh-terminfo` installs `xterm-ghostty` on the remote so SSH keeps Ghostty's
+real terminfo. That is the fix for `'xterm-ghostty': unknown terminal type`
+and the garbled/doubled line editing that follows.
+
+`cursor` is omitted on purpose: Zellij owns cursor shape. Ghostty's cursor
+integration hides the cursor and often fails to restore it over SSH/Zellij.
+`cursor-style = block` and `cursor-color` stay.
+
+`ssh-env` is omitted on purpose: it rewrites `TERM` to `xterm-256color` and
+fights `ssh-terminfo`. Restricted hosts that cannot accept the terminfo
+upload should set `TERM=xterm-256color` for that host only, not globally.
 
 ### Live theme changes
 
@@ -95,7 +106,10 @@ Zellij tab-navigation keybindings.
   escape sequences — no reload needed.
 - **Structural** changes (cursor style, keybindings) need a config reload:
   press **Cmd/Ctrl+Shift+,** or restart Ghostty.
-- Inside **Zellij**, the Zellij theme owns the palette while attached.
+- Inside **Zellij**, there is no instant OSC repaint. Ghostty still owns the
+  window background (reload config with **Cmd/Ctrl+Shift+,** or restart
+  Ghostty). Zellij owns pane colors until you start a **new Zellij session**.
+  `potions theme set|cycle` rewrites the files and prints those two steps.
 
 ---
 
@@ -158,7 +172,7 @@ Most common cause on macOS: pressing `Cmd+A` (⌘A) instead of `Ctrl+a`. The **C
 
 ### Restoring Cmd Muscle Memory (Optional)
 
-Configure your terminal to forward `Cmd+<key>` as `Alt+<key>` (escape sequence `\e<key>`) — the PTY receives it as `Alt`, and Zellij's `Alt+<key>` bindings fire. See per-terminal instructions below.
+Configure your terminal to forward `Cmd+<key>` as `Alt+<key>` (escape sequence `\e<key>`) — the PTY receives it as `Alt`, and Zellij's `Alt+<key>` bindings fire. See per-terminal instructions below. **Ghostty** already generates these Cmd→Alt binds in the managed `ghostty.conf`; other emulators still need a one-time mapping.
 
 ---
 

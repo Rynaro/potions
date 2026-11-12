@@ -372,11 +372,15 @@ config-file = $gen/ghostty-colors
 cursor-style = block
 unfocused-split-opacity = 0.85
 shell-integration = detect
-# ssh-terminfo auto-installs the xterm-ghostty terminfo on remote hosts, fixing
-# "'xterm-ghostty': unknown terminal type" (and the garbled line editing it
-# causes) over ssh. ssh-env is the TERM=xterm-256color fallback for hosts where
-# that install can't run.
-shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
+# ssh-terminfo installs xterm-ghostty on the remote so SSH keeps Ghostty's real
+# terminfo (fixes unknown terminal type and garbled/doubled line editing).
+# cursor is omitted: Zellij owns cursor shape; Ghostty's cursor integration
+# hides the cursor and often fails to restore it over SSH/Zellij.
+# cursor-style = block and cursor-color stay.
+# ssh-env is omitted: it rewrites TERM to xterm-256color and fights
+# ssh-terminfo. Restricted hosts that cannot accept the terminfo upload should
+# set TERM=xterm-256color per host, not globally.
+shell-integration-features = sudo,title,ssh-terminfo
 
 # macOS: send the left Option key as Alt so Zellij Alt+<key> bindings fire.
 macos-option-as-alt = left
@@ -384,6 +388,15 @@ macos-option-as-alt = left
 # Zellij tab navigation (mirrors terminal-setup/TERMINAL_SETUP.md).
 keybind = ctrl+tab=csi:27;5;9~
 keybind = ctrl+shift+tab=csi:27;6;9~
+
+# macOS: Cmd chords never reach Zellij. Forward Cmd+<key> as Alt+<key>
+# (same set documented in TERMINAL_SETUP.md / zellij config.kdl).
+keybind = cmd+d=send_key:alt+d
+keybind = cmd+t=send_key:alt+t
+keybind = cmd+w=send_key:alt+w
+keybind = cmd+n=send_key:alt+n
+keybind = cmd+p=send_key:alt+p
+keybind = cmd+enter=send_key:alt+enter
 EOF
 
   # WezTerm (Lua) — config.colors = dofile('~/.potions/config/generated/wezterm-colors.lua')
