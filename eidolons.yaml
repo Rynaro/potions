@@ -43,3 +43,15 @@ mcps:
     version: "^0.5.3"
   - name: atomos
     version: "^0.2.0"
+
+models:
+  hosts:
+    claude-code:
+      profile: anthropic
+    codex:
+      profile: openai
+    cursor:
+      profile: cursor-native
+      calibration:
+        standard: grok-4.6
+        deep: grok-4.7

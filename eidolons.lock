@@ -36,10 +36,10 @@ members:
           "reasoning_effort": medium
         "cursor":
           "status": managed
-          "effective_model": composer-2.5
+          "effective_model": grok-4.6
           "tier": standard
-          "profile": cursor
-          "source": roster-tier
+          "profile": cursor-native
+          "source": calibration
   - name: ramza
     version: "1.1.0"
     eiis_version: "3.0.0"
@@ -73,10 +73,10 @@ members:
           "reasoning_effort": high
         "cursor":
           "status": managed
-          "effective_model": claude-fable-5-1
+          "effective_model": grok-4.7
           "tier": deep
-          "profile": cursor
-          "source": roster-tier
+          "profile": cursor-native
+          "source": calibration
   - name: vivi
     version: "1.4.0"
     eiis_version: "3.0.0"
@@ -110,10 +110,10 @@ members:
           "reasoning_effort": medium
         "cursor":
           "status": managed
-          "effective_model": composer-2.5
+          "effective_model": grok-4.6
           "tier": standard
-          "profile": cursor
-          "source": roster-tier
+          "profile": cursor-native
+          "source": calibration
   - name: idg
     version: "1.11.0"
     eiis_version: "3.0.0"
@@ -147,9 +147,9 @@ members:
           "reasoning_effort": low
         "cursor":
           "status": managed
-          "effective_model": gemini-3.8-flash
+          "effective_model": composer-2.5[]
           "tier": light
-          "profile": cursor
+          "profile": cursor-native
           "source": roster-tier
 hosts:
   wire: [claude-code, codex, cursor]

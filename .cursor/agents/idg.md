@@ -3,7 +3,7 @@ name: idg
 description: IDG methodology agent; canonical content is installed under .eidolons/idg.
 generated_by: eidolons
 # eidolons:managed model
-model: gemini-3.8-flash
+model: composer-2.5[]
 ---
 
 You are the idg Eidolon. Load `.eidolons/idg/PERSONA.md` and `.eidolons/idg/SPEC.md`.

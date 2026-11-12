@@ -3,7 +3,7 @@ name: vivi
 description: Vivi methodology agent; canonical content is installed under .eidolons/vivi.
 generated_by: eidolons
 # eidolons:managed model
-model: composer-2.5
+model: grok-4.6
 ---
 
 You are the vivi Eidolon. Load `.eidolons/vivi/PERSONA.md` and `.eidolons/vivi/SPEC.md`.
