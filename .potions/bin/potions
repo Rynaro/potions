@@ -617,6 +617,7 @@ cmd_keybindings() {
     echo "  Ctrl+a  c x X    New tab / Close pane / Close tab"
     echo "  Ctrl+a  n p      Next / previous tab"
     echo "  Ctrl+a  S        Session manager"
+    echo "  Ctrl+a  g        Open the Potions door"
     echo ""
     echo "Zsh:"
     echo "  Ctrl+a / Ctrl+e  Beginning / end of line"
@@ -634,6 +635,26 @@ cmd_keybindings() {
     echo "Full reference: ~/.potions/KEYMAPS.md"
     echo ""
   fi
+}
+
+# Command: door (interactive front door)
+cmd_door() {
+  local lib=""
+  if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.potions/lib/door.sh" ]; then
+    lib="$REPO_ROOT/.potions/lib/door.sh"
+  elif [ -f "$POTIONS_HOME/lib/door.sh" ]; then
+    lib="$POTIONS_HOME/lib/door.sh"
+  fi
+
+  if [ -z "$lib" ] || [ ! -f "$lib" ]; then
+    log_error "Potions door is not installed."
+    exit 1
+  fi
+
+  # shellcheck source=/dev/null
+  . "$lib"
+  POTIONS_DOOR_VERSION="$(get_version)"
+  potions_door_main || true
 }
 
 # Command: help
@@ -670,6 +691,7 @@ ${BOLD}COMMANDS:${NC}
     ${CYAN}upgrade${NC}           Upgrade Potions to the latest version
     ${CYAN}update${NC}            Check if updates are available
     ${CYAN}keybindings${NC}       Show keybindings popup (aliases: keys, kb)
+    ${CYAN}door${NC}              Open the front door (resume, begin, notes)
     ${CYAN}version${NC}           Show current Potions version
     ${CYAN}versions${NC}          Alias for 'version'
     ${CYAN}status${NC}            Show installation status
@@ -814,6 +836,9 @@ main() {
       ;;
     keybindings|keys|kb)
       cmd_keybindings
+      ;;
+    door)
+      cmd_door
       ;;
     version|versions)
       cmd_version

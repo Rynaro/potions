@@ -41,6 +41,110 @@ detect_terminal_capabilities() {
     _w=100
   fi
   POTIONS_DISPLAY_WIDTH="$_w"
+  _potions_apply_palette
+}
+
+# Read one CTERM token. .theme files are data, never sourced.
+_potions_theme_cterm() {
+  local file="$1"
+  local key="$2"
+  local line val
+
+  [ -f "$file" ] || return 1
+  line=$(grep -E "^${key}=[0-9]{1,3}$" "$file" 2>/dev/null | head -1) || true
+  val="${line#*=}"
+  case "$val" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  if [ "$val" -gt 255 ]; then
+    return 1
+  fi
+  printf '%s' "$val"
+}
+
+# Point the help/door chrome at the active variant.
+# Light paper (white, sepia) cannot use ANSI 37: that slot is the paper.
+# 256-color tokens stay put when the terminal remaps the 16 ANSI colors.
+_potions_apply_palette() {
+  local home state theme variant root themes varfile basefile base
+  local primary cool warm ink muted
+
+  [ "${POTIONS_HAS_COLOR:-false}" = true ] || return 0
+
+  home="${POTIONS_HOME:-$HOME/.potions}"
+  state=""
+  if [ -f "$home/config/theme.conf" ]; then
+    state=$(head -1 "$home/config/theme.conf" 2>/dev/null | tr -d '[:space:]')
+  fi
+
+  case "$state" in
+    "")
+      theme="alchemists-orchid"
+      variant="dark"
+      ;;
+    *:*)
+      theme="${state%%:*}"
+      variant="${state#*:}"
+      ;;
+    *)
+      theme="$state"
+      variant="dark"
+      ;;
+  esac
+
+  case "$theme" in
+    ""|*[!A-Za-z0-9._-]*) return 0 ;;
+  esac
+  case "$variant" in
+    ""|*[!A-Za-z0-9._-]*) return 0 ;;
+  esac
+
+  themes=""
+  for root in "$home/themes" "$(cd "$(dirname "${BASH_SOURCE[0]}")/../themes" 2>/dev/null && pwd)"; do
+    [ -n "$root" ] || continue
+    if [ -f "$root/$theme/$variant.theme" ]; then
+      themes="$root/$theme"
+      break
+    fi
+  done
+  [ -n "$themes" ] || return 0
+
+  varfile="$themes/$variant.theme"
+  basefile=""
+  base=$(grep -E '^META_BASE=[A-Za-z0-9._-]+$' "$varfile" 2>/dev/null | head -1) || true
+  base="${base#META_BASE=}"
+  if [ -n "$base" ] && [ -f "$themes/$base.theme" ]; then
+    basefile="$themes/$base.theme"
+  fi
+
+  _potions_pick_cterm() {
+    local key="$1"
+    local val=""
+    val=$(_potions_theme_cterm "$varfile" "$key" || true)
+    if [ -z "$val" ] && [ -n "$basefile" ]; then
+      val=$(_potions_theme_cterm "$basefile" "$key" || true)
+    fi
+    printf '%s' "$val"
+  }
+
+  primary=$(_potions_pick_cterm COLOR_PRIMARY_CTERM)
+  cool=$(_potions_pick_cterm COLOR_ACCENT_COOL_CTERM)
+  warm=$(_potions_pick_cterm COLOR_ACCENT_WARM_CTERM)
+  ink=$(_potions_pick_cterm COLOR_ON_SURFACE_CTERM)
+  POTIONS_CTERM_PRIMARY="$primary"
+  POTIONS_CTERM_SURFACE=$(_potions_pick_cterm COLOR_SURFACE_CTERM)
+  case "$variant" in
+    white|sepia) muted=$(_potions_pick_cterm COLOR_MUTED_CTERM) ;;
+    *) muted=$(_potions_pick_cterm COLOR_SECONDARY_CTERM) ;;
+  esac
+
+  # Keys use the warm accent when it is a deep ink (light variants).
+  # On dark, the same token is a pale gold and stays readable.
+  [ -n "$primary" ] && POTIONS_COLOR_BRAND=$(printf '\033[1;38;5;%sm' "$primary")
+  [ -n "$cool" ] && POTIONS_COLOR_DIM=$(printf '\033[38;5;%sm' "$cool")
+  [ -n "$warm" ] && POTIONS_COLOR_KEY=$(printf '\033[1;38;5;%sm' "$warm")
+  [ -n "$ink" ] && POTIONS_COLOR_VALUE=$(printf '\033[38;5;%sm' "$ink")
+  [ -n "$muted" ] && POTIONS_COLOR_MUTED=$(printf '\033[38;5;%sm' "$muted")
 }
 
 # ── Brand Constants ───────────────────────────────────────────────────────────
@@ -204,6 +308,7 @@ help_section_zellij() {
   render_note_row "The Ctrl+a prefix works on every platform with zero setup -- prefer it"
   render_keybind_row "Ctrl+a"           "Enter prefix mode (tmux style)"
   render_keybind_row "F1  /  Ctrl+a ?"  "Open the floating cheatsheet (universal)"
+  render_keybind_row "Ctrl+a  g"        "Open the Potions door"
   echo ""
 
   render_keybind_row "Ctrl+a  |"        "Split pane right"
@@ -283,6 +388,7 @@ help_section_commands() {
   render_keybind_row "upgrade"      "Upgrade Potions to latest version"
   render_keybind_row "update"       "Check if updates are available"
   render_keybind_row "keybindings"  "Show keybindings popup (aliases: keys, kb)"
+  render_keybind_row "door"         "Open the front door (resume, begin, notes)"
   render_keybind_row "version"      "Show current version"
   render_keybind_row "status"       "Show installation status"
   render_keybind_row "info"         "Show system information"

@@ -225,10 +225,82 @@ _potions_zellij_session_name() {
   echo "${_materials[$w1]}-${_alchemical_words[$w2]}"
 }
 
-# Auto-start zellij only if not already in zellij and not in an AI code editor terminal
-# AI code editors (VSCode, Cursor, etc.) should not auto-start zellij to avoid
-# terminal output capture issues
-if command -v zellij &> /dev/null && [ -z "$ZELLIJ" ] && ! is_ai_code_editor; then
-  _potions_session="${POTIONS_SESSION:-$(_potions_zellij_session_name)}"
-  zellij --config-dir "$POTIONS_HOME/zellij" attach --create "${_potions_session}"
+# Names passed to Zellij. Empty, flag-like, or punctuation-bearing values are refused.
+_potions_session_name_ok() {
+  case "$1" in
+    ""|-*|*[!A-Za-z0-9._-]*) return 1 ;;
+  esac
+  [ "${#1}" -le 64 ]
+}
+
+# Resume rejoins a mood that is already alive. It does not mint a name.
+_potions_resume_mood() {
+  local name="$1"
+  _potions_session_name_ok "$name" || return 0
+  command zellij --config-dir "$POTIONS_HOME/zellij" attach "$name" || true
+}
+
+# Begin is the only path that mints. A valid POTIONS_SESSION pin is used as-is.
+# attach --create resurrects that mood when it is not already alive.
+_potions_begin_mood() {
+  local name=""
+  if [ -n "${POTIONS_SESSION:-}" ] && _potions_session_name_ok "$POTIONS_SESSION"; then
+    name="$POTIONS_SESSION"
+  else
+    name="$(_potions_zellij_session_name)"
+  fi
+  _potions_session_name_ok "$name" || return 0
+  command zellij --config-dir "$POTIONS_HOME/zellij" attach --create "$name" || true
+}
+
+# Personal interactive shells land on the door. AI editors keep a raw shell.
+# Ctrl-C is the child's signal: this shell keeps going because the door is just
+# a foreground command and the TRAPINT above refreshes the prompt.
+_potions_personal_shell_should_enter_door() {
+  [ -z "${ZELLIJ:-}" ] || return 1
+  command -v zellij >/dev/null 2>&1 || return 1
+  if is_ai_code_editor; then
+    return 1
+  fi
+  case $- in
+    *i*) ;;
+    *) return 1 ;;
+  esac
+  [ -t 0 ] && [ -t 1 ] || return 1
+  return 0
+}
+
+# Ctrl+a g opens this inset. A new terminal uses it only when no mood is alive.
+# Coming back to a living mood attaches straight in, with no modal.
+_potions_door_modal_run() {
+  local session="$1"
+  command zellij --config-dir "$POTIONS_HOME/zellij" --session "$session" run \
+    --floating --close-on-exit --name Door \
+    --x 10% --y 8% --width 80% --height 72% -- \
+    "$POTIONS_HOME/bin/potions" door
+}
+
+_potions_living_mood() {
+  POTIONS_HOME="${POTIONS_HOME:-$HOME/.potions}" command bash -c '
+    # shellcheck disable=SC1091
+    . "$POTIONS_HOME/lib/door.sh"
+    potions_door_living_name
+  '
+}
+
+_potions_open_door() {
+  local living=""
+  living="$(_potions_living_mood)" || living=""
+  if [ -n "$living" ] && _potions_session_name_ok "$living"; then
+    command zellij --config-dir "$POTIONS_HOME/zellij" attach "$living" || true
+    return 0
+  fi
+  # No mood yet. The lobby holds the modal. Begin still mints the name.
+  command zellij --config-dir "$POTIONS_HOME/zellij" --session potions attach --create-background >/dev/null 2>&1 || true
+  _potions_door_modal_run potions >/dev/null 2>&1 || true
+  command zellij --config-dir "$POTIONS_HOME/zellij" attach potions || true
+}
+
+if _potions_personal_shell_should_enter_door; then
+  _potions_open_door
 fi

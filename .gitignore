@@ -112,10 +112,11 @@
 !.potions/bin/
 !.potions/bin/potions
 
-# Allow help library
+# Allow help library and the front door
 !.potions/lib
 !.potions/lib/
 !.potions/lib/help.sh
+!.potions/lib/door.sh
 
 # Allow theme system library (resolver, state, registry, generator, manager)
 !.potions/lib/theme
