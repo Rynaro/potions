@@ -422,6 +422,8 @@ shell-integration = detect
 # ssh-env is omitted: it rewrites TERM to xterm-256color and fights
 # ssh-terminfo. Restricted hosts that cannot accept the terminfo upload should
 # set TERM=xterm-256color per host, not globally.
+# Inside Zellij, .zshrc pins the pane and ssh to xterm-256color. This
+# fragment stays ssh-terminfo for a bare Ghostty window.
 shell-integration-features = sudo,title,ssh-terminfo
 
 # macOS: send the left Option key as Alt so Zellij Alt+<key> bindings fire.

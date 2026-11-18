@@ -328,6 +328,10 @@ test_config_validity() {
   # Check attach --create is used so dead sessions resurrect on reopen
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "attach --create" ".zshrc uses attach --create for session resurrection"
 
+  # Zellij cannot emulate xterm-ghostty. Panes must pin TERM before SSH.
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "export TERM=xterm-256color" ".zshrc pins TERM inside Zellij"
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_potions_terminal_restore" ".zshrc restores the terminal after ssh"
+
   # Functional: verify generated name matches the expected format and uses words from both lists
   if command -v zsh &>/dev/null; then
     _materials_list="golden silver copper iron obsidian azure crimson verdant pale molten frozen ethereal arcane vivid tarnished radiant"
@@ -366,6 +370,32 @@ test_config_validity() {
       TESTS_PASSED=$((TESTS_PASSED + 1))
     else
       log_failure "Session name not random: only $_distinct_count distinct names across 50 calls"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    # Inside Zellij, a Ghostty TERM must be rewritten before SSH. Sourcing
+    # .zshrc with ZELLIJ=1 also skips the auto-start at the bottom of the file.
+    _term_pin=$(ZELLIJ=1 TERM=xterm-ghostty zsh -c '
+      source "$1/.potions/.zshrc" 2>/dev/null || true
+      printf "%s" "$TERM"
+    ' _ "$SCRIPT_DIR")
+    if [ "$_term_pin" = "xterm-256color" ]; then
+      log_success "Zellij pane pins xterm-ghostty to xterm-256color"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Zellij TERM pin failed: '$_term_pin'"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    _term_keep=$(ZELLIJ=1 TERM=xterm-256color zsh -c '
+      source "$1/.potions/.zshrc" 2>/dev/null || true
+      printf "%s" "$TERM"
+    ' _ "$SCRIPT_DIR")
+    if [ "$_term_keep" = "xterm-256color" ]; then
+      log_success "Zellij pane keeps an already compatible TERM"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Zellij TERM was rewritten unexpectedly: '$_term_keep'"
       TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
   else
