@@ -44,6 +44,7 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 | `-` | Split down |
 | `=` / `E` / `T` / `M` / `V` | Cycle layouts (NextSwapLayout) |
 | `S` | Session manager |
+| `g` | Open the Potions door (resume, begin, notes) |
 | `B` | Break pane into tab |
 | `R` | Rename tab |
 | `<` / `>` | Swap pane position (repeatable) |

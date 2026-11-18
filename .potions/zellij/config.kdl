@@ -40,7 +40,7 @@ keybinds clear-defaults=true {
         //   iTerm2:       Profiles → Keys → Key Mappings → "+" →
         //                 Keyboard Shortcut: Cmd+D, Action: Send Escape Sequence, value: d
         //                 (repeat for each key: t→t, w→w, n→n, p→p, Return→\n)
-        //   Ghostty:      keybind = cmd+d=send_key:alt+d  (in ghostty.conf)
+        //   Ghostty:      keybind = cmd+d=esc:d  (in ghostty.conf)
         //   Kitty:        map cmd+d send_key alt+d  (in kitty.conf)
         //   Terminal.app: Preferences → Profiles → Keyboard → "Use Option as Meta Key"
         //                 then press Option+<key> instead of Cmd+<key>
@@ -172,6 +172,22 @@ keybinds clear-defaults=true {
             SwitchToMode "Normal";
         }
 
+        // Door as a modal: inset so the mood stays visible around and below it.
+        // `g` was free in tmux mode; the cheatsheet documents it.
+        // Quit closes this pane.
+        bind "g" {
+            Run "sh" "-lc" "~/.potions/bin/potions door" {
+                floating true
+                name "Door"
+                close_on_exit true
+                x "10%"
+                y "8%"
+                width "80%"
+                height "72%"
+            }
+            SwitchToMode "Normal";
+        }
+
         // Send Ctrl+a to the application (press Ctrl+a twice)
         bind "Ctrl a" { Write 1; SwitchToMode "Normal"; }
 
@@ -248,4 +264,11 @@ default_layout "compact"
 // generated into themes/potions-active.kdl (loaded from this --config-dir).
 // Switch with:  potions theme set alchemists-orchid <dark|white>
 //        or:    potions theme cycle
+//
+// Zellij 0.44 switches to the bundled default-light theme when the terminal
+// reports a light background. That theme's pane frame is the neon green
+// around the Ctrl+a g door. Pin both hues to potions-active so sepia/white
+// keep the Orchid frame.
 theme "potions-active"
+theme_dark "potions-active"
+theme_light "potions-active"
