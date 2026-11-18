@@ -40,7 +40,7 @@ keybinds clear-defaults=true {
         //   iTerm2:       Profiles → Keys → Key Mappings → "+" →
         //                 Keyboard Shortcut: Cmd+D, Action: Send Escape Sequence, value: d
         //                 (repeat for each key: t→t, w→w, n→n, p→p, Return→\n)
-        //   Ghostty:      keybind = cmd+d=send_key:alt+d  (in ghostty.conf)
+        //   Ghostty:      keybind = cmd+d=esc:d  (in ghostty.conf)
         //   Kitty:        map cmd+d send_key alt+d  (in kitty.conf)
         //   Terminal.app: Preferences → Profiles → Keyboard → "Use Option as Meta Key"
         //                 then press Option+<key> instead of Cmd+<key>

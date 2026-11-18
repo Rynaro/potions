@@ -198,6 +198,10 @@ potions_door_menu_field() {
   line=$(potions_door_menu_lines "$living" | sed -n "$((index + 1))p")
   case "$field" in
     id) printf '%s' "${line%%|*}" ;;
+    key)
+      line="${line#*|}"
+      printf '%s' "${line%%|*}"
+      ;;
     *)
       line="${line#*|}"
       line="${line#*|}"
@@ -220,6 +224,25 @@ _potions_door_rule() {
     i=$((i + 1))
   done
   printf '%s' "$out"
+}
+
+# Faint (SGR 2) disappears in several terminals. A hint is a sentence.
+_potions_door_quiet() {
+  _potions_quiet_color
+}
+
+# One inner row with no text. Used as air around the bottle.
+_potions_door_span() {
+  local v="$1"
+  local inner="$2"
+  local spaces
+  spaces=$(_potions_door_rule " " "$inner")
+  if [ "$POTIONS_HAS_COLOR" = true ]; then
+    printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}%s${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" \
+      "$v" "$spaces" "$v"
+  else
+    printf "%s%s%s\n" "$v" "$spaces" "$v"
+  fi
 }
 
 # Center $2 inside a frame of inner width $3. $4 is the text color, or empty.
@@ -248,8 +271,8 @@ _potions_door_center_line() {
 potions_door_render() {
   local living="${1:-}"
   local index="${2:-0}"
-  local pinned_name="" mood_name mood_line
-  local width inner line_no row_id row_label row_detail row_plain row_fill cols
+  local pinned_name="" mood_name mood_line quiet
+  local width inner line_no row_id row_label row_detail row_key row_plain detail_width cols
   local H TL TR BL BR V
 
   detect_terminal_capabilities
@@ -268,21 +291,46 @@ potions_door_render() {
   inner=$((width - 4))
   POTIONS_DOOR_BLOCK_WIDTH=$((width - 2))
 
-  if [ "$POTIONS_HAS_UNICODE" = true ]; then
-    H="═"; TL="╔"; TR="╗"; BL="╚"; BR="╝"; V="║"
-  else
+  # The Linux console keeps a 256-glyph font. Double-line Unicode is the first thing it drops.
+  if [ "${TERM:-}" = "linux" ] || [ "$POTIONS_HAS_UNICODE" != true ]; then
     H="="; TL="+"; TR="+"; BL="+"; BR="+"; V="|"
+  else
+    H="═"; TL="╔"; TR="╗"; BL="╚"; BR="╝"; V="║"
+  fi
+
+  local rows breath bottle_color
+  rows=$(tput lines 2>/dev/null || echo 0)
+  case "$rows" in
+    ''|*[!0-9]*) rows=0 ;;
+  esac
+  breath=false
+  if [ "$rows" -ge 28 ]; then
+    breath=true
+  fi
+  bottle_color=""
+  if [ "$POTIONS_HAS_COLOR" = true ]; then
+    bottle_color="${POTIONS_COLOR_WARM:-$POTIONS_COLOR_KEY}"
   fi
 
   if [ "$POTIONS_HAS_COLOR" = true ]; then
     printf "${POTIONS_COLOR_BRAND}%s%s%s${POTIONS_NC}\n" "$TL" "$(_potions_door_rule "$H" "$inner")" "$TR"
-    _potions_door_center_line "$V" "potions" "$inner" "$POTIONS_COLOR_KEY"
-    _potions_door_center_line "$V" "your cozy dev environment" "$inner" "$POTIONS_COLOR_DIM"
-    printf "${POTIONS_COLOR_BRAND}%s%s%s${POTIONS_NC}\n" "$BL" "$(_potions_door_rule "$H" "$inner")" "$BR"
   else
     printf "%s%s%s\n" "$TL" "$(_potions_door_rule "$H" "$inner")" "$TR"
-    _potions_door_center_line "$V" "potions" "$inner" ""
-    _potions_door_center_line "$V" "your cozy dev environment" "$inner" ""
+  fi
+  if [ "$breath" = true ]; then
+    _potions_door_span "$V" "$inner"
+  fi
+  _potions_door_center_line "$V" "  _  " "$inner" "$bottle_color"
+  _potions_door_center_line "$V" " ( ) " "$inner" "$bottle_color"
+  _potions_door_center_line "$V" "/___\\" "$inner" "$bottle_color"
+  if [ "$breath" = true ]; then
+    _potions_door_span "$V" "$inner"
+  fi
+  _potions_door_center_line "$V" "potions" "$inner" "$POTIONS_COLOR_KEY"
+  _potions_door_center_line "$V" "your cozy dev environment" "$inner" "$POTIONS_COLOR_DIM"
+  if [ "$POTIONS_HAS_COLOR" = true ]; then
+    printf "${POTIONS_COLOR_BRAND}%s%s%s${POTIONS_NC}\n" "$BL" "$(_potions_door_rule "$H" "$inner")" "$BR"
+  else
     printf "%s%s%s\n" "$BL" "$(_potions_door_rule "$H" "$inner")" "$BR"
   fi
 
@@ -301,7 +349,12 @@ potions_door_render() {
   if [ "$POTIONS_HAS_COLOR" = true ]; then
     printf "${POTIONS_COLOR_BRAND}%s%s%s${POTIONS_NC}\n" "$TL" "$(_potions_door_rule "$H" "$inner")" "$TR"
     printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}  ${POTIONS_COLOR_KEY}%-$((inner - 2))s${POTIONS_NC}${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" "$V" "$mood_name" "$V"
-    printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}  ${POTIONS_COLOR_MUTED}%-$((inner - 2))s${POTIONS_NC}${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" "$V" "$mood_line" "$V"
+    quiet=$(_potions_door_quiet)
+    if [ -n "$quiet" ]; then
+      printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}  ${quiet}%-$((inner - 2))s${POTIONS_NC}${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" "$V" "$mood_line" "$V"
+    else
+      printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}  %-*s${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" "$V" "$((inner - 2))" "$mood_line" "$V"
+    fi
     printf "${POTIONS_COLOR_BRAND}%s%s%s${POTIONS_NC}\n" "$BL" "$(_potions_door_rule "$H" "$inner")" "$BR"
   else
     printf "%s%s%s\n" "$TL" "$(_potions_door_rule "$H" "$inner")" "$TR"
@@ -317,28 +370,39 @@ potions_door_render() {
     printf "%s%s%s\n" "$TL" "$(_potions_door_rule "$H" "$inner")" "$TR"
   fi
   line_no=0
+  detail_width=$((inner - 15))
+  if [ "$detail_width" -lt 0 ]; then
+    detail_width=0
+  fi
   while IFS= read -r row_id; do
     [ -n "$row_id" ] || continue
     row_label=$(potions_door_menu_field "$living" "$line_no" label)
     row_detail=$(potions_door_menu_field "$living" "$line_no" detail)
-    row_plain=$(printf '  %-8s  %s' "$row_label" "$row_detail")
-    row_fill=$(printf '%-*s' "$inner" "$row_plain")
+    row_key=$(potions_door_menu_field "$living" "$line_no" key)
+    if [ "${#row_detail}" -gt "$detail_width" ]; then
+      row_detail="${row_detail:0:detail_width}"
+    fi
+    row_plain=$(printf '  %-8s  %-*s  %s' "$row_label" "$detail_width" "$row_detail" "$row_key")
     if [ "$line_no" -eq "$index" ]; then
       if [ "$POTIONS_HAS_COLOR" = true ] && [ -n "${POTIONS_CTERM_PRIMARY:-}" ] && [ -n "${POTIONS_CTERM_SURFACE:-}" ]; then
         printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\033[1;48;5;%s;38;5;%sm%s\033[0m${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" \
-          "$V" "$POTIONS_CTERM_PRIMARY" "$POTIONS_CTERM_SURFACE" "$row_fill" "$V"
+          "$V" "$POTIONS_CTERM_PRIMARY" "${POTIONS_CTERM_SELECT_FG:-$POTIONS_CTERM_SURFACE}" "$row_plain" "$V"
       elif [ "$POTIONS_HAS_COLOR" = true ]; then
-        printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\033[7m%s\033[0m${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" "$V" "$row_fill" "$V"
+        printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\033[7m%s\033[0m${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" "$V" "$row_plain" "$V"
       else
-        printf "%s>%s%s\n" "$V" "${row_fill# }" "$V"
+        printf "%s>%s%s\n" "$V" "${row_plain# }" "$V"
+      fi
+    elif [ "$POTIONS_HAS_COLOR" = true ]; then
+      quiet=$(_potions_door_quiet)
+      if [ -n "$quiet" ]; then
+        printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}  ${POTIONS_COLOR_KEY}%-8s${POTIONS_NC}  ${POTIONS_COLOR_VALUE}%-*s${POTIONS_NC}  ${quiet}%s${POTIONS_NC}${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" \
+          "$V" "$row_label" "$detail_width" "$row_detail" "$row_key" "$V"
+      else
+        printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}  ${POTIONS_COLOR_KEY}%-8s${POTIONS_NC}  ${POTIONS_COLOR_VALUE}%-*s${POTIONS_NC}  %s${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" \
+          "$V" "$row_label" "$detail_width" "$row_detail" "$row_key" "$V"
       fi
     else
-      if [ "$POTIONS_HAS_COLOR" = true ]; then
-        printf "${POTIONS_COLOR_BRAND}%s${POTIONS_NC}  ${POTIONS_COLOR_KEY}%-8s${POTIONS_NC}  ${POTIONS_COLOR_VALUE}%-*s${POTIONS_NC}${POTIONS_COLOR_BRAND}%s${POTIONS_NC}\n" \
-          "$V" "$row_label" "$((inner - 12))" "$row_detail" "$V"
-      else
-        printf "%s%s%s\n" "$V" "$row_fill" "$V"
-      fi
+      printf "%s%s%s\n" "$V" "$row_plain" "$V"
     fi
     line_no=$((line_no + 1))
   done <<EOF
@@ -357,9 +421,14 @@ EOF
 
   echo ""
   if [ "$POTIONS_HAS_COLOR" = true ]; then
-    printf "  ${POTIONS_COLOR_MUTED}j k move    enter open    b begin    n notes    q quit${POTIONS_NC}\n"
+    quiet=$(_potions_door_quiet)
+    if [ -n "$quiet" ]; then
+      printf "  ${quiet}j k move    enter open${POTIONS_NC}\n"
+    else
+      printf "  j k move    enter open\n"
+    fi
   else
-    printf "  j k move    enter open    b begin    n notes    q quit\n"
+    printf "  j k move    enter open\n"
   fi
   echo ""
 }
@@ -471,14 +540,19 @@ potions_door_config_dir() {
 # Inside a session: create in the background and switch, so the client does not nest.
 potions_door_resume() {
   local name="$1"
-  local config_dir
+  local config_dir attach_err
   potions_door_valid_session_name "$name" || return 0
   if [ -n "${ZELLIJ:-}" ]; then
     config_dir=$(potions_door_config_dir)
     zellij --config-dir "$config_dir" action switch-session "$name" || true
     return 0
   fi
-  potions_door_zsh_call _potions_resume_mood "$name" || true
+  attach_err=$(mktemp)
+  potions_door_zsh_call _potions_resume_mood "$name" 2>"$attach_err" || true
+  if grep -q "another client" "$attach_err" 2>/dev/null; then
+    POTIONS_DOOR_NOTICE="That mood is open in another terminal."
+  fi
+  rm -f "$attach_err"
 }
 
 potions_door_begin() {

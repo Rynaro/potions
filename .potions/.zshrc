@@ -234,10 +234,12 @@ _potions_session_name_ok() {
 }
 
 # Resume rejoins a mood that is already alive. It does not mint a name.
+# A second client is refused by Zellij. Do not pass --force: that mirrors
+# the terminal that is still open.
 _potions_resume_mood() {
   local name="$1"
   _potions_session_name_ok "$name" || return 0
-  command zellij --config-dir "$POTIONS_HOME/zellij" attach "$name" || true
+  command zellij --config-dir "$POTIONS_HOME/zellij" attach "$name"
 }
 
 # Begin is the only path that mints. A valid POTIONS_SESSION pin is used as-is.
@@ -270,8 +272,7 @@ _potions_personal_shell_should_enter_door() {
   return 0
 }
 
-# Ctrl+a g opens this inset. A new terminal uses it only when no mood is alive.
-# Coming back to a living mood attaches straight in, with no modal.
+# Ctrl+a g opens this inset inside a session the caller already holds.
 _potions_door_modal_run() {
   local session="$1"
   command zellij --config-dir "$POTIONS_HOME/zellij" --session "$session" run \
@@ -288,12 +289,24 @@ _potions_living_mood() {
   '
 }
 
+# A new terminal rejoins a mood only when no other terminal holds it.
+# Zellij exits with "Session attached to another client" rather than share
+# the live window. That case opens the door here, and Resume stays explicit.
 _potions_open_door() {
-  local living=""
+  local living="" attach_err
   living="$(_potions_living_mood)" || living=""
   if [ -n "$living" ] && _potions_session_name_ok "$living"; then
-    command zellij --config-dir "$POTIONS_HOME/zellij" attach "$living" || true
-    return 0
+    attach_err="$(mktemp)"
+    if command zellij --config-dir "$POTIONS_HOME/zellij" attach "$living" 2>"$attach_err"; then
+      rm -f "$attach_err"
+      return 0
+    fi
+    if grep -q "another client" "$attach_err" 2>/dev/null; then
+      rm -f "$attach_err"
+      command "$POTIONS_HOME/bin/potions" door || true
+      return 0
+    fi
+    rm -f "$attach_err"
   fi
   # No mood yet. The lobby holds the modal. Begin still mints the name.
   command zellij --config-dir "$POTIONS_HOME/zellij" --session potions attach --create-background >/dev/null 2>&1 || true

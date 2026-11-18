@@ -432,13 +432,13 @@ keybind = ctrl+tab=csi:27;5;9~
 keybind = ctrl+shift+tab=csi:27;6;9~
 
 # macOS: Cmd chords never reach Zellij. Forward Cmd+<key> as Alt+<key>
-# (same set documented in TERMINAL_SETUP.md / zellij config.kdl).
-keybind = cmd+d=send_key:alt+d
-keybind = cmd+t=send_key:alt+t
-keybind = cmd+w=send_key:alt+w
-keybind = cmd+n=send_key:alt+n
-keybind = cmd+p=send_key:alt+p
-keybind = cmd+enter=send_key:alt+enter
+# (ESC + key). Ghostty has no send_key action; esc: is the encoding.
+keybind = cmd+d=esc:d
+keybind = cmd+t=esc:t
+keybind = cmd+w=esc:w
+keybind = cmd+n=esc:n
+keybind = cmd+p=esc:p
+keybind = cmd+enter=esc:\r
 EOF
 
   # WezTerm (Lua) — config.colors = dofile('~/.potions/config/generated/wezterm-colors.lua')

@@ -986,12 +986,12 @@ test_theme_system() {
   assert_file_contains "$tmp/config/generated/ghostty.conf" "macos-option-as-alt" "ghostty.conf sets QoL keys"
   assert_file_contains "$tmp/config/generated/ghostty.conf" "shell-integration-features = sudo,title,ssh-terminfo" "ghostty.conf uses sudo,title,ssh-terminfo features"
   assert_file_contains "$tmp/config/generated/ghostty.conf" "ssh-terminfo" "ghostty.conf enables ssh terminfo integration"
-  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+d=send_key:alt+d" "ghostty.conf forwards cmd+d to alt+d"
-  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+t=send_key:alt+t" "ghostty.conf forwards cmd+t to alt+t"
-  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+w=send_key:alt+w" "ghostty.conf forwards cmd+w to alt+w"
-  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+n=send_key:alt+n" "ghostty.conf forwards cmd+n to alt+n"
-  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+p=send_key:alt+p" "ghostty.conf forwards cmd+p to alt+p"
-  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+enter=send_key:alt+enter" "ghostty.conf forwards cmd+enter to alt+enter"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+d=esc:d" "ghostty.conf forwards cmd+d to alt+d"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+t=esc:t" "ghostty.conf forwards cmd+t to alt+t"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+w=esc:w" "ghostty.conf forwards cmd+w to alt+w"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+n=esc:n" "ghostty.conf forwards cmd+n to alt+n"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+p=esc:p" "ghostty.conf forwards cmd+p to alt+p"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+enter=esc:\\r" "ghostty.conf forwards cmd+enter to alt+enter"
   _ghostty_feat=$(grep -E '^shell-integration-features =' "$tmp/config/generated/ghostty.conf" || true)
   if [ "$_ghostty_feat" = "shell-integration-features = sudo,title,ssh-terminfo" ]; then
     log_success "ghostty.conf feature line is exact (no ssh-env, no cursor)"
@@ -1579,6 +1579,17 @@ EOF
     log_failure "Door render missed the living mood"
     TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
+  plain=$(potions_door_strip_ansi "$out")
+  if printf '%s\n' "$plain" | grep -q '/___\\' \
+    && printf '%s\n' "$plain" | grep -q 'j k move    enter open' \
+    && ! printf '%s\n' "$plain" | grep -q 'q quit' \
+    && printf '%s\n' "$plain" | grep -q 'Resume  *rejoin golden-cauldron  *r'; then
+    log_success "The door wears the bottle, a short hint, and a key on the row"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "Door frame missed the bottle, the short hint, or the row key"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
   # Light variants must ink the body with on-surface, not ANSI white.
   saved_color_home="${POTIONS_HOME:-}"
   saved_has_color="${POTIONS_HAS_COLOR:-}"
@@ -1752,6 +1763,49 @@ EOF
       log_failure "zsh door decisions: $(cat "$tmp/zsh.out" "$tmp/zsh.err" 2>/dev/null)"
       TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
+
+    mkdir -p "$tmp/home/bin" "$tmp/home/zellij"
+    cat > "$tmp/home/bin/potions" << 'EOF'
+#!/bin/bash
+printf '%s\n' "door" >> "${DOOR_LOG:?}"
+exit 0
+EOF
+    chmod +x "$tmp/home/bin/potions"
+    cat > "$stub/zellij" << 'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >> "${DOOR_LOG:?}"
+case "$*" in
+  *"attach golden-cauldron"*)
+    printf '%s\n' "Session attached to another client. Use --force flag to force connect." >&2
+    exit 1
+    ;;
+esac
+exit 0
+EOF
+    : > "$log"
+    DOOR_HOME="$tmp/home"
+    export DOOR_HOME
+    zsh --no-rcs -c '
+      source "$DOOR_ZSHRC" >/dev/null 2>&1 || true
+      HISTFILE=/dev/null
+      export PATH="$DOOR_STUB:$PATH"
+      export POTIONS_HOME="$DOOR_HOME"
+      _potions_living_mood() { print -r -- golden-cauldron; }
+      _potions_open_door
+    ' >"$tmp/busy.out" 2>"$tmp/busy.err" || true
+    if grep -q "door" "$log" && grep -q "attach golden-cauldron" "$log" && ! grep -q -- "--force" "$log"; then
+      log_success "A mood already open in another terminal gets the door, not a second client"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Occupied mood still forced a client: $(cat "$log" "$tmp/busy.err" 2>/dev/null)"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+    cat > "$stub/zellij" << 'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >> "${DOOR_LOG:?}"
+exit 0
+EOF
+    chmod +x "$stub/zellij"
   else
     log_skip "zsh door decisions skipped (zsh not in PATH)"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
@@ -1967,6 +2021,566 @@ PY
   rm -rf "$tmp"
 }
 
+test_help_frame() {
+  log_step "Help Frame"
+
+  local tmp out plain top line header zellij zsh neovim footer note keybind
+  local saved_path saved_term saved_home saved_has_color saved_has_unicode
+  local saved_width saved_color_key saved_color_dim saved_color_brand
+  local saved_color_value saved_color_muted saved_color_warm saved_nc
+  local saved_cterm_primary saved_cterm_surface saved_cterm_select_fg
+  local had_term had_home over xs faint hint_line sub door_out
+  local living_name="golden-cauldron"
+
+  tmp=$(mktemp -d)
+  saved_path="$PATH"
+  had_term=0
+  if [ -n "${TERM+x}" ]; then
+    had_term=1
+    saved_term="$TERM"
+  fi
+  had_home=0
+  if [ -n "${POTIONS_HOME+x}" ]; then
+    had_home=1
+    saved_home="$POTIONS_HOME"
+  fi
+  saved_has_color="${POTIONS_HAS_COLOR:-}"
+  saved_has_unicode="${POTIONS_HAS_UNICODE:-}"
+  saved_width="${POTIONS_DISPLAY_WIDTH:-}"
+  saved_color_key="${POTIONS_COLOR_KEY:-}"
+  saved_color_dim="${POTIONS_COLOR_DIM:-}"
+  saved_color_brand="${POTIONS_COLOR_BRAND:-}"
+  saved_color_value="${POTIONS_COLOR_VALUE:-}"
+  saved_color_muted="${POTIONS_COLOR_MUTED:-}"
+  saved_color_warm="${POTIONS_COLOR_WARM:-}"
+  saved_nc="${POTIONS_NC:-}"
+  saved_cterm_primary="${POTIONS_CTERM_PRIMARY:-}"
+  saved_cterm_surface="${POTIONS_CTERM_SURFACE:-}"
+  saved_cterm_select_fg="${POTIONS_CTERM_SELECT_FG:-}"
+
+  # shellcheck source=/dev/null
+  . "$SCRIPT_DIR/.potions/lib/door.sh"
+
+  POTIONS_COLOR_BRAND='\033[0;35m'
+  POTIONS_COLOR_DIM='\033[0;36m'
+  POTIONS_COLOR_KEY='\033[1;33m'
+  POTIONS_COLOR_WARM='\033[33m'
+  POTIONS_COLOR_VALUE='\033[1;37m'
+  POTIONS_COLOR_MUTED='\033[2;37m'
+  POTIONS_NC='\033[0m'
+  unset POTIONS_CTERM_PRIMARY POTIONS_CTERM_SURFACE POTIONS_CTERM_SELECT_FG
+
+  _help_first_plain() {
+    local stripped
+    stripped=$(potions_door_strip_ansi "$1")
+    printf '%s\n' "$stripped" | sed '/^$/d' | head -1
+  }
+
+  _help_plain_nth() {
+    local stripped
+    stripped=$(potions_door_strip_ansi "$1")
+    printf '%s\n' "$stripped" | sed '/^$/d' | sed -n "$2p"
+  }
+
+  # AC-001, AC-002, AC-003
+  POTIONS_HAS_UNICODE=true
+  POTIONS_HAS_COLOR=false
+  POTIONS_DISPLAY_WIDTH=72
+  TERM=linux
+  header=$(render_popup_header "" || true)
+  top=$(_help_first_plain "$header")
+  if printf '%s\n' "$top" | grep -qE '^\+-{1,}\+$'; then
+    log_success "AC-001 Linux-console help top rule is plus and hyphens"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-001 help top rule was '${top}'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if printf '%s\n' "$top" | grep -q '='; then
+    log_failure "AC-002 Linux-console help top rule contained an equals sign"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-002 Linux-console help top rule has no equals sign"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+  if printf '%s\n' "$header" | grep -qF '╭'; then
+    log_failure "AC-003 Linux-console help header still has a rounded corner"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-003 Linux-console help header has no rounded corner"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # AC-004
+  TERM=xterm-256color
+  POTIONS_HAS_UNICODE=true
+  POTIONS_HAS_COLOR=false
+  header=$(render_popup_header "" || true)
+  if printf '%s\n' "$header" | grep -qF '╭'; then
+    log_success "AC-004 Unicode help header keeps the rounded corner"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-004 Unicode help header missed the rounded corner"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-005, AC-006, AC-007
+  POTIONS_HAS_COLOR=true
+  POTIONS_COLOR_KEY='[KEY]'
+  POTIONS_COLOR_DIM='[DIM]'
+  header=$(render_popup_header "" || true)
+  if printf '%s\n' "$header" | grep -qF '[KEY]potions'; then
+    log_success "AC-005 help title uses the warm key color"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-005 help title missed [KEY]potions"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if printf '%s\n' "$header" | grep -qF '[DIM]your cozy dev environment'; then
+    log_success "AC-006 help tagline uses the cool color"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-006 help tagline missed [DIM]your cozy dev environment"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  header=$(render_popup_header "1.2.3" || true)
+  plain=$(potions_door_strip_ansi "$header")
+  if printf '%s\n' "$plain" | grep -q 'v1.2.3'; then
+    log_success "AC-007 passed version appears on the help subtitle"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-007 subtitle missed v1.2.3"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-008
+  POTIONS_COLOR_BRAND='[BRAND]'
+  POTIONS_HAS_COLOR=true
+  line=$(render_section_header "Zellij - Multiplexer" || true)
+  if printf '%s\n' "$line" | grep -qF '[BRAND]'; then
+    log_success "AC-008 section rules use the brand color"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-008 section header missed [BRAND]"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-009
+  POTIONS_HAS_COLOR=false
+  POTIONS_HAS_UNICODE=true
+  TERM=xterm-256color
+  line=$(render_section_header "Zellij - Multiplexer" || true)
+  plain=$(potions_door_strip_ansi "$line")
+  if printf '%s\n' "$plain" | grep -qF -- '--'; then
+    log_failure "AC-009 colorless Unicode section rule used an ASCII hyphen pair"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-009 colorless Unicode section rule is not an ASCII hyphen pair"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  POTIONS_COLOR_BRAND='\033[0;35m'
+  POTIONS_COLOR_DIM='\033[0;36m'
+  POTIONS_COLOR_KEY='\033[1;33m'
+
+  # AC-010, AC-011, AC-012, AC-013, AC-014
+  POTIONS_DISPLAY_WIDTH=72
+  POTIONS_HAS_COLOR=false
+  POTIONS_HAS_UNICODE=true
+  TERM=xterm-256color
+  header=$(render_popup_header "1.2.3" || true)
+  zellij=$(help_section_zellij || true)
+  zsh=$(help_section_zsh || true)
+  neovim=$(help_section_neovim || true)
+  footer=$(render_popup_footer || true)
+  plain=$(potions_door_strip_ansi "${header}
+${zellij}
+${zsh}
+${neovim}
+${footer}")
+  over=0
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ "${#line}" -gt 72 ]; then
+      over=1
+      break
+    fi
+  done <<EOF
+$plain
+EOF
+  if [ "$over" -eq 0 ]; then
+    log_success "AC-010 at width 72 every rendered help line is at most 72 columns"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-010 a help line exceeded 72 columns: '${line}'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if printf '%s\n' "$plain" | grep -qF '…'; then
+    log_failure "AC-011 help text contained an ellipsis"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-011 help text contains no ellipsis"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+  plain=$(potions_door_strip_ansi "$zellij")
+  if printf '%s\n' "$plain" | grep -qF 'The Ctrl+a prefix works on every platform. Prefer it.'; then
+    log_success "AC-012 prefix note is the short sentence that fits"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-012 zellij section missed the short prefix note"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if printf '%s\n' "$plain" | grep -qF 'Alt is Option. It needs Option as Meta, or use Ctrl+a.'; then
+    log_success "AC-013 macOS note keeps Option-as-Meta and Ctrl+a"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-013 zellij section missed the macOS note"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if printf '%s\n' "$plain" | grep -qF 'Terminal.app does not forward Ctrl+Tab. Use Alt+n or Alt+p.'; then
+    log_success "AC-014 tab note keeps Alt+n and Alt+p"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-014 zellij section missed the Terminal.app note"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-015
+  POTIONS_DISPLAY_WIDTH=72
+  footer=$(render_popup_footer || true)
+  plain=$(potions_door_strip_ansi "$footer")
+  if printf '%s\n' "$plain" | grep -qF 'Customize: ~/.potions/zellij/user.kdl | ~/.potions/config/aliases.zsh'; then
+    log_success "AC-015 footer keeps both config paths with a single-space separator"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-015 footer missed the single-space path separator"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-016
+  POTIONS_HAS_COLOR=true
+  POTIONS_COLOR_MUTED=$'\033[2;37m'
+  footer=$(render_popup_footer || true)
+  faint=$'\033[2;'
+  hint_line=$(printf '%s\n' "$footer" | grep 'user.kdl' | head -1 || true)
+  if printf '%s\n' "$hint_line" | grep -qF "$faint"; then
+    log_failure "AC-016 faint muted sequence was used as the footer hint color"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-016 a faint muted sequence is not the footer hint color"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # AC-017
+  POTIONS_HAS_COLOR=true
+  POTIONS_COLOR_MUTED=$'\033[38;5;188m'
+  note=$(render_note_row "themed note" || true)
+  if printf '%s\n' "$note" | grep -qF '38;5;188'; then
+    log_success "AC-017 a themed muted note still uses 38;5;188"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-017 themed note missed 38;5;188"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-018, AC-019
+  POTIONS_COLOR_MUTED=$'\033[2;37m'
+  note=$(render_note_row "No living mood to resume." || true)
+  plain=$(potions_door_strip_ansi "$note")
+  if [ "$plain" = "    # No living mood to resume." ]; then
+    log_success "AC-018 a door notice keeps the     #  prefix"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-018 notice line was '${plain}'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  POTIONS_HAS_COLOR=true
+  note=$(render_note_row "No living mood to resume." || true)
+  if printf '%s\n' "$note" | grep -qF "$faint"; then
+    log_failure "AC-019 faint muted sequence was used as the note color"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-019 a faint muted sequence is not the note color"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # AC-020, AC-021
+  POTIONS_DISPLAY_WIDTH=72
+  xs=$(_potions_repeat x 200)
+  note=$(render_note_row "$xs" || true)
+  plain=$(potions_door_strip_ansi "$note")
+  if [ "${#plain}" -eq 72 ]; then
+    log_success "AC-020 an overlong note is cut to 72 columns"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-020 overlong note length was ${#plain}"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  case "$plain" in
+    "    # "*)
+      log_success "AC-021 that cut note still starts with     # "
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+      ;;
+    *)
+      log_failure "AC-021 cut note prefix was '${plain}'"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+      ;;
+  esac
+
+  # AC-022
+  POTIONS_DISPLAY_WIDTH=72
+  keybind=$(render_keybind_row "Ctrl+a" "$xs" || true)
+  plain=$(potions_door_strip_ansi "$keybind")
+  if [ "${#plain}" -eq 72 ]; then
+    log_success "AC-022 an overlong keybind row is cut to 72 columns"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-022 overlong keybind length was ${#plain}"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-023
+  POTIONS_DISPLAY_WIDTH=72
+  POTIONS_HAS_COLOR=false
+  POTIONS_HAS_UNICODE=false
+  header=$(render_popup_header "$xs" || true)
+  sub=$(_help_plain_nth "$header" 3)
+  if [ "${#sub}" -eq 72 ]; then
+    log_success "AC-023 an overlong subtitle is cut to the frame width"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-023 overlong subtitle length was ${#sub} ('${sub}')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Theme home for selection ink (AC-024 through AC-028)
+  POTIONS_HOME="$tmp/theme-home"
+  mkdir -p "$POTIONS_HOME/config"
+  ln -s "$SCRIPT_DIR/.potions/themes" "$POTIONS_HOME/themes"
+
+  _help_door_colored() {
+    local variant="$1"
+    printf '%s\n' "alchemists-orchid:${variant}" > "$POTIONS_HOME/config/theme.conf"
+    (
+      detect_terminal_capabilities() {
+        POTIONS_HAS_COLOR=true
+        POTIONS_HAS_UNICODE=true
+        POTIONS_DISPLAY_WIDTH=72
+        _potions_apply_palette
+      }
+      tput() {
+        case "$1" in
+          cols) echo 100 ;;
+          lines) echo 40 ;;
+          *) echo 0 ;;
+        esac
+      }
+      potions_door_render "$living_name" 0
+    )
+  }
+
+  door_out=$(_help_door_colored white || true)
+  if printf '%s\n' "$door_out" | grep -qF $'\033[1;48;5;91;38;5;236m'; then
+    log_success "AC-024 white selection is 1;48;5;91;38;5;236"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-024 white selection sequence was missing"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if printf '%s\n' "$door_out" | grep -qF '38;5;255'; then
+    log_failure "AC-025 white selection used paper index 255"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-025 white selection does not use paper index 255"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  door_out=$(_help_door_colored sepia || true)
+  if printf '%s\n' "$door_out" | grep -qF $'\033[1;48;5;90;38;5;236m'; then
+    log_success "AC-026 sepia selection is 1;48;5;90;38;5;236"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-026 sepia selection sequence was missing"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if printf '%s\n' "$door_out" | grep -qF '38;5;254'; then
+    log_failure "AC-027 sepia selection used paper index 254"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-027 sepia selection does not use paper index 254"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  door_out=$(_help_door_colored dark || true)
+  if printf '%s\n' "$door_out" | grep -qF $'\033[1;48;5;176;38;5;236m'; then
+    log_success "AC-028 dark selection stays 1;48;5;176;38;5;236"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-028 dark selection sequence was missing"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-029, AC-030
+  door_out=$(
+    detect_terminal_capabilities() {
+      POTIONS_HAS_COLOR=false
+      POTIONS_HAS_UNICODE=true
+      POTIONS_DISPLAY_WIDTH=72
+    }
+    tput() {
+      case "$1" in
+        cols) echo 100 ;;
+        lines) echo 40 ;;
+        *) echo 0 ;;
+      esac
+    }
+    potions_door_render "$living_name" 0
+  ) || true
+  plain=$(potions_door_strip_ansi "$door_out")
+  top=$(printf '%s\n' "$plain" | sed '/^$/d' | head -1)
+  if [ "${#top}" -eq 66 ]; then
+    log_success "AC-029 the default door top rule is 66 columns"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-029 door top rule length was ${#top} ('${top}')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if printf '%s\n' "$plain" | grep -qF '~  v'; then
+    log_failure "AC-030 the door render contained a version marker"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-030 the door render has no version marker"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # AC-031
+  door_out=$(
+    TERM=linux
+    detect_terminal_capabilities() {
+      POTIONS_HAS_COLOR=false
+      POTIONS_HAS_UNICODE=true
+      POTIONS_DISPLAY_WIDTH=72
+    }
+    tput() {
+      case "$1" in
+        cols) echo 100 ;;
+        lines) echo 40 ;;
+        *) echo 0 ;;
+      esac
+    }
+    potions_door_render "$living_name" 0
+  ) || true
+  plain=$(potions_door_strip_ansi "$door_out")
+  top=$(printf '%s\n' "$plain" | sed '/^$/d' | head -1)
+  if printf '%s\n' "$top" | grep -qE '^\+=+\+$'; then
+    log_success "AC-031 Linux-console door rule stays plus and equals"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-031 Linux-console door top rule was '${top}'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # AC-032, AC-033
+  mkdir -p "$tmp/tput40" "$tmp/tput140"
+  printf '%s\n' '#!/bin/bash' 'if [ "$1" = cols ]; then echo 40; exit 0; fi' 'echo 0' > "$tmp/tput40/tput"
+  printf '%s\n' '#!/bin/bash' 'if [ "$1" = cols ]; then echo 140; exit 0; fi' 'echo 0' > "$tmp/tput140/tput"
+  chmod +x "$tmp/tput40/tput" "$tmp/tput140/tput"
+  PATH="$tmp/tput40:$saved_path"
+  detect_terminal_capabilities || true
+  if [ "${POTIONS_DISPLAY_WIDTH:-}" = "72" ]; then
+    log_success "AC-032 help width clamps 40 columns up to 72"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-032 width at 40 cols was '${POTIONS_DISPLAY_WIDTH:-}'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  PATH="$tmp/tput140:$saved_path"
+  detect_terminal_capabilities || true
+  if [ "${POTIONS_DISPLAY_WIDTH:-}" = "100" ]; then
+    log_success "AC-033 help width clamps 140 columns down to 100"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-033 width at 140 cols was '${POTIONS_DISPLAY_WIDTH:-}'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  PATH="$saved_path"
+
+  # AC-034, AC-035
+  POTIONS_HAS_COLOR=true
+  POTIONS_COLOR_MUTED=$'\033[2;37m'
+  door_out=$(
+    detect_terminal_capabilities() {
+      POTIONS_HAS_COLOR=true
+      POTIONS_HAS_UNICODE=true
+      POTIONS_DISPLAY_WIDTH=72
+    }
+    tput() {
+      case "$1" in
+        cols) echo 100 ;;
+        lines) echo 40 ;;
+        *) echo 0 ;;
+      esac
+    }
+    potions_door_render "$living_name" 0
+  ) || true
+  plain=$(potions_door_strip_ansi "$door_out")
+  if printf '%s\n' "$plain" | grep -qF 'j k move    enter open'; then
+    log_success "AC-034 the door hint text survives the shared quiet-color helper"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "AC-034 door hint text was missing"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  hint_line=$(printf '%s\n' "$door_out" | grep 'j k move' | head -1 || true)
+  if printf '%s\n' "$hint_line" | grep -qF "$faint"; then
+    log_failure "AC-035 the door hint was faint when muted is SGR 2"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "AC-035 the door hint is not faint when muted is SGR 2"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  unset -f _help_first_plain _help_plain_nth _help_door_colored
+
+  if [ "$had_term" -eq 1 ]; then
+    TERM="$saved_term"
+    export TERM
+  else
+    unset TERM
+  fi
+  if [ "$had_home" -eq 1 ]; then
+    POTIONS_HOME="$saved_home"
+  else
+    unset POTIONS_HOME
+  fi
+  if [ -n "$saved_has_color" ]; then
+    POTIONS_HAS_COLOR="$saved_has_color"
+  else
+    unset POTIONS_HAS_COLOR
+  fi
+  if [ -n "$saved_has_unicode" ]; then
+    POTIONS_HAS_UNICODE="$saved_has_unicode"
+  else
+    unset POTIONS_HAS_UNICODE
+  fi
+  if [ -n "$saved_width" ]; then
+    POTIONS_DISPLAY_WIDTH="$saved_width"
+  else
+    unset POTIONS_DISPLAY_WIDTH
+  fi
+  if [ -n "$saved_color_key" ]; then POTIONS_COLOR_KEY="$saved_color_key"; else unset POTIONS_COLOR_KEY; fi
+  if [ -n "$saved_color_dim" ]; then POTIONS_COLOR_DIM="$saved_color_dim"; else unset POTIONS_COLOR_DIM; fi
+  if [ -n "$saved_color_brand" ]; then POTIONS_COLOR_BRAND="$saved_color_brand"; else unset POTIONS_COLOR_BRAND; fi
+  if [ -n "$saved_color_value" ]; then POTIONS_COLOR_VALUE="$saved_color_value"; else unset POTIONS_COLOR_VALUE; fi
+  if [ -n "$saved_color_muted" ]; then POTIONS_COLOR_MUTED="$saved_color_muted"; else unset POTIONS_COLOR_MUTED; fi
+  if [ -n "$saved_color_warm" ]; then POTIONS_COLOR_WARM="$saved_color_warm"; else unset POTIONS_COLOR_WARM; fi
+  if [ -n "$saved_nc" ]; then POTIONS_NC="$saved_nc"; else unset POTIONS_NC; fi
+  if [ -n "$saved_cterm_primary" ]; then POTIONS_CTERM_PRIMARY="$saved_cterm_primary"; else unset POTIONS_CTERM_PRIMARY; fi
+  if [ -n "$saved_cterm_surface" ]; then POTIONS_CTERM_SURFACE="$saved_cterm_surface"; else unset POTIONS_CTERM_SURFACE; fi
+  if [ -n "$saved_cterm_select_fg" ]; then POTIONS_CTERM_SELECT_FG="$saved_cterm_select_fg"; else unset POTIONS_CTERM_SELECT_FG; fi
+  PATH="$saved_path"
+  rm -rf "$tmp"
+}
+
 # Main function
 main() {
   echo ""
@@ -1982,6 +2596,7 @@ main() {
   test_no_local_outside_functions
   test_config_validity
   test_door
+  test_help_frame
   test_install_script
   test_common_packages
   test_upgrade_script
