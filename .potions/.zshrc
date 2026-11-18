@@ -1,5 +1,19 @@
 POTIONS_HOME="$HOME/.potions"
 
+# Zellij emulates xterm-256color. Panes inherit the outer TERM (xterm-ghostty,
+# xterm-kitty, alacritty, wezterm). SSH then forwards that name, and the remote
+# emits scroll-region, charset, and synchronized-output sequences Zellij does
+# not emulate. Scrolling repaints the desynced grid and characters overlap.
+# Pin the pane before the prompt or any SSH so local editing and remote
+# programs both speak the TERM Zellij actually implements. A bare Ghostty
+# (no Zellij) keeps xterm-ghostty so ssh-terminfo can still install it.
+if [ -n "$ZELLIJ" ]; then
+  case "${TERM:-}" in
+    xterm-256color|screen-256color|tmux-256color|xterm-color) ;;
+    *) export TERM=xterm-256color ;;
+  esac
+fi
+
 # Migration detection - check if legacy config needs migration
 # Only show once per session
 if [ -z "$POTIONS_MIGRATION_CHECKED" ]; then
@@ -224,6 +238,38 @@ _potions_zellij_session_name() {
   local w2=$(( (RANDOM % 16) + 1 ))
   echo "${_materials[$w1]}-${_alchemical_words[$w2]}"
 }
+
+# Return the pane to a known state after SSH. A remote TUI can leave mouse
+# tracking or the line-drawing charset armed; the next scroll then repaints
+# with mixed glyphs. The alternate screen is left alone — Zellij lives there.
+_potions_terminal_restore() {
+  [ -t 1 ] || return 0
+  printf '\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?1015l\033[?1004l\033[?2004l\033[0m\033(B\017'
+}
+
+# One wrap per shell. Inside Zellij, also stop Ghostty's ssh wrapper (when it
+# is present) from advertising xterm-ghostty: --terminfo=false makes `ghostty
+# +ssh` fall back to xterm-256color, which matches the pane pin above.
+if [[ -o interactive ]] && [ -z "${_POTIONS_SSH_WRAPPED:-}" ]; then
+  _POTIONS_SSH_WRAPPED=1
+  if (( $+functions[ssh] )); then
+    functions -c ssh _potions_ssh_impl
+  else
+    _potions_ssh_impl() { command ssh "$@"; }
+  fi
+  ssh() {
+    local _st
+    if [ -n "${ZELLIJ:-}" ]; then
+      local GHOSTTY_SHELL_FEATURES="${GHOSTTY_SHELL_FEATURES//ssh-terminfo/}"
+      TERM=xterm-256color _potions_ssh_impl "$@"
+    else
+      _potions_ssh_impl "$@"
+    fi
+    _st=$?
+    _potions_terminal_restore
+    return "$_st"
+  }
+fi
 
 # Auto-start zellij only if not already in zellij and not in an AI code editor terminal
 # AI code editors (VSCode, Cursor, etc.) should not auto-start zellij to avoid

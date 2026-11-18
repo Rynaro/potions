@@ -100,6 +100,12 @@ integration hides the cursor and often fails to restore it over SSH/Zellij.
 fights `ssh-terminfo`. Restricted hosts that cannot accept the terminfo
 upload should set `TERM=xterm-256color` for that host only, not globally.
 
+Inside Zellij the pane is not Ghostty. `.zshrc` pins `TERM` to
+`xterm-256color` for the pane and for `ssh`, so a remote shell does not emit
+Ghostty-only sequences (scroll regions, alternate charset, synchronized
+output) that Zellij mis-draws. Scrolling those sequences mixes the pane.
+A shell that is not inside Zellij still uses `xterm-ghostty`.
+
 ### Live theme changes
 
 - In a **bare shell**, `potions theme cycle` repaints Ghostty instantly via OSC
