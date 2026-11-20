@@ -22,7 +22,7 @@ is_termux() {
 
 # Function to check if the environment is WSL
 is_wsl() {
-  grep -qi microsoft /proc/version
+  grep -qi microsoft /proc/version 2>/dev/null
 }
 
 # Function to check if the environment is macOS
@@ -61,7 +61,7 @@ fi
 
 # Neovim as the default editor
 export PATH="$HOME/.neovim/bin:$PATH"
-export EDITOR=nvim
+export EDITOR="${EDITOR:-nvim}"
 
 # Potions CLI
 export PATH="$POTIONS_HOME/bin:$PATH"
@@ -192,8 +192,7 @@ TRAPINT() {
 # Derive a deterministic two-word alchemical session name from the machine's hostname.
 # A single 16-word list produced collisions on common hostnames (e.g. "server" always
 # mapped to "vitriol"). Two independent 16-element lists give 256 combinations, reducing
-# collision probability to ~0.4%. Names are hyphen-joined (e.g. "verdant-retort") so
-# they remain a single awk field in the attach-or-create pipeline below.
+# collision probability. Names are hyphen-joined (e.g. "verdant-retort").
 # Formula:
 #   w1 = (ascii_sum % 16) + 1
 #   w2 = ((ascii_sum + hostname_length) % 16) + 1
@@ -217,11 +216,7 @@ _potions_zellij_session_name() {
 # Auto-start zellij only if not already in zellij and not in an AI code editor terminal
 # AI code editors (VSCode, Cursor, etc.) should not auto-start zellij to avoid
 # terminal output capture issues
-if command -v zellij &> /dev/null && [ -z "$ZELLIJ" ] && ! is_ai_code_editor; then
+if [[ -o interactive && -t 0 && -t 1 && -z "$ZELLIJ" ]] && command -v zellij &> /dev/null && ! is_ai_code_editor; then
   _potions_session="${POTIONS_SESSION:-$(_potions_zellij_session_name)}"
-  if zellij list-sessions 2>/dev/null | awk '{print $1}' | grep -qx "${_potions_session}"; then
-    zellij --config-dir "$POTIONS_HOME/zellij" attach "${_potions_session}"
-  else
-    zellij --config-dir "$POTIONS_HOME/zellij" --session "${_potions_session}"
-  fi
+  command zellij --config-dir "$POTIONS_HOME/zellij" attach --create "$_potions_session"
 fi

@@ -69,6 +69,10 @@ CRITICAL_FILES=(
   ".version"
   ".potions/.zshrc"
   ".potions/bin/potions"
+  ".potions/lib/desk.sh"
+  ".potions/lib/desk-actions.sh"
+  ".potions/lib/help.sh"
+  ".potions/zellij/config.kdl"
 )
 
 CHECKSUMS_FILE="$REPO_ROOT/.checksums"

@@ -37,7 +37,7 @@ POTIONS_REPO_BRANCH="main"
 POTIONS_HOME="$HOME/.potions"
 POTIONS_REPO_DIR="$POTIONS_HOME/.repo"
 POTIONS_BACKUPS_DIR="$POTIONS_HOME/backups"
-BACKUP_DIR="$POTIONS_BACKUPS_DIR/backup-$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR=""
 TEMP_DIR=$(mktemp -d)
 
 # Get current script directory
@@ -204,7 +204,7 @@ version_compare() {
   local v2="$2"
   
   # Use awk for version comparison
-  local result=$(awk -v v1="$v1" -v v2="$v2" 'BEGIN {
+  awk -v v1="$v1" -v v2="$v2" 'BEGIN {
     split(v1, a, ".")
     split(v2, b, ".")
     for (i=1; i<=3; i++) {
@@ -214,9 +214,7 @@ version_compare() {
       if (a[i] > b[i]) { exit 1 }
     }
     exit 1
-  }')
-  
-  return $result
+  }'
 }
 
 # Verify checksums of critical files
@@ -295,7 +293,8 @@ check_upgrade_needed() {
 create_backup() {
   log_step "Creating backup"
   
-  mkdir -p "$BACKUP_DIR"
+  mkdir -p "$POTIONS_BACKUPS_DIR"
+  BACKUP_DIR=$(mktemp -d "$POTIONS_BACKUPS_DIR/backup-$(date +%Y%m%d-%H%M%S)-XXXXXX")
   
   # Backup entire .potions directory (excluding repo and backups directories to avoid recursion)
   if [ -d "$POTIONS_HOME" ]; then
@@ -470,193 +469,58 @@ prepare_repository() {
   echo "$repo_dir"
 }
 
-# Preserve user customizations
-preserve_user_files() {
-  log_info "Preserving user customizations..."
-
-  local repo_dir="$1"
-  local preserved_files=(
-    # New config structure (v2.5.0+)
-    "config/aliases.zsh"
-    "config/secure.zsh"
-    "config/local.zsh"
-    "config/macos.zsh"
-    "config/linux.zsh"
-    "config/wsl.zsh"
-    "config/termux.zsh"
-    "nvim/user.vim"
-    "nvim/lua/theme/alchemists-orchid.lua"
-    "zellij/user.kdl"
-    # Legacy files (for backwards compatibility)
-    ".zsh_aliases"
-    ".zsh_secure_aliases"
-    "sources/macos.sh"
-    "sources/linux.sh"
-    "sources/wsl.sh"
-    "sources/termux.sh"
-  )
-  
-  for file in "${preserved_files[@]}"; do
-    local user_file="$POTIONS_HOME/$file"
-    local new_file="$repo_dir/.potions/$file"
-    
-    if [ -f "$user_file" ] && [ -f "$new_file" ]; then
-      # Check if files are different
-      if ! cmp -s "$user_file" "$new_file"; then
-        log_info "Processing $file..."
-        
-        # Backup user's original file
-        cp "$user_file" "$POTIONS_HOME/$file.backup"
-        
-        # For .zsh_aliases and .zsh_secure_aliases, try to preserve user additions
-        # Strategy: Append user lines that don't exist in new file
-        if [ "$file" = ".zsh_aliases" ] || [ "$file" = ".zsh_secure_aliases" ]; then
-          # Create merged version: new content + user additions
-          cp "$new_file" "$user_file"
-          
-          # Extract user-specific lines (lines in user file but not in new file)
-          # Use comm command if available, otherwise use simpler diff approach
-          local user_additions=""
-          if command -v comm &> /dev/null; then
-            # Ensure files are not empty before sorting
-            if [ -s "$new_file" ] && [ -s "$user_file.backup" ]; then
-              user_additions=$(comm -13 <(sort "$new_file") <(sort "$user_file.backup") 2>/dev/null || true)
-            elif [ -s "$user_file.backup" ]; then
-              # If new file is empty but user file has content, preserve all user content
-              user_additions=$(cat "$user_file.backup")
-            fi
-          else
-            # Fallback: simple diff approach (less accurate but works everywhere)
-            log_warning "  'comm' command not available, using simple merge strategy"
-            # Just keep the new version and warn user
-            user_additions=""
-          fi
-          
-          if [ -n "$user_additions" ]; then
-            echo "" >> "$user_file"
-            echo "# User customizations (automatically preserved during upgrade)" >> "$user_file"
-            echo "$user_additions" >> "$user_file"
-            log_success "  Merged user customizations into $file"
-          else
-            log_info "  Updated $file (no user customizations detected)"
-          fi
-        else
-          # For other files (sources/*.sh), be more conservative
-          # Just update and warn user to check backup
-          cp "$new_file" "$user_file"
-          log_warning "  Updated $file. Your original saved to $file.backup"
-          log_info "  Please review $file.backup and merge manually if needed"
-        fi
-      else
-        log_info "  $file is up to date"
-      fi
-    elif [ -f "$new_file" ] && [ ! -f "$user_file" ]; then
-      # New file that doesn't exist in user's installation
-      mkdir -p "$(dirname "$POTIONS_HOME/$file")"
-      cp "$new_file" "$user_file"
-      log_info "  Added new file: $file"
-    fi
-  done
-  
-  log_success "User customizations preserved"
-}
-
-# Update dotfiles
+# Update managed files and seed user-owned templates only when absent.
 update_dotfiles() {
   log_step "Updating configuration files"
 
-  local repo_dir="$1"
-  local preserved_files=(
-    # New config structure (v2.5.0+)
-    "config/aliases.zsh"
-    "config/secure.zsh"
-    "config/local.zsh"
-    "config/macos.zsh"
-    "config/linux.zsh"
-    "config/wsl.zsh"
-    "config/termux.zsh"
-    "nvim/user.vim"
-    "nvim/lua/theme/alchemists-orchid.lua"
-    "zellij/user.kdl"
-    # Legacy files (for backwards compatibility)
-    ".zsh_aliases"
-    ".zsh_secure_aliases"
-    "sources/macos.sh"
-    "sources/linux.sh"
-    "sources/wsl.sh"
-    "sources/termux.sh"
-  )
-  
-  if [ ! -d "$repo_dir/.potions" ]; then
+  local source_dir="$1/.potions"
+  local file relative_path destination
+  if [ ! -d "$source_dir" ]; then
     log_error "Cannot find .potions directory in repository"
     return 1
   fi
-  
-  # Update files while preserving user customizations
-  preserve_user_files "$repo_dir"
-  
-  # Copy new/updated files (excluding preserved ones that we handled specially)
-  log_info "Copying updated files..."
-  
-  # Copy new files and update existing ones (excluding preserved files)
-  # First, ensure directory structure exists
-  find "$repo_dir/.potions" -type d | while read -r dir; do
-    rel_dir="${dir#$repo_dir/.potions/}"
-    if [ -n "$rel_dir" ]; then
-      mkdir -p "$POTIONS_HOME/$rel_dir"
-    fi
+
+  find "$source_dir" -type f -print0 | while IFS= read -r -d '' file; do
+    relative_path=${file#"$source_dir"/}
+    destination="$POTIONS_HOME/$relative_path"
+    case "$relative_path" in
+      config/aliases.zsh|config/secure.zsh|config/local.zsh|\
+      config/macos.zsh|config/linux.zsh|config/wsl.zsh|config/termux.zsh|\
+      nvim/user.vim|nvim/lua/theme/alchemists-orchid.lua|zellij/user.kdl|\
+      .zsh_aliases|.zsh_secure_aliases|sources/macos.sh|sources/linux.sh|\
+      sources/wsl.sh|sources/termux.sh|notes.md)
+        if [ -e "$destination" ] || [ -L "$destination" ]; then
+          continue
+        fi
+        ;;
+    esac
+    mkdir -p "$(dirname "$destination")"
+    cp "$file" "$destination"
   done
-  
-  # Copy files, excluding preserved ones
-  # Note: Only files from .potions directory are copied - AI agent docs (AGENT.md, .cursorrules, etc.)
-  # in repo root are git-only and never deployed to user installations
-  find "$repo_dir/.potions" -type f | while read -r file; do
-    rel_file="${file#$repo_dir/.potions/}"
-    
-    # Skip preserved files (already handled)
-    should_skip=false
-    for preserved in "${preserved_files[@]}"; do
-      if [ "$rel_file" = "$preserved" ]; then
-        should_skip=true
-        break
-      fi
-    done
-    
-    if [ "$should_skip" = false ]; then
-      cp "$file" "$POTIONS_HOME/$rel_file"
-    fi
-  done
-  
-  log_success "Dotfiles updated"
-  
-  # Update Potions CLI if available
-  if [ -f "$repo_dir/.potions/bin/potions" ]; then
-    log_info "Updating Potions CLI..."
-    mkdir -p "$POTIONS_HOME/bin"
-    cp "$repo_dir/.potions/bin/potions" "$POTIONS_HOME/bin/potions"
+
+  if [ -f "$source_dir/bin/potions" ]; then
     chmod +x "$POTIONS_HOME/bin/potions"
-    log_success "Potions CLI updated"
   fi
+  log_success "Dotfiles updated"
 }
 
 # Clean up old backups (keep last 5 backups)
 cleanup_old_backups() {
   log_step "Cleaning up old backups..."
   
-  if [ -d "$POTIONS_BACKUPS_DIR" ]; then
-    # Keep only the 5 most recent backups
-    # Backup directories are named backup-YYYYMMDD-HHMMSS, so we can sort by name
-    local backup_count=$(find "$POTIONS_BACKUPS_DIR" -maxdepth 1 -type d -name "backup-*" 2>/dev/null | wc -l | tr -d ' ')
-    
-    if [ "$backup_count" -gt 5 ]; then
-      # Sort by directory name (which includes timestamp), keep newest 5, delete oldest
-      find "$POTIONS_BACKUPS_DIR" -maxdepth 1 -type d -name "backup-*" | \
-        sort -r | \
-        tail -n +6 | \
-        xargs rm -rf 2>/dev/null || true
-      
-      log_info "Kept 5 most recent backups"
+  local LC_ALL=C
+  local backup excess
+  local older_backups=()
+  # The glob orders timestamped names and preserves paths containing spaces.
+  for backup in "$POTIONS_BACKUPS_DIR"/backup-*; do
+    if [ -d "$backup" ] && [ ! -L "$backup" ] && [ "$backup" != "$BACKUP_DIR" ]; then
+      older_backups+=("$backup")
     fi
+  done
+  excess=$(("${#older_backups[@]}" - 4))
+  if [ "$excess" -gt 0 ]; then
+    rm -rf -- "${older_backups[@]:0:excess}"
+    log_info "Kept 5 most recent backups"
   fi
 }
 
@@ -667,9 +531,6 @@ main() {
   # Check if Potions is installed
   log_info "Checking installation..."
   check_potions_installed
-  
-  # Create backup
-  create_backup
   
   # Prepare repository
   repo_dir=$(prepare_repository)
@@ -705,7 +566,7 @@ main() {
     exit 0
   fi
   
-  # Update dotfiles
+  create_backup
   update_dotfiles "$repo_dir"
   
   # Update version file
@@ -728,7 +589,6 @@ main() {
     echo ""
     echo -e "${WHITE}Next steps:${NC}"
     echo -e "  ${CYAN}⟹${NC} Restart your terminal or run ${BOLD}exec zsh${NC}"
-    echo -e "  ${CYAN}⟹${NC} Review .backup files in ${CYAN}~/.potions${NC} if needed"
     echo ""
     echo -e "${YELLOW}Tip:${NC} If something went wrong, restore from backup:"
     echo -e "  ${CYAN}cp -r ${BACKUP_DIR#$HOME/~}/* ~/.potions/${NC}"
@@ -742,7 +602,6 @@ main() {
     echo ""
     echo "Next steps:"
     echo "  - Restart your terminal or run 'exec zsh'"
-    echo "  - Review .backup files in ~/.potions if needed"
     echo ""
     echo "Tip: If something went wrong, restore from backup:"
     echo "  cp -r ${BACKUP_DIR#$HOME/~}/* ~/.potions/"

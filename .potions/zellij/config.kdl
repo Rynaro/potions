@@ -62,6 +62,19 @@ keybinds clear-defaults=true {
 
     // Tmux mode: all prefix-based keybindings
     tmux {
+        bind "Space" {
+            SwitchToMode "Normal"
+            Run "potions" "desk" {
+                floating true
+                name "Potions Desk"
+                x "7%"
+                y "10%"
+                width "86%"
+                height "80%"
+                close_on_exit true
+            }
+        }
+
         // Pane navigation
         bind "h" { MoveFocus "Left"; SwitchToMode "Normal"; }
         bind "j" { MoveFocus "Down"; SwitchToMode "Normal"; }

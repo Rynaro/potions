@@ -41,22 +41,6 @@ POTIONS_BACKUPS_DIR="$POTIONS_HOME/backups"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd 2>/dev/null || echo "")"
 
-# Load help library (graceful degradation when file is absent)
-POTIONS_HELP_AVAILABLE=false
-_potions_help_lib=""
-if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.potions/lib/help.sh" ]; then
-  _potions_help_lib="$REPO_ROOT/.potions/lib/help.sh"
-elif [ -f "$POTIONS_HOME/lib/help.sh" ]; then
-  _potions_help_lib="$POTIONS_HOME/lib/help.sh"
-fi
-if [ -n "$_potions_help_lib" ]; then
-  # shellcheck source=/dev/null
-  if . "$_potions_help_lib" 2>/dev/null; then
-    POTIONS_HELP_AVAILABLE=true
-  fi
-fi
-unset _potions_help_lib
-
 # Platform detection functions
 is_macos() {
   [ "$(uname -s)" = "Darwin" ]
@@ -568,112 +552,72 @@ cmd_doctor() {
   echo ""
 }
 
-# Command: keybindings (branded popup)
-cmd_keybindings() {
-  if [ "$POTIONS_HELP_AVAILABLE" = true ]; then
-    local _version; _version=$(get_version)
-    detect_terminal_capabilities
-    # Enforce minimum render width
-    if [ "${POTIONS_DISPLAY_WIDTH:-0}" -lt 72 ]; then
-      POTIONS_DISPLAY_WIDTH=72
+# Interactive entry points share a printable fallback for pipelines, older
+# installations and terminals without cursor addressing.
+cmd_desk() {
+  local page="$1" plain=false lib_dir="$SCRIPT_DIR/../lib"
+  shift
+  if [ "$#" -eq 1 ] && [ "$1" = "--plain" ]; then
+    plain=true
+  elif [ "$#" -gt 0 ]; then
+    printf 'Usage: potions %s [--plain]\n' "${page/home/desk}" >&2
+    return 2
+  fi
+
+  [ -r "$lib_dir/help.sh" ] || lib_dir="$POTIONS_HOME/lib"
+  if [ -r "$lib_dir/help.sh" ]; then
+    source "$lib_dir/help.sh"
+  fi
+
+  if [ "$plain" = false ] && [ -t 0 ] && [ -t 1 ] && [ "${TERM:-dumb}" != dumb ] &&
+     declare -F desk_shortcuts >/dev/null && [ -r "$lib_dir/desk.sh" ] && [ -r "$lib_dir/desk-actions.sh" ]; then
+    source "$lib_dir/desk-actions.sh"
+    source "$lib_dir/desk.sh"
+    desk_open "$page"
+  elif [ "$page" = keys ]; then
+    printf 'Potions keyboard shortcuts\n'
+    if declare -F print_shortcuts >/dev/null; then
+      print_shortcuts
+    elif [ -r "$SCRIPT_DIR/../KEYMAPS.md" ]; then
+      cat "$SCRIPT_DIR/../KEYMAPS.md"
+    elif [ -r "$POTIONS_HOME/KEYMAPS.md" ]; then
+      cat "$POTIONS_HOME/KEYMAPS.md"
+    else
+      printf 'Zellij   Ctrl+a enters prefix mode, Alt+h/j/k/l moves between panes.\n'
+      printf 'Zsh      Ctrl+r searches history.\nNeovim   Space ff finds files.\n'
     fi
-    render_popup_header "$_version"
-    local _section
-    for _section in "${POTIONS_HELP_SECTIONS[@]}"; do
-      "help_section_${_section}"
-    done
-    render_popup_footer
   else
-    # Plain-text fallback for older installs where lib/help.sh is absent
-    echo ""
-    echo "Potions Keybindings"
-    echo "==================="
-    echo ""
-    echo "Zellij:"
-    echo "  Ctrl+a           Enter prefix mode"
-    echo "  Alt+h/j/k/l      Navigate panes"
-    echo "  Alt+d            Split pane right"
-    echo "  Alt+t / Alt+w    New tab / Close pane"
-    echo "  Alt+n / Alt+p    Next / previous tab"
-    echo "  Ctrl+a  |  -     Split right / down"
-    echo "  Ctrl+a  c x X    New tab / Close pane / Close tab"
-    echo "  Ctrl+a  n p      Next / previous tab"
-    echo "  Ctrl+a  S        Session manager"
-    echo ""
-    echo "Zsh:"
-    echo "  Ctrl+a / Ctrl+e  Beginning / end of line"
-    echo "  Ctrl+r           Reverse history search"
-    echo "  Ctrl+u / Ctrl+k  Clear to start / end"
-    echo "  Ctrl+w           Delete word backward"
-    echo ""
-    echo "Neovim:"
-    echo "  Ctrl+s           Save file"
-    echo "  Ctrl+n           Toggle NERDTree"
-    echo "  Space ff / fg    Find files / Live grep"
-    echo "  Space q / wq     Quit / Write and quit"
-    echo "  Space h / l      Previous / next buffer"
-    echo ""
-    echo "Full reference: ~/.potions/KEYMAPS.md"
-    echo ""
+    cmd_help
   fi
 }
 
-# Command: help
 cmd_help() {
-  if [ "$POTIONS_HELP_AVAILABLE" = true ]; then
-    local _version; _version=$(get_version)
-    detect_terminal_capabilities
-    if [ "${POTIONS_DISPLAY_WIDTH:-0}" -lt 72 ]; then
-      POTIONS_DISPLAY_WIDTH=72
-    fi
-    render_popup_header "$_version"
-    help_section_commands
-    echo ""
-    if [ "$POTIONS_HAS_COLOR" = true ]; then
-      printf "    ${POTIONS_COLOR_DIM}plugin install${POTIONS_NC}  [name]    Install plugins from Potionfile or specific plugin\n"
-      printf "    ${POTIONS_COLOR_DIM}plugin list${POTIONS_NC}               List installed plugins\n"
-      printf "    ${POTIONS_COLOR_DIM}plugin update${POTIONS_NC}  [name]     Update plugins\n"
-      printf "    ${POTIONS_COLOR_DIM}plugin status${POTIONS_NC}             Show plugin system status\n"
-    else
-      printf "    plugin install  [name]    Install plugins from Potionfile or specific plugin\n"
-      printf "    plugin list               List installed plugins\n"
-      printf "    plugin update  [name]     Update plugins\n"
-      printf "    plugin status             Show plugin system status\n"
-    fi
-    render_popup_footer
-  else
-    cat << EOF
-${BOLD}Potions CLI${NC} - Professional command-line interface for Potions
+  cat <<'EOF'
+Potions Desk
+  potions                     Open the desk in this terminal
+  potions desk                Open the project editor, scratchpad, shortcuts or diagnostics
+  potions keys                Browse and search keyboard shortcuts (also kb, keybindings)
+  potions keys --plain        Print the shortcut reference
 
-${BOLD}USAGE:${NC}
-    potions <command> [options]
+Installation
+  potions version             Show the installed version (also versions)
+  potions status              Show installation status
+  potions info                Show system information
+  potions doctor              Check installation health
+  potions update              Check for available updates
+  potions upgrade             Upgrade Potions
+  potions help                Print this command reference
 
-${BOLD}COMMANDS:${NC}
-    ${CYAN}upgrade${NC}           Upgrade Potions to the latest version
-    ${CYAN}update${NC}            Check if updates are available
-    ${CYAN}keybindings${NC}       Show keybindings popup (aliases: keys, kb)
-    ${CYAN}version${NC}           Show current Potions version
-    ${CYAN}versions${NC}          Alias for 'version'
-    ${CYAN}status${NC}            Show installation status
-    ${CYAN}info${NC}              Show system information
-    ${CYAN}doctor${NC}            Run health check on installation
-    ${CYAN}help${NC}              Show this help message
-
-${BOLD}PLUGIN COMMANDS:${NC}
-    ${CYAN}plugin install${NC} [name]   Install plugins from Potionfile or specific plugin
-    ${CYAN}plugin uninstall${NC} <name> Uninstall a plugin
-    ${CYAN}plugin list${NC}             List installed plugins
-    ${CYAN}plugin update${NC} [name]    Update plugins
-    ${CYAN}plugin status${NC}           Show plugin system status
-    ${CYAN}plugin activate${NC} <name>  Activate a plugin
-    ${CYAN}plugin deactivate${NC} <name> Deactivate a plugin
-    ${CYAN}plugin create${NC} <name>    Create a new plugin scaffold
-
-${BOLD}For more information, visit:${NC}
-    https://github.com/Rynaro/potions
-
+Plugins
+  potions plugin list                 List installed plugins
+  potions plugin status               Show plugin system status
+  potions plugin install [name]       Install from Potionfile or by name
+  potions plugin update [name]        Update plugins
+  potions plugin uninstall <name>     Remove a plugin
+  potions plugin activate <name>      Activate a plugin
+  potions plugin deactivate <name>    Deactivate a plugin
+  potions plugin create <name>        Create a plugin scaffold
 EOF
-  fi
 }
 
 # Command: plugin (delegates to plugins.sh)
@@ -704,7 +648,7 @@ cmd_plugin() {
 
 # Main command router
 main() {
-  local command="${1:-help}"
+  local command="${1:-desk}"
   
   case "$command" in
     upgrade)
@@ -714,8 +658,13 @@ main() {
     update)
       cmd_update
       ;;
+    desk)
+      if [ "$#" -gt 0 ]; then shift; fi
+      cmd_desk home "$@"
+      ;;
     keybindings|keys|kb)
-      cmd_keybindings
+      shift
+      cmd_desk keys "$@"
       ;;
     version|versions)
       cmd_version

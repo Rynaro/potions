@@ -2,6 +2,8 @@
 
 This document provides a unified reference for all keybindings across Zsh, Zellij, and Neovim to help understand and avoid conflicts.
 
+Run `potions keys` to search shortcuts in the terminal, or `potions keys --plain` to print the reference. In Zellij, press **Ctrl+a**, release it, then press **Space** to open the Potions desk.
+
 ---
 
 ## Quick Reference Table
@@ -31,6 +33,7 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 
 | Key | Action |
 |-----|--------|
+| `Space` | Open the Potions desk in a floating pane |
 | `c` | New tab |
 | `x` | Close pane |
 | `X` | Close tab |
@@ -39,7 +42,7 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 | `\|` | Split right |
 | `-` | Split down |
 | `=` / `E` / `T` / `M` / `V` | Cycle layouts (NextSwapLayout) |
-| `S` | Session manager |
+| `S` then `w` | Enter session mode and open the session manager |
 | `B` | Break pane into tab |
 | `R` | Rename tab |
 | `<` / `>` | Swap pane position (repeatable) |

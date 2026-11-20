@@ -86,6 +86,8 @@ The following files are tracked in `.checksums`:
 - `.version` - Version file
 - `.potions/.zshrc` - Zsh configuration
 - `.potions/bin/potions` - Potions binary
+- `.potions/lib/{desk,desk-actions,help}.sh` - Interactive desk, actions and shortcut reference
+- `.potions/zellij/config.kdl` - Managed keybindings, including the floating desk
 
 When modifying any of these files, you MUST update `.checksums`.
 

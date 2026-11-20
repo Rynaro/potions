@@ -241,6 +241,10 @@ test_bash_syntax() {
   assert_syntax_valid "$SCRIPT_DIR/migrate.sh" "migrate.sh syntax"
   assert_syntax_valid "$SCRIPT_DIR/drink.sh" "drink.sh syntax"
   assert_syntax_valid "$SCRIPT_DIR/packages/accessories.sh" "accessories.sh syntax"
+  assert_syntax_valid "$SCRIPT_DIR/.potions/bin/potions" "Potions CLI syntax"
+  for script in "$SCRIPT_DIR"/.potions/lib/*.sh; do
+    assert_syntax_valid "$script" "Potions library ${script##*/} syntax"
+  done
 
   # Common packages
   for script in "$SCRIPT_DIR"/packages/common/*.sh; do
@@ -323,15 +327,16 @@ test_config_validity() {
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_materials" ".zshrc has material/adjective word list"
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_alchemical_words" ".zshrc has alchemical word list"
 
-  # Check awk strip is present for session state annotation handling
-  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "awk '{print \$1}'" ".zshrc strips session state annotations"
-
   # Functional: verify composed session name for reference hostname
   if command -v zsh &>/dev/null; then
-    _session_name_result=$(HOSTNAME=server zsh -c '
-      source "$1/.potions/.zshrc" 2>/dev/null || true
-      _potions_zellij_session_name
-    ' _ "$SCRIPT_DIR")
+    _session_name_result=$(
+      fixture_home=$(mktemp -d)
+      trap 'rm -rf "$fixture_home"' EXIT
+      env HOME="$fixture_home" ZDOTDIR="$fixture_home" HOSTNAME=server zsh -fc '
+        source "$1/.potions/.zshrc" 2>/dev/null || true
+        _potions_zellij_session_name
+      ' _ "$SCRIPT_DIR"
+    )
     if [ "$_session_name_result" = "verdant-retort" ]; then
       log_success "Session naming: HOSTNAME=server → verdant-retort"
       TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -350,16 +355,6 @@ test_config_validity() {
   else
     log_success "Session naming functional test: skipped (zsh not in PATH)"
     TESTS_PASSED=$((TESTS_PASSED + 1))
-  fi
-
-  # Unit: verify awk pipeline treats hyphenated names as a single field
-  _awk_result=$(echo "verdant-retort RUNNING" | awk '{print $1}')
-  if [ "$_awk_result" = "verdant-retort" ]; then
-    log_success "awk pipeline: hyphenated session name is single field"
-    TESTS_PASSED=$((TESTS_PASSED + 1))
-  else
-    log_failure "awk pipeline: expected 'verdant-retort', got '$_awk_result'"
-    TESTS_FAILED=$((TESTS_FAILED + 1))
   fi
 
   # Check hardcoded potions-main session name is gone
@@ -652,6 +647,22 @@ main() {
   test_install_script
   test_common_packages
   test_upgrade_script
+  log_step "Upgrade Preservation"
+  if command -v git >/dev/null 2>&1; then
+    bash "$SCRIPT_DIR/scripts/test-upgrade-preservation.sh"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_skip "Upgrade integration test requires Git"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+  log_step "Potions Desk"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "$SCRIPT_DIR/scripts/test-desk.py"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_skip "Desk terminal tests require Python 3"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
   test_documentation
   test_platform_detection
 
