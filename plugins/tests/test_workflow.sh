@@ -10,6 +10,17 @@ export GIT_CONFIG_GLOBAL="$TEST_ROOT/gitconfig"
 export GIT_CONFIG_NOSYSTEM=1
 export GIT_ALLOW_PROTOCOL=file
 mkdir -p "$POTIONS_HOME/bin" "$TEST_ROOT/projects"
+
+# Only grep's no-match status satisfies a negative assertion.
+assert_no_match() {
+  local pattern="$1" status=0
+  grep -Eq -- "$pattern" || status=$?
+  if [ "$status" -ne 1 ]; then
+    printf 'Expected no match for %s (grep exit %s)\n' "$pattern" "$status" >&2
+    return 1
+  fi
+}
+
 cp "$REPO_ROOT/.potions/bin/potions" "$POTIONS_HOME/bin/"
 source "$REPO_ROOT/scripts/install-plugin-runtime.sh"
 install_plugin_runtime "$REPO_ROOT" "$POTIONS_HOME"
@@ -35,8 +46,8 @@ fi
 bash "$CLI" plugin uninstall demo >/dev/null
 [ -f "$TEST_ROOT/projects/demo/config/init.zsh" ]
 [ ! -e "$POTIONS_HOME/plugins/demo" ]
-! grep -q '^demo|' "$POTIONS_HOME/Potionfile.lock"
-! grep -q '^demo:' "$POTIONS_HOME/plugins/.state"
+assert_no_match '^demo[|]' < "$POTIONS_HOME/Potionfile.lock"
+assert_no_match '^demo:' < "$POTIONS_HOME/plugins/.state"
 if bash "$CLI" plugin create ../escape >/dev/null 2>&1; then exit 1; fi
 if bash "$CLI" plugin install https://example.com/bad/repo --trust >/dev/null 2>&1; then exit 1; fi
 # Redirect a GitHub URL to a real local Git repository without network access.
@@ -116,12 +127,12 @@ EOF
 date +%s > "$POTIONS_HOME/.registry/.timestamp"
 search_output=$(bash "$CLI" plugin search '[' 2>&1)
 printf '%s\n' "$search_output" | grep -Fx '  demo' >/dev/null
-! printf '%s\n' "$search_output" | grep -q 'Directory .* already exists'
+assert_no_match 'Directory .* already exists' <<< "$search_output"
 no_match_output=$(bash "$CLI" plugin search '.*' 2>&1)
 printf '%s\n' "$no_match_output" | grep -F 'No plugins found matching: .*' >/dev/null
 info_output=$(bash "$CLI" plugin info demo 2>&1)
 printf '%s\n' "$info_output" | grep -F 'Catalog: Listed in Potions Shelf' >/dev/null
-! printf '%s\n' "$info_output" | grep -E 'Verified by Potions Quality Assurance|Safe to install|Checksum URL:' >/dev/null
+assert_no_match 'Verified by Potions Quality Assurance|Safe to install|Checksum URL:' <<< "$info_output"
 if bash "$CLI" plugin install demo </dev/null >/dev/null 2>&1; then exit 1; fi
 [ ! -e "$POTIONS_HOME/plugins/demo" ]
 bash "$CLI" plugin install demo --trust >/dev/null 2>&1
@@ -132,8 +143,8 @@ mkdir -p "$TEST_ROOT/bin"
 cat > "$TEST_ROOT/refreshed-index.json" <<'EOF'
 {"version":"1.0.0","plugins":[],"categories":{}}
 EOF
-cat > "$TEST_ROOT/bin/curl" <<'EOF'
-#!/bin/bash
+printf '#!%s\n' "$BASH" > "$TEST_ROOT/bin/curl"
+cat >> "$TEST_ROOT/bin/curl" <<'EOF'
 set -eu
 url=""
 output=""
