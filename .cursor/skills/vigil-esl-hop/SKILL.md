@@ -1,0 +1,1 @@
+../../../.eidolons/vigil/skills/esl-hop/SKILL.md

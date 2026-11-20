@@ -1,0 +1,1 @@
+../../../.eidolons/vigil/skills/verify/SKILL.md

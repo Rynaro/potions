@@ -1,0 +1,1 @@
+../../../.eidolons/spectra/skills/verify-incoming/SKILL.md

@@ -1,0 +1,1 @@
+../../../.eidolons/spectra/skills/discover/SKILL.md

@@ -1,0 +1,1 @@
+../../../.eidolons/forge/skills/self-consistency/SKILL.md

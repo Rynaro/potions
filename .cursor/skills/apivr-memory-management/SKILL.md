@@ -1,0 +1,1 @@
+../../../.eidolons/apivr/skills/memory-management/SKILL.md
