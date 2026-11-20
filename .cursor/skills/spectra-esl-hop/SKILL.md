@@ -1,1 +1,0 @@
-../../../.eidolons/spectra/skills/esl-hop/SKILL.md

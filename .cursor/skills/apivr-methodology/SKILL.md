@@ -1,1 +1,0 @@
-../../../.eidolons/apivr/skills/methodology/SKILL.md
