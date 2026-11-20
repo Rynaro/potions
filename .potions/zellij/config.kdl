@@ -88,6 +88,19 @@ keybinds clear-defaults=true {
             }
         }
 
+        bind "P" {
+            SwitchToMode "Normal"
+            Run "potions" "projects" {
+                floating true
+                name "Potions Projects"
+                x "7%"
+                y "10%"
+                width "86%"
+                height "80%"
+                close_on_exit true
+            }
+        }
+
         // Pane navigation
         bind "h" { MoveFocus "Left"; SwitchToMode "Normal"; }
         bind "j" { MoveFocus "Down"; SwitchToMode "Normal"; }

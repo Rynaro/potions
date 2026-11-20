@@ -29,6 +29,11 @@ printf '%s\n' 'new bindings' > "$templates/zellij/config.kdl"
 printf '%s\n' 'Linux defaults' > "$templates/config/linux.zsh"
 printf '%s\n' 'machine defaults' > "$templates/config/macos.zsh"
 ln -s "$test_home/unavailable-config" "$install_dir/config/macos.zsh"
+project="$test_home/field notes"
+missing_project="$test_home/old project"
+mkdir -p "$project" "$install_dir/projects.d"
+ln -s "$project" "$install_dir/projects.d/live.pin"
+ln -s "$missing_project" "$install_dir/projects.d/missing.pin"
 
 git -c init.defaultBranch=main init -q "$upstream"
 git -C "$upstream" add -f .version .potions
@@ -46,10 +51,32 @@ run_upgrade() {
   fi
 }
 
-run_upgrade
+# Exercise the fallback that runs on machines without rsync.
+cat > "$test_dir/without-rsync.bash" <<'EOF'
+command() {
+  if [[ "$1" = -v && "$2" = rsync ]]; then return 1; fi
+  builtin command "$@"
+}
+cp() {
+  if [[ "${FAIL_BACKUP:-}" = 1 && "$1" = -RP && "$2" = */projects.d ]]; then return 1; fi
+  builtin command cp "$@"
+}
+EOF
+BASH_ENV="$test_dir/without-rsync.bash" run_upgrade
 backups=("$install_dir"/backups/backup-*)
 [ "${#backups[@]}" -eq 1 ]
 [ -d "${backups[0]}" ]
+initial_backup="${backups[0]}"
+expected_tip=$(printf '  cp -RP "$HOME/.potions/backups/%s/." "$HOME/.potions/"' "${initial_backup##*/}")
+grep -Fxq "$expected_tip" "$test_dir/log"
+assert_pins() {
+  [ "$(readlink "$1/projects.d/live.pin")" = "$project" ]
+  [ "$(readlink "$1/projects.d/missing.pin")" = "$missing_project" ]
+  [ ! -e "$missing_project" ]
+  [ -z "$(ls -A "$project")" ]
+}
+assert_pins "$install_dir"
+assert_pins "$initial_backup"
 for file in config/{aliases,local,secure}.zsh nvim/user.vim zellij/user.kdl .zsh_aliases notes.md; do
   printf 'user %s\n' "$file" | cmp - "$install_dir/$file"
   cmp "$install_dir/$file" "${backups[0]}/$file"
@@ -84,4 +111,21 @@ backups=("$install_dir"/backups/backup-*)
 [ ! -e "$install_dir/backups/backup-20000101-000000" ]
 [ -d "$install_dir/backups/backup-20000102-000000" ]
 [ -d "$test_dir/home" ]
+# Apply the printed restore command once with a missing pin and once with both
+# destination symlinks in place. Restoring must also recover the hidden version.
+rm "$install_dir/projects.d/missing.pin"
+for attempt in 1 2; do
+  cp -RP "$initial_backup/." "$install_dir/"
+  assert_pins "$install_dir"
+  printf '%s\n' '1.9.0' | cmp - "$install_dir/.version"
+done
+# A failed copy must stop the upgrade and leave the successful snapshots intact.
+if FAIL_BACKUP=1 BASH_ENV="$test_dir/without-rsync.bash" run_upgrade >/dev/null 2>&1; then
+  echo 'Upgrade continued after a failed backup.' >&2
+  exit 1
+fi
+grep -Fq 'Could not finish the backup' "$test_dir/log"
+backups=("$install_dir"/backups/backup-*)
+[ "${#backups[@]}" -eq 5 ]
+printf '%s\n' '1.9.0' | cmp - "$install_dir/.version"
 printf '%s\n' 'Upgrade preserved user files, installed new defaults and skipped a repeat run.'

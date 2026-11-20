@@ -289,8 +289,25 @@ check_upgrade_needed() {
   fi
 }
 
+# Preserve links without copying the directories they point to.
+copy_backup_files() {
+  local entry
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -av --exclude='.repo' --exclude='backups' "$POTIONS_HOME/" "$BACKUP_DIR/"
+    return
+  fi
+  (
+    shopt -s dotglob nullglob
+    for entry in "$POTIONS_HOME"/*; do
+      case "${entry##*/}" in .repo|backups) continue ;; esac
+      cp -RP "$entry" "$BACKUP_DIR/" || return 1
+    done
+  )
+}
+
 # Create backup of current installation
 create_backup() {
+  local copy_status=0
   log_step "Creating backup"
   
   mkdir -p "$POTIONS_BACKUPS_DIR"
@@ -300,32 +317,16 @@ create_backup() {
   if [ -d "$POTIONS_HOME" ]; then
     log_info "Backing up configuration files..."
     
-    # Use rsync if available for better exclusion control
-    if command -v rsync &> /dev/null; then
-      if [ "$HAS_COLOR" = true ]; then
-        rsync -av --exclude='.repo' --exclude='backups' "$POTIONS_HOME/" "$BACKUP_DIR/" > /dev/null 2>&1 &
-        spinner $! "Copying files"
-      else
-        rsync -av --exclude='.repo' --exclude='backups' "$POTIONS_HOME/" "$BACKUP_DIR/" > /dev/null 2>&1
-        echo "[OK] Backup created"
-      fi
+    if [ "$HAS_COLOR" = true ]; then
+      copy_backup_files >/dev/null &
+      spinner $! "Copying files" || copy_status=$?
     else
-      # Fallback: copy manually excluding .repo and backups
-      if [ "$HAS_COLOR" = true ]; then
-        (
-          find "$POTIONS_HOME" -mindepth 1 -maxdepth 1 \
-            -not -name '.repo' \
-            -not -name 'backups' \
-            -exec cp -r {} "$BACKUP_DIR/" \; 2>/dev/null
-        ) &
-        spinner $! "Copying files"
-      else
-        find "$POTIONS_HOME" -mindepth 1 -maxdepth 1 \
-          -not -name '.repo' \
-          -not -name 'backups' \
-          -exec cp -r {} "$BACKUP_DIR/" \; 2>/dev/null
-        echo "[OK] Backup created"
-      fi
+      copy_backup_files >/dev/null || copy_status=$?
+    fi
+    if [ "$copy_status" -ne 0 ]; then
+      log_error "Could not finish the backup. Upgrade stopped."
+      rm -rf -- "$BACKUP_DIR"
+      return "$copy_status"
     fi
     
     log_success "Backup created at ${BACKUP_DIR#$HOME/}"
@@ -601,6 +602,8 @@ main() {
   cleanup_old_backups
   
   # Success message
+  local restore_command
+  printf -v restore_command 'cp -RP "$HOME/.potions/backups/%s/." "$HOME/.potions/"' "${BACKUP_DIR##*/}"
   echo ""
   if [ "$HAS_COLOR" = true ]; then
     echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -613,7 +616,7 @@ main() {
     echo -e "  ${CYAN}⟹${NC} Restart your terminal or run ${BOLD}exec zsh${NC}"
     echo ""
     echo -e "${YELLOW}Tip:${NC} If something went wrong, restore from backup:"
-    echo -e "  ${CYAN}cp -r ${BACKUP_DIR#$HOME/~}/* ~/.potions/${NC}"
+    echo -e "  ${CYAN}${restore_command}${NC}"
     echo ""
   else
     echo "========================================"
@@ -626,7 +629,7 @@ main() {
     echo "  - Restart your terminal or run 'exec zsh'"
     echo ""
     echo "Tip: If something went wrong, restore from backup:"
-    echo "  cp -r ${BACKUP_DIR#$HOME/~}/* ~/.potions/"
+    echo "  ${restore_command}"
     echo ""
   fi
 }

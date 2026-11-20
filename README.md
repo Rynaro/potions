@@ -36,6 +36,21 @@ The scratchpad lives at `$POTIONS_HOME/notes.md` (normally `~/.potions/notes.md`
 
 Press `/` to search Zellij, Zsh, and Neovim shortcuts by tool, key, or action. For example, search for `split` to find the pane controls. Press **F1** in Zellij or run `potions keys` to open the browser directly or `potions keys --plain` to print the reference.
 
+### Pinned projects
+
+Pin a project folder once, then open **Projects** from another directory. In Zellij, press **Ctrl+a**, release it, then press **Shift+p** to open Projects over the active pane.
+
+```sh
+cd "$HOME/work/Field Notes"
+potions projects pin
+cd "$HOME"
+potions projects
+```
+
+Select **Field Notes** and press **Enter**. The Desk now opens its editor, Git view, and new Zellij tabs in that folder. Closing the Desk returns you to the shell directory where you launched it.
+
+In **Projects**, press `p` to pin the Desk’s current folder and `u` to remove the selected bookmark, even if its folder has moved or been deleted. From the shell, use `potions projects list` to print pinned paths or `potions projects unpin "$HOME/work/Field Notes"` to remove one.
+
 ## 🛠️ What's Installed
 
 - **Zsh**: Modern shell with autosuggestions and syntax highlighting

@@ -47,6 +47,33 @@ _desk_text() {
   _desk_put "$1" "$2" "$3" "$clipped"
 }
 
+_desk_clip_path() {
+  local path="$1" limit="$2" head_limit cells=0 char tail_start ascii='^[ -~]$' home_marker='~'
+  if [ -n "$display_home" ]; then
+    case "$path" in
+      "$display_home"|"$physical_home") path="$home_marker" ;;
+      "$display_home/"*) path="$home_marker/${path#"$display_home/"}" ;;
+      "$physical_home/"*) path="$home_marker/${path#"$physical_home/"}" ;;
+    esac
+  fi
+  path="${path//[[:cntrl:]]/ }"
+  _desk_clip "$path" "$limit"
+  if [ "$clipped" = "$path" ] || [ "$limit" -lt 5 ]; then return 0; fi
+
+  # Keep the start of the path and more cells for its trailing components.
+  head_limit=$(((limit - 3) / 3))
+  tail_start="${#path}"
+  while [ "$tail_start" -gt 0 ]; do
+    char="${path:tail_start-1:1}"
+    if [[ "$char" =~ $ascii ]]; then cells=$((cells + 1))
+    else cells=$((cells + 2)); fi
+    [ "$cells" -le $((limit - head_limit - 3)) ] || break
+    tail_start=$((tail_start - 1))
+  done
+  _desk_clip "$path" "$head_limit"
+  clipped="$clipped...${path:tail_start}"
+}
+
 _desk_size() {
   local dims
   dims=$(stty size 2>/dev/null) || return 1
@@ -60,6 +87,7 @@ _desk_size() {
   [ "$height" -le 23 ] || height=23
   header_rows=2
   if [ "$view" = home ] && [ "$width" -ge 59 ] && [ "$rows" -ge 16 ]; then header_rows=4; fi
+  if [ "$view" = projects ] && [ "$rows" -ge 9 ] && [ -n "$project_notice" ]; then header_rows=3; fi
   local home_height=$((${#action_ids[@]} + header_rows + 5))
   if [ "$view" = home ] && [ "$height" -gt "$home_height" ]; then height=$home_height; fi
   left=$(((cols - width) / 2 + 1))
@@ -97,6 +125,56 @@ _desk_load_keys() {
   view=keys
 }
 
+_desk_load_projects() {
+  local path
+  project_paths=()
+  while IFS= read -r -d '' path; do
+    if [[ "$path" != /* ]]; then
+      project_notice='Cannot read pins.'
+      break
+    fi
+    project_paths+=("$path")
+  done < <(desk_project_paths 2>/dev/null || printf '\0')
+}
+
+_desk_show_projects() {
+  view=projects
+  project_notice=''
+  project_cursor=0
+  offset=0
+  _desk_load_projects
+}
+
+_desk_change_pins() {
+  local message cwd i
+  case "$1" in
+    p)
+      if message=$(desk_project_pin 2>&1); then
+        project_notice='Pinned current folder.'
+        _desk_load_projects
+        cwd=$(pwd -P) || return 0
+        for i in "${!project_paths[@]}"; do
+          if [ "${project_paths[i]}" = "$cwd" ]; then
+            project_cursor="$i"
+            break
+          fi
+        done
+      else
+        project_notice="${message:-Could not pin this folder.}"
+      fi
+      ;;
+    u)
+      if [ "${#project_paths[@]}" -eq 0 ]; then return 0; fi
+      if message=$(desk_project_unpin "${project_paths[project_cursor]}" 2>&1); then
+        project_notice='Project unpinned.'
+        _desk_load_projects
+      else
+        project_notice="${message:-Could not unpin this project.}"
+      fi
+      ;;
+  esac
+}
+
 _desk_load_report() {
   local line
   lines=()
@@ -129,13 +207,19 @@ _desk_move() {
   case "$view" in
     home) home_cursor=$((home_cursor + step)) ;;
     keys) key_cursor=$((key_cursor + step)) ;;
+    projects)
+      if [ "${#project_paths[@]}" -gt 0 ]; then
+        project_cursor=$((project_cursor + step))
+        project_notice=''
+      fi
+      ;;
     *) offset=$((offset + step)) ;;
   esac
 }
 
 _desk_render() {
   local heading context footer total selected=-1 item i y row color label
-  local right bottom inner rule space marker info header_x header_y section_y secondary
+  local right bottom inner rule space marker info header_x header_y section_y secondary context_limit
   frame=$'\033[H\033[2J'
   if [ "$cols" -lt 24 ] || [ "$rows" -lt 8 ]; then
     _desk_text 1 1 "$bold" 'Potions Desk' "$cols"
@@ -147,13 +231,21 @@ _desk_render() {
   right=$((left + width - 1))
   bottom=$((top + height - 1))
   inner=$((width - 2))
+  context_limit=$((width - 5))
+  if [ "$header_rows" -eq 4 ]; then context_limit=$((context_limit - 8)); fi
   printf -v space '%*s' "$inner" ''
   rule="${space// /$horizontal}"
   case "$view" in
     home)
       heading='Potions Desk'
-      context="Workspace  $workspace"
-      [ -z "$notice" ] || context="$notice"
+      if [ -n "$notice" ]; then
+        context="$notice"
+      else
+        context=''
+        if [ "$width" -ge 35 ]; then context='Workspace  '; fi
+        _desk_clip_path "$PWD" $((context_limit - ${#context}))
+        context+="$clipped"
+      fi
       total=${#action_ids[@]}
       selected=$home_cursor
       footer='Up/Down or j/k   Enter Open   / Shortcuts   q Close'
@@ -174,6 +266,17 @@ _desk_render() {
         [ "$body_width" -ge 56 ] || footer='/ Search  Enter Details  Esc Back'
       fi
       ;;
+    projects)
+      heading='Projects'
+      _desk_clip_path "$PWD" $((context_limit - 9))
+      context="Current: $clipped"
+      if [ "$header_rows" -eq 2 ] && [ -n "$project_notice" ]; then context="$project_notice"; fi
+      total=${#project_paths[@]}
+      selected=$project_cursor
+      footer='j/k Move   Enter Switch   p Pin   u Unpin   Esc Back   q Close'
+      if [ "$width" -lt 65 ]; then footer='Enter Switch  p Pin  u Unpin  Esc  q'; fi
+      if [ "$total" -eq 0 ]; then footer='p Pin current folder   Esc Back   q Close'; fi
+      ;;
     *)
       if [ "$wrap_width" -ne "$body_width" ]; then _desk_wrap; fi
       total=${#wrapped[@]}
@@ -189,10 +292,14 @@ _desk_render() {
       ;;
   esac
 
-  if [ "$view" = home ] || [ "$view" = keys ]; then
+  if [ "$view" = home ] || [ "$view" = keys ] || [ "$view" = projects ]; then
     [ "$selected" -lt "$total" ] || selected=$((total - 1))
     [ "$selected" -ge 0 ] || selected=0
-    if [ "$view" = home ]; then home_cursor=$selected; else key_cursor=$selected; fi
+    case "$view" in
+      home) home_cursor=$selected ;;
+      keys) key_cursor=$selected ;;
+      projects) project_cursor=$selected ;;
+    esac
     [ "$offset" -le "$selected" ] || offset=$selected
     [ "$offset" -gt $((selected - visible)) ] || offset=$((selected - visible + 1))
   fi
@@ -224,11 +331,14 @@ _desk_render() {
     _desk_text "$header_y" $((right - ${#info} - 2)) "$muted" "$info" "${#info}"
   fi
   _desk_text $((header_y + 1)) "$header_x" "$muted" "$context" $((right - header_x - 1))
+  if [ "$view" = projects ] && [ "$header_rows" -eq 3 ]; then
+    _desk_text $((header_y + 2)) "$header_x" "$muted" "$project_notice" "$context_limit"
+  fi
 
   for ((row=0; row<visible && offset+row<total; row++)); do
     i=$((offset + row))
     y=$((section_y + 1 + row))
-    if [ "$view" = home ] || [ "$view" = keys ]; then
+    if [ "$selected" -ge 0 ]; then
       marker='  '; color=''; secondary=$muted
       if [ "$i" -eq "$selected" ]; then
         color=$highlight; secondary=$highlight; marker="$pointer "
@@ -241,6 +351,9 @@ _desk_render() {
         if [ "$width" -ge 59 ]; then
           _desk_text "$y" $((left + 27)) "$secondary" "${action_hints[i]}" $((width - 30))
         fi
+      elif [ "$view" = projects ]; then
+        _desk_clip_path "${project_paths[i]}" "$body_width"
+        _desk_put "$y" $((left + 4)) "$color" "$clipped"
       else
         item="${matches[i]}"
         if [ "$width" -ge 66 ]; then
@@ -258,6 +371,8 @@ _desk_render() {
   done
   if [ "$view" = keys ] && [ "$total" -eq 0 ]; then
     _desk_text $((section_y + 1)) $((left + 3)) '' 'No matching shortcuts' "$body_width"
+  elif [ "$view" = projects ] && [ "$total" -eq 0 ]; then
+    _desk_text $((section_y + 1)) $((left + 3)) '' 'No projects pinned' "$body_width"
   fi
   if [ "$total" -gt "$visible" ]; then
     local last=$((offset + visible))
@@ -269,6 +384,10 @@ _desk_render() {
     case "$view" in
       home) footer='j/k  Enter  /  q' ;;
       keys) if [ "$editing" = true ]; then footer='Enter Apply  Esc Clear'; else footer='j/k  /  Enter  Esc  q'; fi ;;
+      projects)
+        if [ "$total" -eq 0 ]; then footer='p Pin  Esc Back  q'
+        else footer='Enter p+ u Unpin q'; fi
+        ;;
       *) footer='j/k  Esc Back  q' ;;
     esac
   fi
@@ -283,6 +402,7 @@ _desk_activate() {
       action="${action_ids[home_cursor]}"
       case "$action" in
         keys) query=''; _desk_load_keys ;;
+        projects) _desk_show_projects ;;
         git|doctor) _desk_load_report "$action" ;;
         tab)
           if notice=$(desk_new_tab 2>&1); then
@@ -311,6 +431,19 @@ _desk_activate() {
         view=detail
         offset=0
         wrap_width=0
+      fi
+      ;;
+    projects)
+      if [ "${#project_paths[@]}" -eq 0 ]; then return 0; fi
+      if builtin cd -P -- "${project_paths[project_cursor]}" >/dev/null 2>&1; then
+        workspace="${PWD##*/}"
+        [ -n "$workspace" ] || workspace=/
+        view=home
+        home_cursor=0
+        offset=0
+        notice=''
+      else
+        project_notice='Project unavailable. Press u to unpin.'
       fi
       ;;
   esac
@@ -345,6 +478,8 @@ _desk_escape() {
 
 _desk_run() {
   local view=home editing=false finished=false query='' notice='' offset=0 home_cursor=0 key_cursor=0
+  local project_cursor=0 project_notice='' project_paths=()
+  local display_home="${HOME%/}" physical_home
   local detail_index=0 wrap_width=0 redraw=true key='' read_started
   local rows cols width height top left visible body_width header_rows frame clipped version workspace
   local sections=() key_names=() descriptions=() matches=() lines=() wrapped=()
@@ -356,6 +491,9 @@ _desk_run() {
     action_titles+=('New terminal tab')
     action_hints+=('Open a shell in this directory')
   fi
+  action_ids+=(projects)
+  action_titles+=('Projects')
+  action_hints+=('Pin and switch folders')
   local accent='' muted='' bold='' highlight=''
   local tl='+' tr='+' bl='+' br='+' horizontal='-' vertical='|' join_left='+' join_right='+' pointer='>'
   detect_terminal_capabilities
@@ -369,9 +507,16 @@ _desk_run() {
   fi
   workspace="${PWD##*/}"
   [ -n "$workspace" ] || workspace=/
+  if [ -n "$display_home" ]; then
+    physical_home=$(builtin cd -P -- "$display_home" 2>/dev/null && printf '%s/' "$PWD") || physical_home="$display_home"
+    physical_home="${physical_home%/}"
+  fi
   version="v$(get_version)"
   _desk_clip "$version" 14; version=$clipped
-  if [ "${1:-home}" = keys ]; then _desk_load_keys; fi
+  case "${1:-home}" in
+    keys) _desk_load_keys ;;
+    projects) _desk_show_projects ;;
+  esac
   # Bash may run traps while read is still using the tty. Repaint or restore
   # the terminal only after read has returned and restored its own settings.
   trap 'redraw=true' WINCH
@@ -432,6 +577,7 @@ _desk_run() {
           keys) editing=true ;;
         esac
         ;;
+      p|u) if [ "$view" = projects ]; then _desk_change_pins "$key"; fi ;;
       UP|k) _desk_move -1 ;;
       DOWN|j) _desk_move 1 ;;
       PAGE_UP) _desk_move $((-visible)) ;;

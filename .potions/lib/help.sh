@@ -20,6 +20,7 @@ detect_terminal_capabilities() {
 desk_shortcuts() {
   cat <<'SHORTCUTS'
 Zellij	Ctrl+a Space	Open Potions Desk
+Zellij	Ctrl+a P	Browse pinned projects
 Zellij	Ctrl+a	Enter prefix mode
 Zellij	F1 / Ctrl+a ?	Open the searchable shortcut browser
 Zellij	Alt+/	Open the shortcut browser (macOS requires Option as Meta)
