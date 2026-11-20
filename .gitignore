@@ -118,6 +118,7 @@
 !.potions/lib/help.sh
 !.potions/lib/desk.sh
 !.potions/lib/desk-actions.sh
+!.potions/lib/projects.sh
 
 # Allow theme system library (resolver, state, registry, generator, manager)
 !.potions/lib/theme

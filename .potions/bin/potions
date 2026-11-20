@@ -32,6 +32,7 @@ fi
 
 # Configuration
 POTIONS_HOME="${POTIONS_HOME:-$HOME/.potions}"
+[[ "$POTIONS_HOME" == /* ]] || POTIONS_HOME="${PWD%/}/$POTIONS_HOME"
 POTIONS_REPO_URL="https://github.com/Rynaro/potions.git"
 POTIONS_REPO_BRANCH="main"
 POTIONS_REPO_DIR="$POTIONS_HOME/.repo"
@@ -40,6 +41,8 @@ POTIONS_BACKUPS_DIR="$POTIONS_HOME/backups"
 # Get script directory (for finding upgrade.sh when running from repo)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd 2>/dev/null || echo "")"
+DESK_LIB_DIR="$SCRIPT_DIR/../lib"
+[ -r "$DESK_LIB_DIR/help.sh" ] || DESK_LIB_DIR="$POTIONS_HOME/lib"
 
 # Platform detection functions
 is_macos() {
@@ -573,7 +576,7 @@ cmd_doctor() {
 # Interactive entry points share a printable fallback for pipelines, older
 # installations and terminals without cursor addressing.
 cmd_desk() {
-  local page="$1" plain=false lib_dir="$SCRIPT_DIR/../lib"
+  local page="$1" plain=false lib_dir="$DESK_LIB_DIR"
   shift
   if [ "$#" -eq 1 ] && [ "$1" = "--plain" ]; then
     plain=true
@@ -582,16 +585,25 @@ cmd_desk() {
     return 2
   fi
 
-  [ -r "$lib_dir/help.sh" ] || lib_dir="$POTIONS_HOME/lib"
   if [ -r "$lib_dir/help.sh" ]; then
     source "$lib_dir/help.sh"
   fi
+  if [ -r "$lib_dir/projects.sh" ]; then
+    source "$lib_dir/projects.sh"
+  fi
 
   if [ "$plain" = false ] && [ -t 0 ] && [ -t 1 ] && [ "${TERM:-dumb}" != dumb ] &&
-     declare -F desk_shortcuts >/dev/null && [ -r "$lib_dir/desk.sh" ] && [ -r "$lib_dir/desk-actions.sh" ]; then
+     declare -F desk_project_paths >/dev/null && declare -F desk_shortcuts >/dev/null &&
+     [ -r "$lib_dir/desk.sh" ] && [ -r "$lib_dir/desk-actions.sh" ]; then
     source "$lib_dir/desk-actions.sh"
     source "$lib_dir/desk.sh"
     desk_open "$page"
+  elif [ "$page" = projects ]; then
+    if ! declare -F desk_project_list >/dev/null; then
+      printf 'Project library is missing. Run potions upgrade to restore it.\n' >&2
+      return 1
+    fi
+    desk_project_list
   elif [ "$page" = keys ]; then
     printf 'Potions keyboard shortcuts\n'
     if declare -F print_shortcuts >/dev/null; then
@@ -609,11 +621,35 @@ cmd_desk() {
   fi
 }
 
+cmd_projects() {
+  case "${1-}" in
+    list)
+      shift
+      cmd_desk projects --plain "$@"
+      ;;
+    pin|unpin)
+      if [ ! -r "$DESK_LIB_DIR/projects.sh" ]; then
+        printf 'Project library is missing. Run potions upgrade to restore it.\n' >&2
+        return 1
+      fi
+      source "$DESK_LIB_DIR/projects.sh"
+      local action="$1"
+      shift
+      "desk_project_$action" "$@"
+      ;;
+    *) cmd_desk projects "$@" ;;
+  esac
+}
+
 cmd_help() {
   cat <<'EOF'
 Potions Desk
   potions                     Open the desk in this terminal
   potions desk                Open the project editor, scratchpad, shortcuts or diagnostics
+  potions projects            Browse pinned directories (prints paths in a pipeline)
+  potions projects list       Print pinned paths, one per line (also --plain)
+  potions projects pin [DIR]  Pin a directory, defaulting to the current directory
+  potions projects unpin PATH Remove the physical path shown by projects list
   potions keys                Browse and search keyboard shortcuts (also kb, keybindings)
   potions keys --plain        Print the shortcut reference
 
@@ -759,6 +795,10 @@ main() {
     keybindings|keys|kb)
       shift
       cmd_desk keys "$@"
+      ;;
+    projects)
+      shift
+      cmd_projects "$@"
       ;;
     version|versions)
       cmd_version

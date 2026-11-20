@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Actions run from the directory in which the Desk was opened.
+# Actions run from the Desk's active project directory.
 desk_working_tree() {
   if ! command -v git >/dev/null 2>&1; then
     printf '%s\n' 'Git is unavailable. Install Git to see changes here.'

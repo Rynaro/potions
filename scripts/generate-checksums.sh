@@ -72,6 +72,7 @@ CRITICAL_FILES=(
   ".potions/lib/desk.sh"
   ".potions/lib/desk-actions.sh"
   ".potions/lib/help.sh"
+  ".potions/lib/projects.sh"
   ".potions/zellij/config.kdl"
 )
 

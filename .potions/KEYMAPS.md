@@ -36,6 +36,7 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 | Key | Action |
 |-----|--------|
 | `Space` | Open the Potions desk in a floating pane |
+| `P` | Browse pinned projects in a floating pane |
 | `c` | New tab |
 | `x` | Close pane |
 | `X` | Close tab |

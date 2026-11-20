@@ -18,6 +18,7 @@ PREFIX  ─  Ctrl+a, then…   (universal — always works)
                B break into tab
   Layout       = / E / T / M / V  (cycle)
   Session      S  ·  Esc cancel
+  Projects     P  browse pinned directories
   Help         ?  open this cheatsheet
   Send ^A      Ctrl+a (twice)
 
