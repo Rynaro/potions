@@ -112,10 +112,12 @@
 !.potions/bin/
 !.potions/bin/potions
 
-# Allow help library
+# Potions Desk and its shortcut catalog
 !.potions/lib
 !.potions/lib/
 !.potions/lib/help.sh
+!.potions/lib/desk.sh
+!.potions/lib/desk-actions.sh
 
 # Allow theme system library (resolver, state, registry, generator, manager)
 !.potions/lib/theme
@@ -170,6 +172,7 @@
 !scripts
 !scripts/
 !scripts/*.sh
+!scripts/test-desk.py
 
 # GitHub Actions workflows
 !.github

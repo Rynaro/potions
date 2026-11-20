@@ -53,27 +53,15 @@ keybinds clear-defaults=true {
         bind "Alt p" { GoToPreviousTab; }            // Cmd+Shift+[ → prev tab
         bind "Alt Enter" { ToggleFocusFullscreen; }  // Cmd+Return  → toggle fullscreen
 
-        // Floating cheatsheet (also bound to `?` in tmux mode).
-        // Wrapped in `sh -lc` so the shell expands `~` — zellij's Run does not.
-        // `less` exits on `q`; close_on_exit removes the floating pane so the
-        // same shortcut re-opens cleanly without stacking duplicates.
-        bind "Alt /" {
-            Run "sh" "-lc" "less -R ~/.potions/zellij/CHEATSHEET.md" {
+        // The same shortcut browser is available with Ctrl+a then ?.
+        bind "F1" "Alt /" {
+            Run "potions" "keys" {
                 floating true
-                name "Cheatsheet"
-                close_on_exit true
-            }
-        }
-
-        // Universal, modifier-free cheatsheet key. F1 reaches the application on
-        // every platform with no terminal setup — unlike Alt+/ which needs
-        // Option-as-Meta on macOS. (Ctrl+a then ? also opens it everywhere.)
-        // This is the always-available "what do I press?" key the compact footer
-        // can't spell out on its own.
-        bind "F1" {
-            Run "sh" "-lc" "less -R ~/.potions/zellij/CHEATSHEET.md" {
-                floating true
-                name "Cheatsheet"
+                name "Keyboard shortcuts"
+                x "7%"
+                y "10%"
+                width "86%"
+                height "80%"
                 close_on_exit true
             }
         }
@@ -87,6 +75,19 @@ keybinds clear-defaults=true {
 
     // Tmux mode: all prefix-based keybindings
     tmux {
+        bind "Space" {
+            SwitchToMode "Normal"
+            Run "potions" "desk" {
+                floating true
+                name "Potions Desk"
+                x "7%"
+                y "10%"
+                width "86%"
+                height "80%"
+                close_on_exit true
+            }
+        }
+
         // Pane navigation
         bind "h" { MoveFocus "Left"; SwitchToMode "Normal"; }
         bind "j" { MoveFocus "Down"; SwitchToMode "Normal"; }
@@ -164,12 +165,16 @@ keybinds clear-defaults=true {
 
         // Floating cheatsheet
         bind "?" {
-            Run "sh" "-lc" "less -R ~/.potions/zellij/CHEATSHEET.md" {
+            SwitchToMode "Normal"
+            Run "potions" "keys" {
                 floating true
-                name "Cheatsheet"
+                name "Keyboard shortcuts"
+                x "7%"
+                y "10%"
+                width "86%"
+                height "80%"
                 close_on_exit true
             }
-            SwitchToMode "Normal";
         }
 
         // Send Ctrl+a to the application (press Ctrl+a twice)

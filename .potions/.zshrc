@@ -79,7 +79,7 @@ fi
 
 # Neovim as the default editor
 export PATH="$HOME/.neovim/bin:$PATH"
-export EDITOR=nvim
+export EDITOR="${EDITOR:-nvim}"
 
 # Potions CLI
 export PATH="$POTIONS_HOME/bin:$PATH"
@@ -274,7 +274,7 @@ fi
 # Auto-start zellij only if not already in zellij and not in an AI code editor terminal
 # AI code editors (VSCode, Cursor, etc.) should not auto-start zellij to avoid
 # terminal output capture issues
-if command -v zellij &> /dev/null && [ -z "$ZELLIJ" ] && ! is_ai_code_editor; then
+if [[ -o interactive && -t 0 && -t 1 && -z "$ZELLIJ" ]] && command -v zellij &> /dev/null && ! is_ai_code_editor; then
   _potions_session="${POTIONS_SESSION:-$(_potions_zellij_session_name)}"
-  zellij --config-dir "$POTIONS_HOME/zellij" attach --create "${_potions_session}"
+  command zellij --config-dir "$POTIONS_HOME/zellij" attach --create "$_potions_session"
 fi

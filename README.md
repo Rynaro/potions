@@ -26,6 +26,16 @@ curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/drink.sh | bash
 
 After installation, restart your terminal or type `zsh` to begin using your new environment!
 
+## Potions Desk
+
+Press **Ctrl+a**, release it, then press **Space** in Zellij to open the desk over your current pane. From a shell, run `potions` or `potions desk`. Move with the arrow keys or `j` and `k`, press **Enter** to open an item, and press `q` to return to work.
+
+From the desk you can inspect the Git working tree, run an installation health check, or open the current directory in your editor. In Zellij, **New terminal tab** closes the desk and opens a shell tab in that directory.
+
+The scratchpad lives at `$POTIONS_HOME/notes.md` (normally `~/.potions/notes.md`) and stays available across projects and sessions. The desk uses `VISUAL`, then `EDITOR`, and falls back to `nvim` or `vi`. An editor command can include simple flags such as `code --wait`. Use an executable wrapper for arguments that require shell quoting.
+
+Press `/` to search Zellij, Zsh, and Neovim shortcuts by tool, key, or action. For example, search for `split` to find the pane controls. Press **F1** in Zellij or run `potions keys` to open the browser directly or `potions keys --plain` to print the reference.
+
 ## 🛠️ What's Installed
 
 - **Zsh**: Modern shell with autosuggestions and syntax highlighting
@@ -39,6 +49,8 @@ After installation, restart your terminal or type `zsh` to begin using your new 
 Potions includes a professional CLI for managing your installation:
 
 ```bash
+potions desk             # Open the terminal desk
+potions keys             # Search keyboard shortcuts
 potions upgrade          # Upgrade to latest version
 potions update           # Check for updates
 potions version          # Show current version
@@ -114,6 +126,7 @@ Run `./migrate.sh` to migrate from legacy to new structure.
 
 | Key | Action | macOS Notes |
 |-----|--------|-------------|
+| `Ctrl+a Space` | Open Potions desk | Press Space after releasing the prefix |
 | `Ctrl+a c` | New tab | or `Alt+t` |
 | `Ctrl+a x` | Close pane | or `Alt+w` |
 | `Ctrl+a \|` | Split right | or `Alt+d` |
@@ -169,6 +182,8 @@ potions upgrade
 ```
 
 ### Manual Upgrade
+
+For an upgrade from 2.15.5 or earlier, use the newer `upgrade.sh` from the release you're installing. Earlier cached upgraders can replace customized files with their templates.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash

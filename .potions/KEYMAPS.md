@@ -2,9 +2,9 @@
 
 This document provides a unified reference for all keybindings across Zsh, Zellij, and Neovim to help understand and avoid conflicts.
 
-> Inside a session, press `F1` (or `Ctrl+a` then `?`) for a floating quick cheatsheet — both work on every platform with no setup. `Alt+/` also opens it wherever Option-as-Meta is enabled. Inside Neovim, press `Space ?` for the Neovim cheatsheet.
->
-> **macOS note:** there is no "Alt" key — it is **Option (⌥)**. The `Alt+…` bindings below only fire after enabling "Use Option as Meta" (or Cmd→Alt forwarding); see [Terminal Setup](.potions/terminal-setup/TERMINAL_SETUP.md). The `Ctrl+a` prefix needs no setup and reaches every action.
+Press **Ctrl+a**, then **Space**, to open Potions Desk. Press **F1** or **Ctrl+a** then **?** to open its searchable shortcuts directly. From a shell, run `potions keys` or print the reference with `potions keys --plain`. Inside Neovim, **Space ?** opens the editor's cheatsheet.
+
+On macOS, **Alt** means **Option (⌥)**. **Alt+/** also opens the shortcut browser when your terminal forwards Option as Meta. [Terminal setup](terminal-setup/TERMINAL_SETUP.md)
 
 ---
 
@@ -35,6 +35,7 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 
 | Key | Action |
 |-----|--------|
+| `Space` | Open the Potions desk in a floating pane |
 | `c` | New tab |
 | `x` | Close pane |
 | `X` | Close tab |
@@ -43,7 +44,7 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 | `\|` | Split right |
 | `-` | Split down |
 | `=` / `E` / `T` / `M` / `V` | Cycle layouts (NextSwapLayout) |
-| `S` | Session manager |
+| `S` then `w` | Enter session mode and open the session manager |
 | `B` | Break pane into tab |
 | `R` | Rename tab |
 | `<` / `>` | Swap pane position (repeatable) |

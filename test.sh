@@ -241,6 +241,10 @@ test_bash_syntax() {
   assert_syntax_valid "$SCRIPT_DIR/migrate.sh" "migrate.sh syntax"
   assert_syntax_valid "$SCRIPT_DIR/drink.sh" "drink.sh syntax"
   assert_syntax_valid "$SCRIPT_DIR/packages/accessories.sh" "accessories.sh syntax"
+  assert_syntax_valid "$SCRIPT_DIR/.potions/bin/potions" "Potions CLI syntax"
+  for script in "$SCRIPT_DIR"/.potions/lib/*.sh; do
+    assert_syntax_valid "$script" "Potions library ${script##*/} syntax"
+  done
 
   # Common packages
   for script in "$SCRIPT_DIR"/packages/common/*.sh; do
@@ -296,6 +300,14 @@ test_no_local_outside_functions() {
   done
 }
 
+# Sourcing .zshrc can load user plugins and create a completion cache.
+run_zshrc_fixture() (
+  local fixture_home
+  fixture_home=$(mktemp -d)
+  trap 'rm -rf "$fixture_home"' EXIT
+  env HOME="$fixture_home" ZDOTDIR="$fixture_home" ZELLIJ=1 zsh -fc "$@"
+)
+
 test_config_validity() {
   log_step "Configuration File Validation"
 
@@ -337,7 +349,7 @@ test_config_validity() {
     _materials_list="golden silver copper iron obsidian azure crimson verdant pale molten frozen ethereal arcane vivid tarnished radiant"
     _alchemical_list="cauldron elixir alembic crucible tincture phlogiston azoth vitriol philosopher quintessence transmutation reagent catalyst retort sublimate athanor"
 
-    _session_name_result=$(ZELLIJ=1 zsh -c '
+    _session_name_result=$(run_zshrc_fixture '
       source "$1/.potions/.zshrc" 2>/dev/null || true
       _potions_zellij_session_name
     ' _ "$SCRIPT_DIR")
@@ -361,7 +373,7 @@ test_config_validity() {
     fi
 
     # Non-determinism: 50 invocations should produce >1 distinct name
-    _distinct_count=$(ZELLIJ=1 zsh -c '
+    _distinct_count=$(run_zshrc_fixture '
       source "$1/.potions/.zshrc" 2>/dev/null || true
       for _ in {1..50}; do _potions_zellij_session_name; done
     ' _ "$SCRIPT_DIR" | sort -u | wc -l | tr -d " ")
@@ -375,7 +387,7 @@ test_config_validity() {
 
     # Inside Zellij, a Ghostty TERM must be rewritten before SSH. Sourcing
     # .zshrc with ZELLIJ=1 also skips the auto-start at the bottom of the file.
-    _term_pin=$(ZELLIJ=1 TERM=xterm-ghostty zsh -c '
+    _term_pin=$(TERM=xterm-ghostty run_zshrc_fixture '
       source "$1/.potions/.zshrc" 2>/dev/null || true
       printf "%s" "$TERM"
     ' _ "$SCRIPT_DIR")
@@ -387,7 +399,7 @@ test_config_validity() {
       TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 
-    _term_keep=$(ZELLIJ=1 TERM=xterm-256color zsh -c '
+    _term_keep=$(TERM=xterm-256color run_zshrc_fixture '
       source "$1/.potions/.zshrc" 2>/dev/null || true
       printf "%s" "$TERM"
     ' _ "$SCRIPT_DIR")
@@ -1225,11 +1237,14 @@ test_reload_system() {
   assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_reload" "potions bin has cmd_reload"
   assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "reload)" "potions bin router has reload case"
 
-  # lib/help.sh mentions reload
-  assert_file_contains "$SCRIPT_DIR/.potions/lib/help.sh" "reload" "lib/help.sh mentions reload"
-
   local tmp
   tmp=$(mktemp -d)
+
+  env HOME="$tmp" POTIONS_HOME="$tmp/.potions" bash "$SCRIPT_DIR/.potions/bin/potions" help > "$tmp/help"
+  local command
+  for command in reload theme terminal; do
+    assert_file_contains "$tmp/help" "potions $command" "potions help lists the $command command"
+  done
 
   # Set up a minimal temp POTIONS_HOME with config/theme.conf and themes dir.
   # Mirrors the setup pattern from test_theme_system.
@@ -1391,6 +1406,22 @@ main() {
   test_install_script
   test_common_packages
   test_upgrade_script
+  log_step "Upgrade Preservation"
+  if command -v git >/dev/null 2>&1; then
+    bash "$SCRIPT_DIR/scripts/test-upgrade-preservation.sh"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_skip "Upgrade integration test requires Git"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+  log_step "Potions Desk"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "$SCRIPT_DIR/scripts/test-desk.py"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_skip "Desk terminal tests require Python 3"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
   test_documentation
   test_platform_detection
   test_theme_system
