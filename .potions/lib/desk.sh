@@ -299,6 +299,7 @@ _desk_activate() {
             rc=$?
             notice="Editor exited with status $rc. Check VISUAL or EDITOR."
           fi
+          [ "$signal_status" -eq 0 ] || return 0
           _desk_enter || return 1
           ;;
       esac
@@ -344,7 +345,7 @@ _desk_escape() {
 
 _desk_run() {
   local view=home editing=false finished=false query='' notice='' offset=0 home_cursor=0 key_cursor=0
-  local detail_index=0 wrap_width=0 redraw=true waiting=false key='' read_started
+  local detail_index=0 wrap_width=0 redraw=true key='' read_started
   local rows cols width height top left visible body_width header_rows frame clipped version workspace
   local sections=() key_names=() descriptions=() matches=() lines=() wrapped=()
   local action_ids=(edit notes git keys doctor)
@@ -371,30 +372,28 @@ _desk_run() {
   version="v$(get_version)"
   _desk_clip "$version" 14; version=$clipped
   if [ "${1:-home}" = keys ]; then _desk_load_keys; fi
-  # Bash can resume a blocking read after WINCH. Repaint from the handler
-  # while waiting for a key, and defer the repaint during actions or drawing.
-  trap 'redraw=true; if [ "$waiting" = true ]; then _desk_size && _desk_render; fi' WINCH
+  # Bash may run traps while read is still using the tty. Repaint or restore
+  # the terminal only after read has returned and restored its own settings.
+  trap 'redraw=true' WINCH
   _desk_enter || return 1
 
-  while [ "$finished" = false ]; do
+  while [ "$finished" = false ] && [ "$signal_status" -eq 0 ]; do
     if [ "$redraw" = true ]; then
       redraw=false
       _desk_size || return 1
       _desk_render
     fi
-    waiting=true
-    if [ "$redraw" = true ]; then waiting=false; continue; fi
+    if [ "$redraw" = true ] || [ "$signal_status" -ne 0 ]; then continue; fi
     read_started=$SECONDS
-    # Bash 3 can defer TERM during a blocking read. A bounded wait also
-    # permits cleanup when the CLI alone receives a signal.
+    # Bound the wait so resize and termination also work without key input.
     if ! IFS= read -r -n 1 -t 1 key; then
-      waiting=false
       if [ "$read_started" -eq "$SECONDS" ] && [ "$redraw" = false ]; then
         stty -g >/dev/null 2>&1 || return 0
       fi
       continue
     fi
-    waiting=false
+    [ "$signal_status" -eq 0 ] || break
+    if [ "$redraw" = true ]; then _desk_size || return 1; fi
     redraw=true
     case "$key" in
       $'\033') _desk_escape || return 1 ;;
@@ -445,15 +444,16 @@ _desk_run() {
 }
 
 desk_open() {
-  local saved_tty screen_active=false reset='' status=0
+  local saved_tty screen_active=false reset='' status=0 signal_status=0
   saved_tty=$(stty -g) || return 1
   trap '_desk_leave' EXIT
-  trap '_desk_leave; exit 130' INT
-  trap '_desk_leave; exit 143' TERM
-  trap '_desk_leave; exit 129' HUP
-  trap '_desk_leave; exit 148' TSTP
+  trap 'signal_status=130' INT
+  trap 'signal_status=143' TERM
+  trap 'signal_status=129' HUP
+  trap 'signal_status=148' TSTP
   _desk_run "$@" || status=$?
   _desk_leave
   trap - EXIT INT TERM HUP TSTP WINCH
+  if [ "$signal_status" -ne 0 ]; then return "$signal_status"; fi
   return "$status"
 }
