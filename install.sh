@@ -213,6 +213,9 @@ update_potions() {
     return 1
   fi
   
+  source "$POTIONS_ROOT/scripts/install-plugin-runtime.sh"
+  install_plugin_runtime "$POTIONS_ROOT" "$check_dir" || return 1
+
   # Copy version file if it exists
   if [ -f ".version" ]; then
     cp ".version" "$check_dir/.version" 2>/dev/null || true

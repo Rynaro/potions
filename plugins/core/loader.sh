@@ -4,10 +4,10 @@
 # Loads active plugins at shell startup and generates initialization scripts
 
 # Guard against multiple inclusion
-if [ -n "$LOADER_SOURCED" ]; then
+if [ -n "$LOADER_SOURCED" ] && declare -F generate_plugin_init >/dev/null; then
   return 0
 fi
-export LOADER_SOURCED=1
+LOADER_SOURCED=1
 
 # Source core accessories if not already sourced
 CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,7 +30,7 @@ get_active_plugins() {
     return 0
   fi
   
-  grep ":active:" "$STATE_FILE" 2>/dev/null | cut -d: -f1
+  awk -F: '$2 == "active" {print $1}' "$STATE_FILE"
 }
 
 # Get list of all installed plugins
@@ -72,6 +72,8 @@ generate_plugin_init() {
   
   ensure_directory "$(dirname "$init_file")"
   
+  local final_file="$init_file"
+  init_file=$(mktemp "${final_file}.XXXXXX") || return 1
   cat > "$init_file" << 'HEADER'
 # Potions Plugin Initialization Script
 # Auto-generated - DO NOT EDIT MANUALLY
@@ -83,6 +85,9 @@ POTIONS_PLUGINS_DIR="${POTIONS_HOME}/plugins"
 
 # Helper to safely source plugin files
 _potions_source_plugin() {
+  if [ -n "${ZSH_VERSION:-}" ]; then
+    setopt localoptions nonomatch
+  fi
   local plugin_name="$1"
   local plugin_dir="$POTIONS_PLUGINS_DIR/$plugin_name"
   
@@ -114,13 +119,15 @@ HEADER
   echo "# Active plugins" >> "$init_file"
   
   for plugin_name in $(get_active_plugins); do
-    echo "_potions_source_plugin '$plugin_name'" >> "$init_file"
+    [[ "$plugin_name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || continue
+    printf "_potions_source_plugin '%s'\n" "$plugin_name" >> "$init_file"
   done
   
   echo "" >> "$init_file"
   echo "# End of plugin initialization" >> "$init_file"
   
-  log "Generated plugin init script: $init_file"
+  mv "$init_file" "$final_file" || return 1
+  log "Generated plugin init script: $final_file"
 }
 
 # Load active plugins (for sourcing in current shell)

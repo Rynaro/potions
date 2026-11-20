@@ -13,21 +13,26 @@ source "$SCRIPT_DIR/plugins/core/engine.sh"
 source "$SCRIPT_DIR/plugins/core/loader.sh"
 
 # Colors for output — Alchemists Orchid Papyrus palette (docs/color-palette.md)
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-BOLD='\033[1m'
-NC='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'
+MAGENTA=$'\033[0;35m'
+CYAN=$'\033[0;36m'
+WHITE=$'\033[1;37m'
+BOLD=$'\033[1m'
+NC=$'\033[0m'
 
 # Check if terminal supports colors
 if [ -t 1 ]; then
   HAS_COLOR=true
 else
   HAS_COLOR=false
+fi
+
+if [ "$HAS_COLOR" = false ] || [ -n "${NO_COLOR:-}" ]; then
+  HAS_COLOR=false
+  RED='' GREEN='' YELLOW='' BLUE='' MAGENTA='' CYAN='' WHITE='' BOLD='' NC=''
 fi
 
 # Logging with colors
@@ -81,20 +86,21 @@ show_banner() {
 
 # Command: install
 cmd_install() {
-  local plugin_spec="$1"
+  local plugin_spec="${1:-}" result=0
   shift || true
   
   if [ -z "$plugin_spec" ]; then
     # Install from Potionfile
     log_info "Installing plugins from Potionfile..."
-    plugin_install_from_potionfile
+    plugin_install_from_potionfile || result=$?
   else
     # Install specific plugin
-    plugin_install "$plugin_spec" "$@"
+    plugin_install "$plugin_spec" "$@" || return 1
   fi
   
-  # Regenerate init script
-  generate_plugin_init
+  # Successful entries from a partially failed Potionfile must load as recorded.
+  generate_plugin_init || return 1
+  return "$result"
 }
 
 # Command: uninstall
@@ -106,7 +112,7 @@ cmd_uninstall() {
     exit 1
   fi
   
-  plugin_uninstall "$plugin_name"
+  plugin_uninstall "$plugin_name" || return 1
   
   # Regenerate init script
   generate_plugin_init
@@ -121,7 +127,7 @@ cmd_activate() {
     exit 1
   fi
   
-  plugin_activate "$plugin_name"
+  plugin_activate "$plugin_name" || return 1
   
   # Regenerate init script
   generate_plugin_init
@@ -136,7 +142,7 @@ cmd_deactivate() {
     exit 1
   fi
   
-  plugin_deactivate "$plugin_name"
+  plugin_deactivate "$plugin_name" || return 1
   
   # Regenerate init script
   generate_plugin_init
@@ -145,7 +151,9 @@ cmd_deactivate() {
 # Command: update
 cmd_update() {
   local plugin_name="${1:---all}"
-  plugin_update "$plugin_name"
+  shift || true
+  plugin_update "$plugin_name" "$@" || return 1
+  generate_plugin_init
 }
 
 # Command: list
@@ -181,7 +189,7 @@ cmd_search() {
   local query="$1"
   
   if [ -z "$query" ]; then
-    log_info "Available verified plugins:"
+    log_info "Available catalog plugins:"
     list_verified_plugins
   else
     log_info "Searching for: $query"
@@ -217,6 +225,12 @@ cmd_verify() {
   fi
   
   local plugin_path="$INSTALLED_PLUGINS_DIR/$plugin_name"
+  if [ -d "$plugin_name" ]; then
+    plugin_path="$plugin_name"
+  elif ! valid_plugin_name "$plugin_name"; then
+    log_error "Invalid plugin name: $plugin_name"
+    return 1
+  fi
   
   if [ ! -d "$plugin_path" ] && [ ! -L "$plugin_path" ]; then
     # Check if it's a path
@@ -245,6 +259,12 @@ cmd_validate() {
   fi
   
   local plugin_path="$INSTALLED_PLUGINS_DIR/$plugin_name"
+  if [ -d "$plugin_name" ]; then
+    plugin_path="$plugin_name"
+  elif ! valid_plugin_name "$plugin_name"; then
+    log_error "Invalid plugin name: $plugin_name"
+    return 1
+  fi
   
   if [ ! -d "$plugin_path" ] && [ ! -L "$plugin_path" ]; then
     # Check if it's a path
@@ -328,8 +348,9 @@ ${BOLD}USAGE:${NC}
     ./plugins.sh <command> [options]
 
 ${BOLD}COMMANDS:${NC}
+    ${CYAN}menu${NC}                      Open the interactive plugin menu
     ${CYAN}install${NC} [plugin]          Install plugins from Potionfile or specific plugin
-                             Options: --force, --skip-security
+                             Options: --trust, --force, --skip-security
     
     ${CYAN}uninstall${NC} <plugin>        Uninstall a plugin
     
@@ -348,7 +369,7 @@ ${BOLD}COMMANDS:${NC}
     
     ${CYAN}info${NC} <plugin>             Show plugin details
     
-    ${CYAN}create${NC} <name> [--potion]  Scaffold a new plugin (--potion for YAML format)
+    ${CYAN}create${NC} <name> [--potion]  Create a minimal plugin in the current directory (--potion for YAML)
     
     ${CYAN}verify${NC} <plugin>           Run security audit on a plugin
     
@@ -367,12 +388,15 @@ ${BOLD}EXAMPLES:${NC}
     # Install all plugins from Potionfile
     ./plugins.sh install
     
-    # Install a specific verified plugin
-    ./plugins.sh install Rynaro/potions-docker
+    # Review and install a GitHub plugin
+    ./plugins.sh install owner/my-plugin@v1.0.0
     
     # Install a local plugin
     ./plugins.sh install ~/my-plugins/custom-theme
     
+    # Review and explicitly trust a GitHub repository in scripts
+    ./plugins.sh install owner/my-plugin@v1.0.0 --trust
+
     # Install with specific version
     ./plugins.sh install 'Rynaro/potions-docker, tag: v1.0.0'
     
@@ -392,12 +416,80 @@ ${BOLD}For more information:${NC}
 EOF
 }
 
+# Menu shares the CLI operations so terminal and scripted behavior stay aligned.
+cmd_menu() {
+  if [ ! -t 0 ] || [ ! -t 1 ]; then cmd_help; return; fi
+  local choice name action
+  while true; do
+    plugin_list
+    printf 'Plugins\n  1 Install GitHub repository or local path\n  2 Enable plugin\n  3 Disable plugin\n  4 Update plugin\n  5 Remove plugin\n  6 Create plugin\n  q Quit\n> '
+    IFS= read -r choice || return 0
+    case "$choice" in
+      q|Q|'') return 0 ;;
+      1) action=install ;;
+      2) action=activate ;;
+      3) action=deactivate ;;
+      4) action=update ;;
+      5) action=uninstall ;;
+      6) action=create ;;
+      *) printf 'Choose an action from the menu.\n'; continue ;;
+    esac
+    printf 'Plugin %s> ' "$action"
+    IFS= read -r name || return 0
+    [ -n "$name" ] || continue
+    if [ "$action" = uninstall ]; then
+      printf 'Remove %s and run its uninstall hook? [y/N] ' "$name"
+      local answer
+      IFS= read -r answer || return 0
+      case "$answer" in y|Y|yes) ;; *) continue ;; esac
+    fi
+    # Child processes share validation, mutation locking and error propagation.
+    POTIONS_HOME="$POTIONS_HOME" bash "$SCRIPT_DIR/plugins.sh" "$action" "$name" || printf 'Action failed. Review the message above.\n'
+  done
+}
+
+# Serialize mutations across CLI processes without a platform-specific lock tool.
+lock_plugin_operation() {
+  ensure_plugin_dirs
+  local operation_lock="$INSTALLED_PLUGINS_DIR/.operation-lock"
+  if ! mkdir "$operation_lock" 2>/dev/null; then
+    local owner=""
+    [ ! -f "$operation_lock/pid" ] || IFS= read -r owner < "$operation_lock/pid"
+    if [[ "$owner" =~ ^[0-9]+$ ]] && ! kill -0 "$owner" 2>/dev/null; then
+      # Only one contender may recover a stale lock. Re-read its owner after
+      # acquiring recovery so a newly started operation cannot be removed.
+      mkdir "$operation_lock/recovery" 2>/dev/null || return 1
+      owner=""
+      [ ! -f "$operation_lock/pid" ] || IFS= read -r owner < "$operation_lock/pid"
+      if ! [[ "$owner" =~ ^[0-9]+$ ]] || kill -0 "$owner" 2>/dev/null; then
+        rmdir "$operation_lock/recovery" 2>/dev/null || true
+        return 1
+      fi
+      rm -f "$operation_lock/pid"
+      rmdir "$operation_lock/recovery" || return 1
+      rmdir "$operation_lock" 2>/dev/null || return 1
+      mkdir "$operation_lock" 2>/dev/null || return 1
+    else
+      printf 'Another plugin operation is running. If it was interrupted, remove %s after checking.\n' "$operation_lock" >&2
+      return 1
+    fi
+  fi
+  printf '%s\n' "$$" > "$operation_lock/pid"
+  trap 'rm -f "$INSTALLED_PLUGINS_DIR/.operation-lock/pid"; rmdir "$INSTALLED_PLUGINS_DIR/.operation-lock" 2>/dev/null || true' EXIT
+}
+
 # Main command router
 main() {
-  local command="${1:-help}"
+  local command="${1:-menu}"
   shift || true
   
   case "$command" in
+    install|uninstall|remove|activate|enable|deactivate|disable|update|upgrade|clean|cleanup|regenerate-init|regen)
+      lock_plugin_operation || return 1 ;;
+  esac
+
+  case "$command" in
+    menu) cmd_menu ;;
     install)
       cmd_install "$@"
       ;;

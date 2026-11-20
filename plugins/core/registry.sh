@@ -4,10 +4,10 @@
 # Handles interaction with the potions-shelf GitHub registry
 
 # Guard against multiple inclusion
-if [ -n "$REGISTRY_SOURCED" ]; then
+if [ -n "$REGISTRY_SOURCED" ] && declare -F registry_fetch_manifest >/dev/null; then
   return 0
 fi
-export REGISTRY_SOURCED=1
+REGISTRY_SOURCED=1
 
 # Source core accessories if not already sourced
 CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,27 +28,31 @@ REGISTRY_TIMESTAMP_FILE="${REGISTRY_CACHE_DIR}/.timestamp"
 
 # Ensure cache directory exists
 ensure_registry_cache_dir() {
-  ensure_directory "$REGISTRY_CACHE_DIR"
-  ensure_directory "$REGISTRY_MANIFESTS_DIR"
+  ensure_directory "$REGISTRY_CACHE_DIR" >/dev/null
+  ensure_directory "$REGISTRY_MANIFESTS_DIR" >/dev/null
 }
 
 # Check if cache is valid (not expired)
 # Usage: is_cache_valid [cache_file]
 is_cache_valid() {
   local cache_file="${1:-$REGISTRY_INDEX_FILE}"
+  local timestamp_file="$REGISTRY_TIMESTAMP_FILE"
+  if [ "$cache_file" != "$REGISTRY_INDEX_FILE" ] && [ -f "${cache_file}.timestamp" ]; then
+    timestamp_file="${cache_file}.timestamp"
+  fi
   
   if [ ! -f "$cache_file" ]; then
     return 1
   fi
   
-  if [ ! -f "$REGISTRY_TIMESTAMP_FILE" ]; then
+  if [ ! -f "$timestamp_file" ]; then
     return 1
   fi
   
   local cache_age
   local current_time
   current_time=$(date +%s)
-  cache_age=$(cat "$REGISTRY_TIMESTAMP_FILE" 2>/dev/null || echo "0")
+  cache_age=$(cat "$timestamp_file" 2>/dev/null || echo "0")
   
   if [ -z "$cache_age" ] || [ "$cache_age" = "0" ]; then
     return 1
@@ -66,7 +70,12 @@ is_cache_valid() {
 # Update cache timestamp
 update_cache_timestamp() {
   ensure_registry_cache_dir
-  date +%s > "$REGISTRY_TIMESTAMP_FILE"
+  local cache_file="${1:-$REGISTRY_INDEX_FILE}"
+  local timestamp_file="$REGISTRY_TIMESTAMP_FILE"
+  if [ "$cache_file" != "$REGISTRY_INDEX_FILE" ]; then
+    timestamp_file="${cache_file}.timestamp"
+  fi
+  date +%s > "$timestamp_file"
 }
 
 # Download a file from registry
@@ -76,17 +85,17 @@ registry_download() {
   local output_file="$2"
   
   if [ -z "$url" ] || [ -z "$output_file" ]; then
-    log "registry_download: missing arguments"
+    log "registry_download: missing arguments" >&2
     return 1
   fi
   
   # Verify URL is from trusted domain
   if ! echo "$url" | grep -qE "^https://(raw\.)?githubusercontent\.com/Rynaro/potions-shelf/"; then
-    log "registry_download: untrusted URL: $url"
+    log "registry_download: untrusted URL: $url" >&2
     return 1
   fi
   
-  ensure_directory "$(dirname "$output_file")"
+  ensure_directory "$(dirname "$output_file")" >/dev/null
   
   # Try curl first, then wget
   if command_exists curl; then
@@ -99,7 +108,7 @@ registry_download() {
     fi
   fi
   
-  log "registry_download: failed to download $url"
+  log "registry_download: failed to download $url" >&2
   return 1
 }
 
@@ -117,19 +126,20 @@ registry_fetch_index() {
   
   local index_url="${REGISTRY_BASE_URL}/index.json"
   local temp_file
-  temp_file=$(mktemp)
+  temp_file=$(mktemp "${REGISTRY_CACHE_DIR}/.index.XXXXXX")
   
-  log "Fetching registry index..."
+  log "Fetching registry index..." >&2
   
   if registry_download "$index_url" "$temp_file"; then
     # Validate JSON (basic check)
     if grep -q "{" "$temp_file" && grep -q "}" "$temp_file"; then
       mv "$temp_file" "$REGISTRY_INDEX_FILE"
       update_cache_timestamp
-      log "Registry index updated"
+      rm -f "$REGISTRY_MANIFESTS_DIR/"*.potion "$REGISTRY_MANIFESTS_DIR/"*.potion.timestamp
+      log "Registry index updated" >&2
       return 0
     else
-      log "Invalid index.json received"
+      log "Invalid index.json received" >&2
       rm -f "$temp_file"
       return 1
     fi
@@ -139,7 +149,7 @@ registry_fetch_index() {
   
   # If download failed but cache exists, use cache
   if [ -f "$REGISTRY_INDEX_FILE" ]; then
-    log "Using cached registry index (network unavailable)"
+    log "Using cached registry index (network unavailable)" >&2
     return 0
   fi
   
@@ -151,7 +161,7 @@ registry_fetch_index() {
 registry_get_plugin_info() {
   local plugin_name="$1"
   
-  if [ -z "$plugin_name" ]; then
+  if ! [[ "$plugin_name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
     return 1
   fi
   
@@ -164,49 +174,58 @@ registry_get_plugin_info() {
     return 1
   fi
   
-  # Parse JSON to find plugin (simple grep-based parser)
-  # Look for plugin name in the JSON structure
-  # Format: "name": "plugin-name" or "name":"plugin-name"
-  if grep -q "\"name\"[[:space:]]*:[[:space:]]*\"${plugin_name}\"" "$REGISTRY_INDEX_FILE" 2>/dev/null; then
-    # Extract the plugin entry (simplified - assumes one plugin per line or simple structure)
-    # This is a basic implementation - could be improved with jq if available
-    grep -A 20 "\"name\"[[:space:]]*:[[:space:]]*\"${plugin_name}\"" "$REGISTRY_INDEX_FILE" 2>/dev/null | head -30
-    return 0
-  fi
-  
-  return 1
+  # The shelf keeps each plugin object on one line for the shell client.
+  awk -v plugin_name="$plugin_name" '
+    /^[[:space:]]*\{/ && match($0, /"name"[[:space:]]*:[[:space:]]*"[A-Za-z0-9_-]+"/) {
+      name=substr($0, RSTART, RLENGTH)
+      sub(/^.*:[[:space:]]*"/, "", name)
+      sub(/"$/, "", name)
+      if (name == plugin_name) { print; found=1; exit }
+    }
+    END { if (!found) exit 1 }
+  ' "$REGISTRY_INDEX_FILE"
 }
 
 # Fetch plugin manifest (.potion file)
 # Usage: registry_fetch_manifest <plugin_name> [output_file]
 registry_fetch_manifest() {
   local plugin_name="$1"
-  local output_file="${2:-${REGISTRY_MANIFESTS_DIR}/${plugin_name}.potion}"
+  local cached_file output_file="${2:-${REGISTRY_MANIFESTS_DIR}/${plugin_name}.potion}"
   
-  if [ -z "$plugin_name" ]; then
+  if ! [[ "$plugin_name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
     return 1
   fi
   
   ensure_registry_cache_dir
+  cached_file="${REGISTRY_MANIFESTS_DIR}/${plugin_name}.potion"
   
-  # Check cache first
-  if [ -f "$output_file" ] && is_cache_valid "$output_file"; then
-    return 0
+  # Reuse a valid cached manifest even when callers request a temporary copy.
+  if [ -s "$cached_file" ] && is_cache_valid "$cached_file"; then
+    if [ "$output_file" != "$cached_file" ]; then
+      ensure_directory "$(dirname "$output_file")" >/dev/null
+      cp "$cached_file" "$output_file"
+    fi
+    return $?
   fi
   
   local manifest_url="${REGISTRY_BASE_URL}/plugins/${plugin_name}.potion"
   local temp_file
-  temp_file=$(mktemp)
+  temp_file=$(mktemp "${REGISTRY_MANIFESTS_DIR}/.${plugin_name}.XXXXXX")
   
-  log "Fetching manifest for: $plugin_name"
+  log "Fetching manifest for: $plugin_name" >&2
   
   if registry_download "$manifest_url" "$temp_file"; then
     # Basic validation - check if it looks like YAML
     if [ -s "$temp_file" ] && head -1 "$temp_file" | grep -qE "^[a-zA-Z]|^#"; then
-      mv "$temp_file" "$output_file"
+      mv "$temp_file" "$cached_file"
+      update_cache_timestamp "$cached_file" >/dev/null
+      if [ "$output_file" != "$cached_file" ]; then
+        ensure_directory "$(dirname "$output_file")" >/dev/null
+        cp "$cached_file" "$output_file"
+      fi
       return 0
     else
-      log "Invalid manifest received for: $plugin_name"
+      log "Invalid manifest received for: $plugin_name" >&2
       rm -f "$temp_file"
       return 1
     fi
@@ -214,9 +233,9 @@ registry_fetch_manifest() {
   
   rm -f "$temp_file"
   
-  # If download failed but cache exists, use cache
-  if [ -f "$output_file" ]; then
-    log "Using cached manifest for: $plugin_name"
+  # Preserve stale-cache fallback for callers using the cache path.
+  if [ "$output_file" = "$cached_file" ] && [ -s "$cached_file" ]; then
+    log "Using cached manifest for: $plugin_name" >&2
     return 0
   fi
   
@@ -225,7 +244,7 @@ registry_fetch_manifest() {
 
 # Check if plugin is in registry
 # Usage: registry_is_verified <plugin_name>
-registry_is_verified() {
+registry_has_plugin() {
   local plugin_name="$1"
   
   if [ -z "$plugin_name" ]; then
@@ -240,30 +259,16 @@ registry_is_verified() {
   return 1
 }
 
+# Compatibility alias. Catalog membership does not confer trust.
+registry_is_verified() {
+  registry_has_plugin "$@"
+}
+
 # Search plugins in registry
 # Usage: registry_search <query>
 registry_search() {
   local query="$1"
   
-  if [ -z "$query" ]; then
-    # List all plugins
-    if ! registry_fetch_index; then
-      return 1
-    fi
-    
-    if [ ! -f "$REGISTRY_INDEX_FILE" ]; then
-      return 1
-    fi
-    
-    # Extract plugin names from index.json
-    # Simple grep-based extraction
-    grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' "$REGISTRY_INDEX_FILE" 2>/dev/null | \
-      sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | \
-      sort
-    return 0
-  fi
-  
-  # Search for query in index
   if ! registry_fetch_index; then
     return 1
   fi
@@ -272,10 +277,22 @@ registry_search() {
     return 1
   fi
   
-  # Search in name, description, tags, etc.
-  grep -i "$query" "$REGISTRY_INDEX_FILE" 2>/dev/null | \
-    grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | \
-    sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | \
+  # The generated index stores one JSON object per plugin on one line.
+  # Search those objects only and treat the query as literal text.
+  local plugin_lines
+  plugin_lines=$(awk '
+    /"plugins"[[:space:]]*:/ { in_plugins=1; next }
+    in_plugins && /^[[:space:]]*\]/ { in_plugins=0; next }
+    in_plugins && /^[[:space:]]*\{/ { print }
+  ' "$REGISTRY_INDEX_FILE")
+  [ -n "$plugin_lines" ] || return 0
+
+  if [ -n "$query" ]; then
+    plugin_lines=$(printf '%s\n' "$plugin_lines" | grep -Fi -- "$query") || return 0
+  fi
+
+  printf '%s\n' "$plugin_lines" | \
+    sed -nE 's/.*"name"[[:space:]]*:[[:space:]]*"([A-Za-z0-9_-]+)".*/\1/p' | \
     sort -u
 }
 

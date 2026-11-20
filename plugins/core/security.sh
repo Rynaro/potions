@@ -4,10 +4,10 @@
 # Handles plugin verification, registry checks, and security validation
 
 # Guard against multiple inclusion
-if [ -n "$SECURITY_SOURCED" ]; then
+if [ -n "$SECURITY_SOURCED" ] && declare -F is_verified_plugin >/dev/null; then
   return 0
 fi
-export SECURITY_SOURCED=1
+SECURITY_SOURCED=1
 
 # Source core accessories if not already sourced
 CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,7 +33,7 @@ is_local_plugin() {
   
   # Local plugins start with /, ~, or ./
   case "$plugin_spec" in
-    /* | ~* | ./*)
+    /* | \~* | ./* | ../*)
       return 0
       ;;
     *)
@@ -42,37 +42,14 @@ is_local_plugin() {
   esac
 }
 
-# Check if plugin is in verified registry
+# Check if exact owner/repository is in the maintainer allowlist
 # Usage: is_verified_plugin <plugin_spec>
 is_verified_plugin() {
   local plugin_spec="$1"
   
-  # Try registry first (if available)
-  if [ -n "$REGISTRY_SOURCED" ] && command -v registry_is_verified > /dev/null 2>&1; then
-    # Extract plugin name from spec (handle owner/repo format)
-    local plugin_name
-    if echo "$plugin_spec" | grep -q "/"; then
-      # It's owner/repo format - extract repo name
-      plugin_name=$(basename "$plugin_spec")
-    else
-      plugin_name="$plugin_spec"
-    fi
-    
-    if registry_is_verified "$plugin_name"; then
-      return 0
-    fi
-    
-    # Also try with full owner/repo format
-    if registry_is_verified "$plugin_spec"; then
-      return 0
-    fi
+  if [ -f "$VERIFIED_REGISTRY" ] && awk -F'|' -v repo="$plugin_spec" '$1 == repo {found=1} END {exit !found}' "$VERIFIED_REGISTRY"; then
+    return 0
   fi
-  
-  # Fallback to local verified.txt for backward compatibility
-  if [ -f "$VERIFIED_REGISTRY" ]; then
-    grep -q "^${plugin_spec}|" "$VERIFIED_REGISTRY" 2>/dev/null && return 0
-  fi
-  
   return 1
 }
 
@@ -80,35 +57,11 @@ is_verified_plugin() {
 # Usage: get_verified_plugin_info <plugin_spec>
 get_verified_plugin_info() {
   local plugin_spec="$1"
-  
-  # Try registry first (if available)
-  if [ -n "$REGISTRY_SOURCED" ] && command -v registry_get_plugin_info > /dev/null 2>&1; then
-    local plugin_name
-    if echo "$plugin_spec" | grep -q "/"; then
-      plugin_name=$(basename "$plugin_spec")
-    else
-      plugin_name="$plugin_spec"
-    fi
-    
-    local info
-    info=$(registry_get_plugin_info "$plugin_name" 2>/dev/null)
-    if [ -n "$info" ]; then
-      echo "$info"
-      return 0
-    fi
-    
-    # Try with full spec
-    info=$(registry_get_plugin_info "$plugin_spec" 2>/dev/null)
-    if [ -n "$info" ]; then
-      echo "$info"
-      return 0
-    fi
-  fi
-  
-  # Fallback to local verified.txt
+
+  # Only the local owner/repository allowlist contains maintainer trust data.
   if [ -f "$VERIFIED_REGISTRY" ]; then
-    grep "^${plugin_spec}|" "$VERIFIED_REGISTRY" | head -1
-    return 0
+    awk -F'|' -v repo="$plugin_spec" '$1 == repo {print; exit}' "$VERIFIED_REGISTRY"
+    return $?
   fi
   
   return 1
@@ -151,18 +104,18 @@ verify_plugin_signature() {
     return 0
   fi
   
-  # Check if plugin is in verified registry (tries registry first, then local)
+  # Catalog presence is informational and never establishes repository trust.
   if ! is_verified_plugin "$plugin_spec"; then
-    log "Plugin '$plugin_spec' is not in the verified registry"
-    log "Only verified plugins from the Potions registry can be installed remotely"
-    log "For local plugins, use: local_plugin '/path/to/plugin'"
-    log ""
-    log "To submit a plugin to the registry, see:"
-    log "  https://github.com/Rynaro/potions-shelf"
+    if command -v registry_has_plugin >/dev/null 2>&1 && registry_has_plugin "$plugin_spec"; then
+      log "Plugin '$plugin_spec' is listed in the catalog, but that does not verify its code."
+    else
+      log "Plugin '$plugin_spec' is not in the Potions maintainer allowlist."
+    fi
+    log "Review the repository and approve its resolved commit during installation."
     return 1
   fi
   
-  log "Plugin '$plugin_spec' is verified"
+  log "Plugin '$plugin_spec' matches the Potions maintainer allowlist."
   return 0
 }
 
@@ -241,8 +194,8 @@ verify_plugin_checksums() {
 list_verified_plugins() {
   # Try registry first (if available)
   if [ -n "$REGISTRY_SOURCED" ] && command -v registry_search > /dev/null 2>&1; then
-    echo "Verified Potions Plugins (from registry):"
-    echo "========================================="
+    echo "Plugins in the Potions Shelf catalog:"
+    echo "====================================="
     echo ""
     
     local plugins
@@ -264,12 +217,14 @@ list_verified_plugins() {
       done
       return 0
     fi
+    echo "  No plugins are currently listed."
+    return 0
   fi
   
-  # Fallback to local verified.txt
+  # Fall back to the small maintainer-trusted repository list.
   if [ -f "$VERIFIED_REGISTRY" ]; then
-    echo "Verified Potions Plugins (local):"
-    echo "================================="
+    echo "Repositories in the Potions maintainer allowlist:"
+    echo "==============================================="
     echo ""
     
     while IFS='|' read -r repo version _ description; do
@@ -293,13 +248,13 @@ is_trusted_source() {
   
   # Trusted sources are:
   # - Local paths
-  # - GitHub repos from verified registry
+  # - GitHub repositories in the maintainer allowlist
   
   if is_local_plugin "$source_url"; then
     return 0
   fi
   
-  # Check if it's a verified GitHub repo
+  # Check if it's an allowlisted GitHub repository
   if echo "$source_url" | grep -qE '^(https://github\.com/|github:)'; then
     local repo
     repo=$(echo "$source_url" | sed -E 's#^(https://github\.com/|github:)##' | sed 's#\.git$##')
@@ -321,8 +276,8 @@ warn_local_plugin() {
   echo "⚠️  WARNING: Installing local plugin"
   echo "   Path: $plugin_path"
   echo ""
-  echo "   Local plugins are NOT verified by Potions Quality Assurance."
-  echo "   Only install plugins from sources you trust."
+  echo "   Local plugin code runs with your account permissions."
+  echo "   Review its files before enabling it."
   echo ""
 }
 
@@ -336,26 +291,24 @@ display_plugin_security_status() {
   
   if is_local_plugin "$plugin_spec"; then
     echo "Type: Local plugin"
-    echo "Verification: Not verified (local plugins bypass verification)"
-    echo "Status: ⚠️  Use at your own risk"
+    echo "Catalog: Local source"
+    echo "Trust: Review the local plugin code before installing."
   elif is_verified_plugin "$plugin_spec"; then
     echo "Type: Remote plugin"
-    echo "Verification: ✓ Verified by Potions Quality Assurance"
-    echo "Status: ✓ Safe to install"
+    echo "Trust: Repository is listed in the Potions maintainer allowlist."
     
-    local min_version checksum_url
+    local min_version
     min_version=$(get_verified_min_version "$plugin_spec")
-    checksum_url=$(get_verified_checksum_url "$plugin_spec")
-    
-    echo "Minimum Version: $min_version"
-    [ -n "$checksum_url" ] && echo "Checksum URL: $checksum_url"
+    [ -z "$min_version" ] || echo "Minimum Potions Version: $min_version"
+    echo "Review the resolved revision before trusting plugin code."
+  elif command -v registry_has_plugin >/dev/null 2>&1 && registry_has_plugin "$plugin_spec"; then
+    echo "Type: Remote plugin"
+    echo "Catalog: Listed in Potions Shelf"
+    echo "Trust: Catalog membership does not verify or endorse its code."
+    echo "Review the repository and approve the resolved commit before installation."
   else
     echo "Type: Remote plugin"
-    echo "Verification: ✗ NOT in verified registry"
-    echo "Status: ✗ REJECTED - Cannot be installed"
-    echo ""
-    echo "To use this plugin:"
-    echo "  1. Submit a PR to add it to the verified registry, or"
-    echo "  2. Clone it locally and use: local_plugin '/path/to/plugin'"
+    echo "Catalog: No entry found"
+    echo "Trust: Direct GitHub installs require review and approval of the resolved commit."
   fi
 }

@@ -674,22 +674,26 @@ Themes and terminals
   potions reload [target]             Reapply configuration to all, terminal, shell, nvim or zellij
 
 Plugins
+  potions plugin                      Open the plugin menu
   potions plugin list                 List installed plugins
   potions plugin status               Show plugin system status
-  potions plugin install [name]       Install from Potionfile or by name
+  potions plugin install [name]       Install from Potionfile, GitHub or local path
   potions plugin update [name]        Update plugins
   potions plugin uninstall <name>     Remove a plugin
   potions plugin activate <name>      Activate a plugin
   potions plugin deactivate <name>    Deactivate a plugin
-  potions plugin create <name>        Create a plugin scaffold
+  potions plugin create <name>        Create a plugin in the current directory
+  potions plugin validate <path>      Check a plugin before sharing
+  potions plugin help                 Show GitHub source and trust options
 EOF
 }
 
 # Command: plugin (delegates to plugins.sh)
 cmd_plugin() {
-  local subcommand="${1:-help}"
+  local subcommand="${1:-menu}"
   shift || true
-  
+  export POTIONS_HOME
+
   # Find plugins.sh script
   local plugins_script=""
   
@@ -697,6 +701,8 @@ cmd_plugin() {
   if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/plugins.sh" ]; then
     plugins_script="$REPO_ROOT/plugins.sh"
   # Try installed location
+  elif [ -f "$POTIONS_HOME/lib/plugin-manager/plugins.sh" ]; then
+    plugins_script="$POTIONS_HOME/lib/plugin-manager/plugins.sh"
   elif [ -f "$POTIONS_REPO_DIR/plugins.sh" ]; then
     plugins_script="$POTIONS_REPO_DIR/plugins.sh"
   fi
@@ -708,7 +714,7 @@ cmd_plugin() {
   fi
   
   # Execute plugins.sh with the subcommand
-  exec "$plugins_script" "$subcommand" "$@"
+  exec bash "$plugins_script" "$subcommand" "$@"
 }
 
 # Command: theme (delegates to the theme manager)

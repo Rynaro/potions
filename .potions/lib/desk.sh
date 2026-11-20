@@ -411,6 +411,17 @@ _desk_activate() {
             notice='Could not open a terminal tab.'
           fi
           ;;
+        plugins)
+          _desk_leave
+          notice=''
+          if (cmd_plugin menu); then :
+          else
+            rc=$?
+            notice="Plugin manager exited with status $rc."
+          fi
+          [ "$signal_status" -eq 0 ] || return 0
+          _desk_enter || return 1
+          ;;
         edit|notes)
           _desk_leave
           notice=''
@@ -491,6 +502,9 @@ _desk_run() {
     action_titles+=('New terminal tab')
     action_hints+=('Open a shell in this directory')
   fi
+  action_ids+=(plugins)
+  action_titles+=('Plugins')
+  action_hints+=('Install and manage GitHub or local plugins')
   action_ids+=(projects)
   action_titles+=('Projects')
   action_hints+=('Pin and switch folders')

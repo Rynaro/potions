@@ -168,16 +168,48 @@ Run `./migrate.sh` to migrate from legacy to new structure.
 
 📖 **Full reference**: [`.potions/KEYMAPS.md`](.potions/KEYMAPS.md)
 
-## 🔌 Plugin System
+## 🔌 Use and build plugins
 
-```bash
-# Install plugins
-echo "Rynaro/mini-rails" > plugins.txt
-./plugins.sh install
+Open **Plugins** in Potions Desk or run `potions plugin`. You can install a plugin
+from anyone’s GitHub repository, including your own fork. The optional
+[Potions Shelf](https://github.com/Rynaro/potions-shelf) lets people discover
+community plugins by name. Use `potions plugin search shell` to look for one.
 
-# Create your own plugin
-./plugins.sh create my_awesome_plugin
+To install a release directly, replace `OWNER/REPO` and the tag with the
+publisher’s details. For a community repository, Potions shows the resolved
+commit and asks for your approval. Review that revision before accepting. Its hooks and shell configuration run
+with your account permissions.
+
+```sh
+potions plugin install OWNER/REPO@v1.2.3
 ```
+
+### Make your first plugin
+
+A shell plugin needs a manifest and a shell configuration file. Try adding a
+command to the scaffold and installing it from your working directory.
+
+```sh
+potions plugin create hello
+printf '%s\n' 'alias potions-hello="echo Hello from Potions"' >> ./hello/config/init.zsh
+potions plugin validate ./hello
+potions plugin install ./hello
+```
+
+Open a new shell and run `potions-hello`. The local install links to your
+project, so later edits take effect in new shells. You can disable or remove
+the plugin through the menu. [Plugin authoring guide](plugins/CREATING_PLUGINS.md)
+
+### Share it with others
+
+Publish the contents of `hello/` at the root of a GitHub repository and share
+its name or release tag. Direct installs work as soon as the repository is
+available. To have it appear in Shelf search, anyone can fork the Shelf,
+generate an entry from the plugin, and open a pull request. Contributors can
+comment on that PR, and maintainers review the entry and its automated checks
+before merging. Users decide what to install.
+[Shelf submission guide](https://github.com/Rynaro/potions-shelf/blob/main/CONTRIBUTING.md)
+· [Plugin commands and configuration](plugins/README.md)
 
 ## 🧪 Test Mode
 
@@ -240,7 +272,11 @@ curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/uninstall.sh | 
 
 ## 🤝 Contributing
 
-Contributions welcome! Help improve Potions by submitting bug reports, improving documentation, adding platform support, or creating plugins.
+You can report a problem, suggest a change, test on your platform, or review an
+open pull request. When reporting a plugin issue, include the Potions version,
+the plugin repository and revision, and the command you ran.
+[Potions issues](https://github.com/Rynaro/potions/issues)
+· [Open pull requests](https://github.com/Rynaro/potions/pulls)
 
 ## 📜 License
 

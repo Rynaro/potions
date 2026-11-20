@@ -4,10 +4,10 @@
 # Handles Potionfile.lock creation, reading, and verification
 
 # Guard against multiple inclusion
-if [ -n "$LOCKFILE_SOURCED" ]; then
+if [ -n "$LOCKFILE_SOURCED" ] && declare -F lockfile_get >/dev/null; then
   return 0
 fi
-export LOCKFILE_SOURCED=1
+LOCKFILE_SOURCED=1
 
 # Source core accessories if not already sourced
 CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -45,7 +45,7 @@ lockfile_read() {
   fi
   
   # Return non-comment, non-empty lines
-  grep -v '^#' "$LOCKFILE_PATH" | grep -v '^$'
+  awk '!/^#/ && NF' "$LOCKFILE_PATH"
 }
 
 # Check if plugin is in lockfile
@@ -57,7 +57,7 @@ lockfile_has() {
     return 1
   fi
   
-  grep -q "^${plugin_name}|" "$LOCKFILE_PATH"
+  awk -F'|' -v name="$plugin_name" '$1 == name {found=1} END {exit !found}' "$LOCKFILE_PATH"
 }
 
 # Get plugin entry from lockfile
@@ -70,7 +70,7 @@ lockfile_get() {
     return 1
   fi
   
-  grep "^${plugin_name}|" "$LOCKFILE_PATH" | head -1
+  awk -F'|' -v name="$plugin_name" '$1 == name {print; exit}' "$LOCKFILE_PATH"
 }
 
 # Get specific field from lockfile entry
@@ -145,7 +145,7 @@ lockfile_remove() {
   # Create temp file without the plugin entry
   local temp_file
   temp_file=$(mktemp)
-  grep -v "^${plugin_name}|" "$LOCKFILE_PATH" > "$temp_file"
+  awk -F'|' -v name="$plugin_name" '$1 != name' "$LOCKFILE_PATH" > "$temp_file" || return 1
   mv "$temp_file" "$LOCKFILE_PATH"
   
   log "Removed from lockfile: $plugin_name"
@@ -208,7 +208,7 @@ lockfile_verify() {
     fi
     
     # Check version matches (if not local)
-    if [ "$source" != "local" ]; then
+    if [[ "$source" != local* ]]; then
       local installed_version
       installed_version=$(get_plugin_version "$plugin_path" 2>/dev/null)
       
@@ -218,16 +218,16 @@ lockfile_verify() {
       fi
     fi
     
-    # Verify checksum if present
-    if [ "$checksum" != "none" ] && [ "$checksum" != "local" ]; then
-      # Checksum verification would go here
-      # For now, just check that the manifest exists
-      if [ ! -f "$plugin_path/plugin.potions.json" ]; then
-        log "Missing manifest for: $name"
+    if [[ "$checksum" =~ ^[a-f0-9]{40}$ ]]; then
+      local installed_commit
+      installed_commit=$(git -C "$plugin_path" rev-parse HEAD 2>/dev/null || true)
+      if [ "$installed_commit" != "$checksum" ] ||
+         [ -n "$(git -C "$plugin_path" status --porcelain --untracked-files=all 2>/dev/null)" ]; then
+        log "Plugin differs from recorded Git revision: $name"
         errors=$((errors + 1))
       fi
     fi
-    
+
   done < <(lockfile_read)
   
   if [ $errors -gt 0 ]; then

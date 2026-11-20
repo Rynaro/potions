@@ -5,10 +5,10 @@
 #
 # SYNTAX:
 #   plugin 'name'                           # from Potions Shelf Registry
-#   plugin 'owner/repo'                     # from GitHub (verified only)
+#   plugin 'owner/repo'                     # from GitHub (prompts to trust unverified code)
 #   plugin 'owner/repo', branch: 'main'     # specific branch
 #   plugin 'owner/repo', tag: 'v1.0.0'      # specific version
-#   local_plugin 'path/to/plugin'           # local plugin (no verification)
+#   local_plugin './path/to/plugin'           # local plugin linked to your working directory
 #
 # PLUGIN TYPES:
 #   - Remote plugins: Fetched from Potions Shelf Registry (https://github.com/Rynaro/potions-shelf)

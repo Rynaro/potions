@@ -4,10 +4,10 @@
 # Handles plugin.potions.json parsing and validation
 
 # Guard against multiple inclusion
-if [ -n "$MANIFEST_SOURCED" ]; then
+if [ -n "$MANIFEST_SOURCED" ] && declare -F get_plugin_name >/dev/null; then
   return 0
 fi
-export MANIFEST_SOURCED=1
+MANIFEST_SOURCED=1
 
 # Source core accessories if not already sourced
 CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,7 +23,7 @@ MANIFEST_REQUIRED_FIELDS=("name" "version" "description" "author" "potions_min_v
 
 # Required files for a valid plugin
 # Note: manifest can be either plugin.potions.json (JSON) or .potion (YAML)
-PLUGIN_REQUIRED_FILES=("install.sh" "README.md")
+PLUGIN_REQUIRED_FILES=()
 
 # Parse JSON field from manifest using native bash (no jq dependency)
 # Usage: parse_manifest_field <manifest_file> <field_name>
@@ -368,7 +368,7 @@ validate_manifest_format() {
     # Check for opening and closing braces
     local first_char last_char
     first_char=$(head -c1 "$manifest_file" | tr -d '[:space:]')
-    last_char=$(tail -c2 "$manifest_file" | head -c1 | tr -d '[:space:]')
+    last_char=$(tr -d '[:space:]' < "$manifest_file" | tail -c1)
     
     if [ "$first_char" != "{" ] || [ "$last_char" != "}" ]; then
       log "Invalid JSON structure in manifest"
@@ -452,7 +452,7 @@ validate_plugin_files() {
   fi
   
   # Check that install.sh is executable
-  if [ ! -x "$plugin_path/install.sh" ]; then
+  if [ -f "$plugin_path/install.sh" ] && [ ! -x "$plugin_path/install.sh" ]; then
     log "install.sh is not executable"
     return 1
   fi
@@ -483,7 +483,7 @@ validate_plugin_platform() {
     current_platform="linux"
   fi
   
-  if echo "$platforms" | grep -q "$current_platform"; then
+  if printf '%s\n' "$platforms" | grep -Fxq "$current_platform"; then
     return 0
   fi
   
@@ -521,6 +521,27 @@ validate_plugin() {
     errors=$((errors + 1))
   fi
   
+  local plugin_name
+  plugin_name=$(get_plugin_name "$plugin_path" 2>/dev/null || true)
+  if ! [[ "$plugin_name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
+    log "Invalid plugin name in manifest"
+    errors=$((errors + 1))
+  fi
+  local version min_version value
+  version=$(get_plugin_version "$plugin_path" 2>/dev/null || true)
+  min_version=$(get_potions_min_version "$plugin_path" 2>/dev/null || true)
+  for value in "$version" "$min_version"; do
+    if ! [[ "$value" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
+      log "Invalid version in plugin manifest: $value"
+      errors=$((errors + 1))
+    fi
+  done
+  # Reject symlinks in plugin contents so validation cannot follow outside files.
+  if [ -n "$(find "$plugin_path/" -type l -print -quit)" ]; then
+    log "Plugin contents must use regular files and directories"
+    errors=$((errors + 1))
+  fi
+
   # Check platform support
   if ! validate_plugin_platform "$plugin_path"; then
     errors=$((errors + 1))

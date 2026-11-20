@@ -4,10 +4,10 @@
 # Handles semantic versioning comparison and compatibility checks
 
 # Guard against multiple inclusion
-if [ -n "$VERSIONS_SOURCED" ]; then
+if [ -n "$VERSIONS_SOURCED" ] && declare -F get_current_potions_version >/dev/null; then
   return 0
 fi
-export VERSIONS_SOURCED=1
+VERSIONS_SOURCED=1
 
 # Source core accessories if not already sourced
 CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
