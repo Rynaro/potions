@@ -4,6 +4,149 @@ This guide helps you configure your terminal emulator for optimal compatibility 
 
 ---
 
+## Theme Colors (Alchemist's Orchid)
+
+Potions manages your colorscheme centrally. Switch it any time — the change
+propagates to Zellij, NeoVim, the shell, and your terminal emulator at once:
+
+```sh
+potions theme set alchemists-orchid white   # variants: dark | white | sepia
+potions theme cycle                          # next variant
+potions theme list                           # installed themes
+```
+
+The palette is **byte-faithful** to the upstream WCAG-AAA, astigmatism-friendly
+[Alchemist's Orchid](https://github.com/Rynaro/alchemists-orchid.ghostty) brand
+theme: one source of truth (`~/.potions/themes/`) feeds every surface, including
+the explicit 16-color ANSI palette plus cursor and selection colors.
+
+### First-class emulators — wired for you
+
+**Ghostty** (Linux & macOS) and **Termux** (Android) are managed automatically.
+Install or upgrade Potions, or run:
+
+```sh
+potions terminal setup        # wire every detected emulator (backs up first)
+potions terminal status       # show what is detected and wired
+```
+
+- **Ghostty** — Potions adds one `config-file` include to your
+  `~/.config/ghostty/config` (backing up the original) pointing at a managed
+  fragment with the palette + QoL companion settings. Potions never installs
+  Ghostty; it only configures it when present.
+- **Termux** — Potions writes `~/.termux/colors.properties` and applies it live
+  via `termux-reload-settings` on every theme switch, and adds a touch-friendly
+  `extra-keys` row to `~/.termux/termux.properties`.
+
+### Other emulators — one include line
+
+For emulators Potions does not manage, add the matching include to your own
+config (it lives outside Potions), then reload/restart the emulator:
+
+| Emulator | Generated file | Add to your emulator config |
+|----------|----------------|-----------------------------|
+| Alacritty | `alacritty-colors.toml` | already imported by the bundled `alacritty.toml` |
+| Kitty | `kitty-colors.conf` | `include ~/.potions/config/generated/kitty-colors.conf` |
+| WezTerm | `wezterm-colors.lua` | `config.colors = dofile(os.getenv('HOME')..'/.potions/config/generated/wezterm-colors.lua')` |
+
+Inside Zellij the generated Zellij theme drives the palette directly, so an
+emulator import is only needed for the bare shell or when Zellij is disabled.
+Bring your own theme with `potions theme install <dir>` (verified before install).
+
+---
+
+## Ghostty (Recommended — Linux & macOS)
+
+[Ghostty](https://ghostty.org) is a fast, native, GPU-accelerated terminal and
+the recommended desktop choice for Potions.
+
+### Install Ghostty yourself
+
+Potions configures Ghostty but never installs it:
+
+- **macOS:** `brew install --cask ghostty`
+- **Linux:** use your distro package (e.g. Fedora `dnf install ghostty`) or the
+  builds linked from <https://ghostty.org/download>.
+
+### Let Potions wire it
+
+```sh
+potions terminal setup ghostty
+```
+
+This backs up `~/.config/ghostty/config`, then appends a single optional include:
+
+```
+config-file = ?~/.potions/config/generated/ghostty.conf
+```
+
+The managed `ghostty.conf` pulls in the active palette and sets QoL companions:
+`cursor-style = block`, `unfocused-split-opacity = 0.85`,
+`shell-integration = detect`,
+`shell-integration-features = sudo,title,ssh-terminfo`,
+`macos-option-as-alt = left` (so Zellij `Alt+<key>` bindings fire on macOS),
+Zellij tab-navigation keybindings, and macOS Cmd→Alt forwards so Zellij's
+`Alt+d/t/w/n/p/Enter` bindings fire from Cmd (you do not add these yourself).
+
+`ssh-terminfo` installs `xterm-ghostty` on the remote so SSH keeps Ghostty's
+real terminfo. That is the fix for `'xterm-ghostty': unknown terminal type`
+and the garbled/doubled line editing that follows.
+
+`cursor` is omitted on purpose: Zellij owns cursor shape. Ghostty's cursor
+integration hides the cursor and often fails to restore it over SSH/Zellij.
+`cursor-style = block` and `cursor-color` stay.
+
+`ssh-env` is omitted on purpose: it rewrites `TERM` to `xterm-256color` and
+fights `ssh-terminfo`. Restricted hosts that cannot accept the terminfo
+upload should set `TERM=xterm-256color` for that host only, not globally.
+
+Inside Zellij the pane is not Ghostty. `.zshrc` pins `TERM` to
+`xterm-256color` for the pane and for `ssh`, so a remote shell does not emit
+Ghostty-only sequences (scroll regions, alternate charset, synchronized
+output) that Zellij mis-draws. Scrolling those sequences mixes the pane.
+A shell that is not inside Zellij still uses `xterm-ghostty`.
+
+### Live theme changes
+
+- In a **bare shell**, `potions theme cycle` repaints Ghostty instantly via OSC
+  escape sequences — no reload needed.
+- **Structural** changes (cursor style, keybindings) need a config reload:
+  press **Cmd/Ctrl+Shift+,** or restart Ghostty.
+- Inside **Zellij**, there is no instant OSC repaint. Ghostty still owns the
+  window background (reload config with **Cmd/Ctrl+Shift+,** or restart
+  Ghostty). Zellij owns pane colors until you start a **new Zellij session**.
+  `potions theme set|cycle` rewrites the files and prints those two steps.
+
+---
+
+## Termux (Android)
+
+On Android, Termux *is* the terminal, so Potions themes it directly.
+
+### Automatic
+
+`potions terminal setup termux` (run for you on install/upgrade) writes the
+colors and a touch-friendly `extra-keys` row, then reloads Termux live.
+
+### What Potions manages
+
+- **`~/.termux/colors.properties`** — the active Alchemist's Orchid palette
+  (`background`/`foreground`/`cursor`/`color0..15`). Rewritten and applied live
+  via `termux-reload-settings` on every `potions theme set|cycle`.
+- **`~/.termux/termux.properties`** — adds (only if you have not set one) an
+  `extra-keys` row giving ESC, TAB, CTRL, ALT, `-`, `/`, arrows, HOME/END, and
+  PgUp/PgDn — essential for Zellij and NeoVim on a touch keyboard. Your existing
+  `termux.properties` is backed up and never overwritten.
+
+### Notes
+
+- Live repaint uses `termux-reload-settings` (bundled with Termux). If a change
+  does not show, run it manually: `termux-reload-settings`.
+- Truecolor is supported by Termux, so the palette is exact; the `cterm`
+  fallbacks only matter on 256-color hosts.
+
+---
+
 ## macOS: Cmd vs Ctrl Key Interception
 
 macOS terminal emulators intercept `Cmd+<key>` at the application (Cocoa) layer before input reaches the PTY. Zellij — running inside the PTY — never sees `Cmd` shortcuts.
@@ -35,7 +178,7 @@ Most common cause on macOS: pressing `Cmd+A` (⌘A) instead of `Ctrl+a`. The **C
 
 ### Restoring Cmd Muscle Memory (Optional)
 
-Configure your terminal to forward `Cmd+<key>` as `Alt+<key>` (escape sequence `\e<key>`) — the PTY receives it as `Alt`, and Zellij's `Alt+<key>` bindings fire. See per-terminal instructions below.
+Configure your terminal to forward `Cmd+<key>` as `Alt+<key>` (escape sequence `\e<key>`) — the PTY receives it as `Alt`, and Zellij's `Alt+<key>` bindings fire. See per-terminal instructions below. **Ghostty** already generates these Cmd→Alt binds in the managed `ghostty.conf`; other emulators still need a one-time mapping.
 
 ---
 
@@ -289,14 +432,17 @@ Try these alternatives:
 
 #### Ctrl+S freezes terminal
 
-This is the terminal's XON/XOFF flow control. Potions should disable it automatically, but if not:
+This is the terminal's XON/XOFF flow control. Potions disables it automatically
+for interactive shells (`stty -ixon` in `~/.potions/.zshrc`), so `Ctrl+S` is free
+for Neovim's "save". If you hit a frozen terminal in a shell that does not load
+Potions' `.zshrc`:
 
 ```bash
 # Add to your shell config
 stty -ixon
 ```
 
-To unfreeze: Press `Ctrl+Q`
+To unfreeze a terminal that is currently paused: press `Ctrl+Q`
 
 ---
 

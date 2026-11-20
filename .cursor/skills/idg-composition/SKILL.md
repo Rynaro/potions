@@ -1,0 +1,1 @@
+../../../.eidolons/idg/skills/composition/SKILL.md

@@ -484,7 +484,7 @@ update_dotfiles() {
     relative_path=${file#"$source_dir"/}
     destination="$POTIONS_HOME/$relative_path"
     case "$relative_path" in
-      config/aliases.zsh|config/secure.zsh|config/local.zsh|\
+      config/aliases.zsh|config/secure.zsh|config/local.zsh|config/theme.conf|\
       config/macos.zsh|config/linux.zsh|config/wsl.zsh|config/termux.zsh|\
       nvim/user.vim|nvim/lua/theme/alchemists-orchid.lua|zellij/user.kdl|\
       .zsh_aliases|.zsh_secure_aliases|sources/macos.sh|sources/linux.sh|\
@@ -502,6 +502,28 @@ update_dotfiles() {
     chmod +x "$POTIONS_HOME/bin/potions"
   fi
   log_success "Dotfiles updated"
+
+  # Regenerate theme artifacts for the active theme so the upgrade re-applies
+  # the colorscheme across zellij/nvim/shell/terminal. Non-fatal on failure.
+  if [ -f "$POTIONS_HOME/lib/theme/manager.sh" ]; then
+    log_info "Regenerating theme artifacts..."
+    if REPO_ROOT="" POTIONS_HOME="$POTIONS_HOME" bash "$POTIONS_HOME/lib/theme/manager.sh" regen > /dev/null 2>&1; then
+      log_success "Theme artifacts regenerated"
+    else
+      log_warning "Theme artifacts could not be regenerated (non-fatal)"
+    fi
+  fi
+
+  # Re-wire detected terminal emulators (Ghostty/Termux). Idempotent and
+  # configure-only — a no-op when no supported emulator is present.
+  if [ -f "$POTIONS_HOME/lib/terminal/manager.sh" ]; then
+    log_info "Reconfiguring terminal emulators..."
+    if REPO_ROOT="" POTIONS_HOME="$POTIONS_HOME" bash "$POTIONS_HOME/lib/terminal/manager.sh" setup --auto > /dev/null 2>&1; then
+      log_success "Terminal emulators reconfigured"
+    else
+      log_warning "Terminal emulator setup skipped (non-fatal)"
+    fi
+  fi
 }
 
 # Clean up old backups (keep last 5 backups)
@@ -517,7 +539,7 @@ cleanup_old_backups() {
       older_backups+=("$backup")
     fi
   done
-  excess=$(("${#older_backups[@]}" - 4))
+  excess=$(( ${#older_backups[@]} - 4 ))
   if [ "$excess" -gt 0 ]; then
     rm -rf -- "${older_backups[@]:0:excess}"
     log_info "Kept 5 most recent backups"

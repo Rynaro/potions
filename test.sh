@@ -300,6 +300,14 @@ test_no_local_outside_functions() {
   done
 }
 
+# Sourcing .zshrc can load user plugins and create a completion cache.
+run_zshrc_fixture() (
+  local fixture_home
+  fixture_home=$(mktemp -d)
+  trap 'rm -rf "$fixture_home"' EXIT
+  env HOME="$fixture_home" ZDOTDIR="$fixture_home" ZELLIJ=1 zsh -fc "$@"
+)
+
 test_config_validity() {
   log_step "Configuration File Validation"
 
@@ -316,6 +324,8 @@ test_config_validity() {
 
   # Check init.vim has user extension
   assert_file_contains "$SCRIPT_DIR/.potions/nvim/init.vim" "user.vim" "init.vim sources user.vim"
+  assert_file_contains "$SCRIPT_DIR/.potions/nvim/init.vim" "xterm-ghostty" "init.vim enables termguicolors for xterm-ghostty"
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "CLAUDECODE" ".zshrc treats Claude Code as an AI editor"
 
   # Check zellij config uses clear-defaults
   assert_file_contains "$SCRIPT_DIR/.potions/zellij/config.kdl" "clear-defaults=true" "config.kdl uses clear-defaults"
@@ -327,29 +337,77 @@ test_config_validity() {
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_materials" ".zshrc has material/adjective word list"
   assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_alchemical_words" ".zshrc has alchemical word list"
 
-  # Functional: verify composed session name for reference hostname
+  # Check attach --create is used so dead sessions resurrect on reopen
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "attach --create" ".zshrc uses attach --create for session resurrection"
+
+  # Zellij cannot emulate xterm-ghostty. Panes must pin TERM before SSH.
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "export TERM=xterm-256color" ".zshrc pins TERM inside Zellij"
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "_potions_terminal_restore" ".zshrc restores the terminal after ssh"
+
+  # Functional: verify generated name matches the expected format and uses words from both lists
   if command -v zsh &>/dev/null; then
-    _session_name_result=$(
-      fixture_home=$(mktemp -d)
-      trap 'rm -rf "$fixture_home"' EXIT
-      env HOME="$fixture_home" ZDOTDIR="$fixture_home" HOSTNAME=server zsh -fc '
-        source "$1/.potions/.zshrc" 2>/dev/null || true
-        _potions_zellij_session_name
-      ' _ "$SCRIPT_DIR"
-    )
-    if [ "$_session_name_result" = "verdant-retort" ]; then
-      log_success "Session naming: HOSTNAME=server → verdant-retort"
-      TESTS_PASSED=$((TESTS_PASSED + 1))
-    else
-      log_failure "Session naming: expected 'verdant-retort', got '$_session_name_result'"
-      TESTS_FAILED=$((TESTS_FAILED + 1))
-    fi
-    # Check output matches two-word hyphenated format
+    _materials_list="golden silver copper iron obsidian azure crimson verdant pale molten frozen ethereal arcane vivid tarnished radiant"
+    _alchemical_list="cauldron elixir alembic crucible tincture phlogiston azoth vitriol philosopher quintessence transmutation reagent catalyst retort sublimate athanor"
+
+    _session_name_result=$(run_zshrc_fixture '
+      source "$1/.potions/.zshrc" 2>/dev/null || true
+      _potions_zellij_session_name
+    ' _ "$SCRIPT_DIR")
+
     if echo "$_session_name_result" | grep -qE '^[a-z]+-[a-z]+$'; then
       log_success "Session name format: two hyphen-joined lowercase words"
       TESTS_PASSED=$((TESTS_PASSED + 1))
     else
       log_failure "Session name format invalid: '$_session_name_result'"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    _w1="${_session_name_result%%-*}"
+    _w2="${_session_name_result##*-}"
+    if echo " $_materials_list " | grep -q " $_w1 " && echo " $_alchemical_list " | grep -q " $_w2 "; then
+      log_success "Session name words from expected lists: $_w1 / $_w2"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Session name words not from expected lists: '$_session_name_result'"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    # Non-determinism: 50 invocations should produce >1 distinct name
+    _distinct_count=$(run_zshrc_fixture '
+      source "$1/.potions/.zshrc" 2>/dev/null || true
+      for _ in {1..50}; do _potions_zellij_session_name; done
+    ' _ "$SCRIPT_DIR" | sort -u | wc -l | tr -d " ")
+    if [ "$_distinct_count" -gt 1 ]; then
+      log_success "Session name randomness: $_distinct_count distinct names across 50 calls"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Session name not random: only $_distinct_count distinct names across 50 calls"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    # Inside Zellij, a Ghostty TERM must be rewritten before SSH. Sourcing
+    # .zshrc with ZELLIJ=1 also skips the auto-start at the bottom of the file.
+    _term_pin=$(TERM=xterm-ghostty run_zshrc_fixture '
+      source "$1/.potions/.zshrc" 2>/dev/null || true
+      printf "%s" "$TERM"
+    ' _ "$SCRIPT_DIR")
+    if [ "$_term_pin" = "xterm-256color" ]; then
+      log_success "Zellij pane pins xterm-ghostty to xterm-256color"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Zellij TERM pin failed: '$_term_pin'"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    _term_keep=$(TERM=xterm-256color run_zshrc_fixture '
+      source "$1/.potions/.zshrc" 2>/dev/null || true
+      printf "%s" "$TERM"
+    ' _ "$SCRIPT_DIR")
+    if [ "$_term_keep" = "xterm-256color" ]; then
+      log_success "Zellij pane keeps an already compatible TERM"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "Zellij TERM was rewritten unexpectedly: '$_term_keep'"
       TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
   else
@@ -510,21 +568,25 @@ test_termux_shell_setup() {
     return 0
   fi
 
-  # Check if ~/.termux/shell file exists (created by zsh.sh)
-  if [ -f "$HOME/.termux/shell" ]; then
-    log_success "Termux shell configuration file exists"
+  # ~/.termux/shell MUST be a symlink to the shell binary — Termux execs it
+  # directly. A regular file (even with a valid path inside) makes Termux
+  # unusable with "exec: Permission denied" on next launch.
+  if [ -L "$HOME/.termux/shell" ]; then
+    log_success "Termux shell configuration is a symlink"
     TESTS_PASSED=$((TESTS_PASSED + 1))
-    
-    # Verify it contains zsh path
-    local shell_path
-    shell_path=$(cat "$HOME/.termux/shell" 2>/dev/null || echo "")
-    if [ -n "$shell_path" ] && [ -x "$shell_path" ]; then
-      log_success "Termux shell file contains valid zsh path"
+
+    local shell_target
+    shell_target=$(readlink -f "$HOME/.termux/shell" 2>/dev/null || echo "")
+    if [ -n "$shell_target" ] && [ -x "$shell_target" ]; then
+      log_success "Termux shell symlink resolves to an executable ($shell_target)"
       TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-      log_failure "Termux shell file does not contain valid zsh path"
+      log_failure "Termux shell symlink does not resolve to an executable"
       TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
+  elif [ -e "$HOME/.termux/shell" ]; then
+    log_failure "Termux shell configuration exists but is not a symlink — this locks the user out of Termux"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
   else
     log_skip "Termux shell configuration not found (may be normal if zsh already default)"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
@@ -630,6 +692,703 @@ print_summary() {
   return $TESTS_FAILED
 }
 
+test_theme_system() {
+  log_step "Theme System Tests (Phase 0)"
+
+  local theme_lib="$SCRIPT_DIR/.potions/lib/theme"
+  local theme_dir="$SCRIPT_DIR/.potions/themes/alchemists-orchid"
+
+  # Structure
+  assert_file_exists "$theme_lib/resolver.sh" "theme/resolver.sh exists"
+  assert_file_exists "$theme_lib/state.sh" "theme/state.sh exists"
+  assert_file_exists "$theme_lib/registry.sh" "theme/registry.sh exists"
+  assert_file_exists "$theme_lib/generator.sh" "theme/generator.sh exists"
+  assert_file_exists "$theme_lib/manager.sh" "theme/manager.sh exists"
+  assert_file_exists "$SCRIPT_DIR/scripts/compile-themes.sh" "compile-themes.sh exists"
+  assert_file_exists "$theme_dir/manifest" "orchid manifest exists"
+  assert_file_exists "$theme_dir/base.tokens.json" "orchid base.tokens.json exists"
+  assert_file_exists "$theme_dir/base.theme" "orchid base.theme exists"
+  assert_file_exists "$theme_dir/dark.theme" "orchid dark.theme exists"
+  assert_file_exists "$theme_dir/white.theme" "orchid white.theme exists"
+
+  # Syntax + discipline for every theme module
+  local f
+  for f in "$theme_lib"/*.sh; do
+    [ -f "$f" ] || continue
+    assert_syntax_valid "$f" "theme/$(basename "$f") syntax"
+    assert_no_local_outside_function "$f" "theme/$(basename "$f"): no local outside functions"
+  done
+  assert_syntax_valid "$SCRIPT_DIR/scripts/compile-themes.sh" "compile-themes.sh syntax"
+
+  # manager.sh must be executable (the potions bin exec's it)
+  if [ -x "$theme_lib/manager.sh" ]; then
+    log_success "theme/manager.sh is executable"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "theme/manager.sh must be executable"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # potions bin wires the theme command
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_theme" "potions bin has cmd_theme"
+  assert_file_contains "$SCRIPT_DIR/.potions/lib/theme/manager.sh" "owns the window background" "theme apply tells the truth about Ghostty reload"
+  assert_file_contains "$SCRIPT_DIR/.potions/lib/theme/manager.sh" "owns pane colors until then" "theme apply tells the truth about Zellij pane colors"
+
+  # VG-PAIR: every HEX token has a matching CTERM in each .theme
+  local pair_ok=true tf hexes cterms
+  for tf in "$theme_dir"/*.theme; do
+    [ -f "$tf" ] || continue
+    hexes=$(grep -Eo '^(COLOR|COMPONENT)_[A-Z0-9_]+_HEX' "$tf" | sed 's/_HEX$//' | sort)
+    cterms=$(grep -Eo '^(COLOR|COMPONENT)_[A-Z0-9_]+_CTERM' "$tf" | sed 's/_CTERM$//' | sort)
+    [ "$hexes" = "$cterms" ] || pair_ok=false
+  done
+  if [ "$pair_ok" = true ]; then
+    log_success "VG-PAIR: every token has both HEX and CTERM"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-PAIR: HEX/CTERM mismatch in a .theme file"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Compiler drift gate: committed .theme files in sync with sources (needs jq)
+  if command -v jq > /dev/null 2>&1; then
+    if "$SCRIPT_DIR/scripts/compile-themes.sh" --check > /dev/null 2>&1; then
+      log_success "compiler drift check: .theme files in sync with sources"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "compiler drift: run scripts/compile-themes.sh and commit"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+  else
+    log_skip "compiler drift check skipped (jq not installed)"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+
+  local tmp
+  tmp=$(mktemp -d)
+
+  # Functional: variant overrides base; un-overridden base tokens stay shared.
+  # (Light variants override brand accents/error for legibility, so secondary —
+  # which no variant overrides — is the stable witness that inheritance works.)
+  if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash -c '
+      . "'"$theme_lib"'/generator.sh"
+      theme_generate "'"$theme_dir"'" dark "'"$tmp"'/dark" > /dev/null 2>&1 || exit 1
+      theme_generate "'"$theme_dir"'" white "'"$tmp"'/white" > /dev/null 2>&1 || exit 1
+      ds=$(grep "^COLOR_SURFACE_HEX=" "'"$tmp"'/dark/resolved.env")
+      ws=$(grep "^COLOR_SURFACE_HEX=" "'"$tmp"'/white/resolved.env")
+      de=$(grep "^COLOR_SECONDARY_HEX=" "'"$tmp"'/dark/resolved.env")
+      we=$(grep "^COLOR_SECONDARY_HEX=" "'"$tmp"'/white/resolved.env")
+      [ "$ds" != "$ws" ] && [ "$de" = "$we" ]
+    '; then
+    log_success "resolver: variant overrides base; base tokens shared"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "resolver: base/variant merge incorrect"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Security VG-BYO-SAFE: hostile theme rejected, never executed
+  local pwn="$tmp/pwned" rc=0
+  printf 'COLOR_X_HEX=$(touch %s)\n' "$pwn" > "$tmp/evil.theme"
+  if REPO_ROOT="$SCRIPT_DIR" bash -c '
+      . "'"$theme_lib"'/resolver.sh"
+      theme_resolver_load "'"$tmp"'/evil.theme"
+    ' > /dev/null 2>&1; then
+    rc=0
+  else
+    rc=1
+  fi
+  if [ "$rc" -ne 0 ] && [ ! -e "$pwn" ]; then
+    log_success "VG-BYO-SAFE: hostile theme rejected, no side effect"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-BYO-SAFE: hostile theme not safely rejected (rc=$rc)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # State: legacy single-token form migrates to default variant
+  mkdir -p "$tmp/config"
+  printf 'alchemists-orchid\n' > "$tmp/config/theme.conf"
+  local legacy
+  legacy=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_read')
+  if [ "$legacy" = "alchemists-orchid:dark" ]; then
+    log_success "state: legacy single-token form migrates to default variant"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "state: legacy migration wrong ('$legacy')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # CLI: theme current renders the active theme name
+  local cur
+  cur=$(REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" current 2>/dev/null)
+  if echo "$cur" | grep -q "Alchemist's Orchid"; then
+    log_success "CLI: theme current renders the active theme"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "CLI: theme current output unexpected ('$cur')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # --- Phase 1: adapters, set/cycle, config wiring, VG-SOT, VG-DOCS ---
+
+  # set regenerates all four target artifacts under POTIONS_HOME
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
+    set alchemists-orchid white > /dev/null 2>&1 || true
+  assert_file_exists "$tmp/zellij/themes/potions-active.kdl" "adapter: zellij theme generated"
+  assert_file_exists "$tmp/nvim/generated/palette.vim" "adapter: nvim palette generated"
+  assert_file_exists "$tmp/config/generated/ansi-map.sh" "adapter: shell ansi-map generated"
+  assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "adapter: terminal colors generated"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#fafbfc' "zellij white bg correct"
+  assert_file_contains "$tmp/config/generated/ansi-map.sh" '033]4;1;' "shell ansi-map emits OSC palette"
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "mode = 'light'" "nvim white drives the plugin light mode"
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "bg = '#fafbfc'" "nvim white pins surface bg via plugin overrides"
+  # The plugin's plugin/*.lua eagerly applies its dark default AFTER init.vim;
+  # the palette must re-assert the variant on VimEnter or the body reverts to
+  # dark while only the tabline tracks the variant (regression guard).
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "PotionsApplyOrchid" "nvim palette exposes a re-callable variant apply"
+  assert_file_contains "$tmp/nvim/generated/palette.vim" "autocmd VimEnter \\* lua PotionsApplyOrchid()" "nvim palette re-asserts variant after plugin/ scripts load"
+
+  local st
+  st=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_read')
+  if [ "$st" = "alchemists-orchid:white" ]; then
+    log_success "set: state updated to white"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "set: state not updated ('$st')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # nvim variant -> plugin palette mode: dark=dark; white/sepia ride the plugin's
+  # light mode (Potions' sepia is light parchment, the plugin's own sepia is dark)
+  # and each pins the editor surface to the active variant's bg via overrides.
+  if REPO_ROOT="$SCRIPT_DIR" bash -c '
+      . "'"$theme_lib"'/generator.sh"
+      ( export POTIONS_HOME="'"$tmp"'/nd"; theme_generate "'"$theme_dir"'" dark )  > /dev/null 2>&1 || exit 1
+      ( export POTIONS_HOME="'"$tmp"'/ns"; theme_generate "'"$theme_dir"'" sepia ) > /dev/null 2>&1 || exit 1
+      grep -q "mode = .dark."  "'"$tmp"'/nd/nvim/generated/palette.vim" || exit 1
+      grep -q "bg = .#2e3440."  "'"$tmp"'/nd/nvim/generated/palette.vim" || exit 1
+      grep -q "mode = .light." "'"$tmp"'/ns/nvim/generated/palette.vim" || exit 1
+      grep -q "bg = .#f5f0e6."  "'"$tmp"'/ns/nvim/generated/palette.vim" || exit 1
+    '; then
+    log_success "nvim: variant maps to plugin mode (dark->dark, sepia->light parchment)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "nvim: variant->plugin-mode mapping incorrect"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # cycle advances and wraps from the last variant back to the first
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" set alchemists-orchid sepia > /dev/null 2>&1 || true
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" cycle > /dev/null 2>&1 || true
+  local cyc
+  cyc=$(POTIONS_HOME="$tmp" bash -c '. "'"$theme_lib"'/state.sh"; theme_state_variant')
+  if [ "$cyc" = "dark" ]; then
+    log_success "cycle: sepia -> dark wraps to first variant"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "cycle: did not wrap to first variant ('$cyc')"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # VG-SOT: no palette hex / inline themes block in tracked tool configs
+  if ! grep -qE '#[0-9A-Fa-f]{6}' "$SCRIPT_DIR/.potions/zellij/config.kdl" \
+     && ! grep -q 'themes {' "$SCRIPT_DIR/.potions/zellij/config.kdl"; then
+    log_success "VG-SOT: config.kdl free of palette hex and inline themes block"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-SOT: config.kdl still contains hex or a themes block"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if ! grep -qE 'gui(fg|bg)=#[0-9A-Fa-f]{6}' "$SCRIPT_DIR/.potions/nvim/init.vim"; then
+    log_success "VG-SOT: init.vim free of hardcoded gui hex"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "VG-SOT: init.vim still has hardcoded gui hex"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Config wiring (includes/references point at generated artifacts)
+  assert_file_contains "$SCRIPT_DIR/.potions/zellij/config.kdl" 'potions-active' "config.kdl references generated theme"
+  assert_file_contains "$SCRIPT_DIR/.potions/nvim/init.vim" "generated/palette.vim" "init.vim sources generated nvim palette"
+  assert_file_contains "$SCRIPT_DIR/.potions/.zshrc" "config/generated/ansi-map.sh" ".zshrc sources generated ansi-map"
+  assert_file_contains "$SCRIPT_DIR/.potions/terminal-setup/alacritty.toml" "alacritty-colors.toml" "alacritty.toml imports generated colors"
+  assert_file_contains "$SCRIPT_DIR/install.sh" "manager.sh.* regen" "install.sh regenerates theme artifacts"
+  assert_file_contains "$SCRIPT_DIR/upgrade.sh" "manager.sh.* regen" "upgrade.sh regenerates theme artifacts"
+
+  # dead parallel nvim mechanism removed
+  if [ ! -f "$SCRIPT_DIR/.potions/nvim/theme.vim" ]; then
+    log_success "nvim/theme.vim (dead parallel mechanism) removed"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "nvim/theme.vim should be removed (folded into potions theme)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # VG-DOCS: docs/color-palette.md in sync with token sources
+  if command -v jq > /dev/null 2>&1; then
+    cp "$SCRIPT_DIR/docs/color-palette.md" "$tmp/doc.before" 2>/dev/null || true
+    "$SCRIPT_DIR/scripts/compile-themes.sh" --docs > /dev/null 2>&1 || true
+    if diff -q "$tmp/doc.before" "$SCRIPT_DIR/docs/color-palette.md" > /dev/null 2>&1; then
+      log_success "VG-DOCS: color-palette.md in sync with token sources"
+      TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+      log_failure "VG-DOCS: color-palette.md drift — run scripts/compile-themes.sh --docs"
+      TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+  else
+    log_skip "VG-DOCS check skipped (jq not installed)"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+
+  # --- Phase 2: sepia variant, terminal breadth, BYO verify/install ---
+
+  # sepia variant compiles and resolves to parchment surfaces
+  assert_file_exists "$theme_dir/sepia.theme" "sepia variant compiled"
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
+    set alchemists-orchid sepia > /dev/null 2>&1 || true
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#f5f0e6' "sepia parchment bg generated"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" 'text_unselected' "zellij sepia defines compact-bar text"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" 'background "#f5f0e6"' "zellij sepia bar fill is the parchment surface"
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" 'ribbon_selected' "zellij sepia defines the selected ribbon"
+
+  # all four terminal emulator color files generated
+  assert_file_exists "$tmp/config/generated/alacritty-colors.toml" "terminal: alacritty colors generated"
+  assert_file_exists "$tmp/config/generated/kitty-colors.conf" "terminal: kitty colors generated"
+  assert_file_exists "$tmp/config/generated/ghostty-colors" "terminal: ghostty colors generated"
+  assert_file_exists "$tmp/config/generated/wezterm-colors.lua" "terminal: wezterm colors generated"
+
+  # BYO: a valid theme verifies, installs into themes-user, and lists as byo
+  local byo="$tmp/byo-src"
+  mkdir -p "$byo"
+  printf 'META_ID=tester\nMETA_NAME=Tester\nMETA_VARIANTS=dark\n' > "$byo/manifest"
+  printf 'META_ID=tester\nMETA_VARIANT=dark\nCOLOR_PRIMARY_HEX=#88C0D0\nCOLOR_PRIMARY_CTERM=110\nCOLOR_SURFACE_HEX=#2E3440\nCOLOR_SURFACE_CTERM=237\nCOLOR_ON_SURFACE_HEX=#ECEFF4\nCOLOR_ON_SURFACE_CTERM=255\n' > "$byo/dark.theme"
+  if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" verify "$byo" > /dev/null 2>&1; then
+    log_success "BYO: valid theme passes verification"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: valid theme failed verification"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" install "$byo" > /dev/null 2>&1 || true
+  assert_file_exists "$tmp/themes-user/tester/dark.theme" "BYO: install copies into themes-user"
+  if REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" list 2>/dev/null | grep -q 'byo'; then
+    log_success "BYO: installed theme listed with byo trust"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: installed theme not listed as byo"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # BYO: hostile theme rejected at install — not copied, no side effect
+  local hbyo="$tmp/byo-evil" pwn2="$tmp/PWNED2"
+  mkdir -p "$hbyo"
+  printf 'META_ID=evil\n' > "$hbyo/manifest"
+  printf 'COLOR_X_HEX=$(touch %s)\n' "$pwn2" > "$hbyo/dark.theme"
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" install "$hbyo" > /dev/null 2>&1 || true
+  if [ ! -e "$pwn2" ] && [ ! -d "$tmp/themes-user/evil" ]; then
+    log_success "BYO: hostile theme rejected at install (no copy, no side effect)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: hostile theme not safely rejected at install"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # BYO: uninstall removes it
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" uninstall tester > /dev/null 2>&1 || true
+  if [ ! -d "$tmp/themes-user/tester" ]; then
+    log_success "BYO: uninstall removes the theme"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "BYO: uninstall did not remove the theme"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # --- Phase 3: explicit ANSI-16 + cursor/selection, Ghostty/Termux ---
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" bash "$theme_lib/manager.sh" \
+    set alchemists-orchid dark > /dev/null 2>&1 || true
+
+  # Token SoT carries the explicit ANSI layer + cursor/selection, byte-faithful
+  # to upstream alchemists-orchid.ghostty (dark ANSI red is the brand pink).
+  assert_file_contains "$theme_dir/dark.theme" "COLOR_ANSI_1_HEX=#e8a4cc" "tokens: dark ANSI red is brand pink"
+  assert_file_contains "$theme_dir/dark.theme" "COLOR_CURSOR_HEX=#d9a8dd" "tokens: dark cursor present"
+  assert_file_contains "$theme_dir/dark.theme" "COLOR_SELECTION_BG_HEX=#4c566a" "tokens: dark selection present"
+
+  # Ghostty palette file: cursor + selection + byte-faithful ANSI
+  assert_file_contains "$tmp/config/generated/ghostty-colors" "cursor-color = #d9a8dd" "ghostty: cursor-color emitted"
+  assert_file_contains "$tmp/config/generated/ghostty-colors" "selection-background = #4c566a" "ghostty: selection emitted"
+  assert_file_contains "$tmp/config/generated/ghostty-colors" "palette = 1=#e8a4cc" "ghostty: ANSI palette byte-faithful"
+
+  # Ghostty managed fragment: palette include + QoL companion settings
+  assert_file_exists "$tmp/config/generated/ghostty.conf" "ghostty: managed config fragment generated"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "ghostty-colors" "ghostty.conf includes the palette file"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "macos-option-as-alt" "ghostty.conf sets QoL keys"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "shell-integration-features = sudo,title,ssh-terminfo" "ghostty.conf uses sudo,title,ssh-terminfo features"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "ssh-terminfo" "ghostty.conf enables ssh terminfo integration"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+d=send_key:alt+d" "ghostty.conf forwards cmd+d to alt+d"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+t=send_key:alt+t" "ghostty.conf forwards cmd+t to alt+t"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+w=send_key:alt+w" "ghostty.conf forwards cmd+w to alt+w"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+n=send_key:alt+n" "ghostty.conf forwards cmd+n to alt+n"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+p=send_key:alt+p" "ghostty.conf forwards cmd+p to alt+p"
+  assert_file_contains "$tmp/config/generated/ghostty.conf" "keybind = cmd+enter=send_key:alt+enter" "ghostty.conf forwards cmd+enter to alt+enter"
+  _ghostty_feat=$(grep -E '^shell-integration-features =' "$tmp/config/generated/ghostty.conf" || true)
+  if [ "$_ghostty_feat" = "shell-integration-features = sudo,title,ssh-terminfo" ]; then
+    log_success "ghostty.conf feature line is exact (no ssh-env, no cursor)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "ghostty.conf feature line unexpected: '$_ghostty_feat'"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Zellij + shell now consume the explicit ANSI tokens
+  assert_file_contains "$tmp/zellij/themes/potions-active.kdl" '#e8a4cc' "zellij red uses explicit ANSI token"
+  assert_file_contains "$tmp/config/generated/ansi-map.sh" '#e8a4cc' "shell ansi-map uses explicit ANSI token"
+
+  # Termux adapter writes a faithful colors.properties when the gate is on
+  local thome="$tmp/thome"
+  mkdir -p "$thome"
+  HOME="$thome" bash -c '
+      . "'"$theme_lib"'/resolver.sh"; . "'"$theme_lib"'/adapters.sh"
+      _theme_is_termux() { return 0; }
+      theme_resolve "'"$theme_dir"'" dark >/dev/null 2>&1 || exit 1
+      theme_gen_adapter_termux "" >/dev/null 2>&1
+    '
+  if grep -q '^color1=#e8a4cc' "$thome/.termux/colors.properties" 2>/dev/null \
+     && grep -q '^background=#2e3440' "$thome/.termux/colors.properties" 2>/dev/null; then
+    log_success "termux: colors.properties written with faithful palette"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "termux: colors.properties not written correctly"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Termux adapter is a strict no-op when the gate is off (deterministic)
+  local nhome="$tmp/nothome"
+  mkdir -p "$nhome"
+  HOME="$nhome" bash -c '
+      . "'"$theme_lib"'/resolver.sh"; . "'"$theme_lib"'/adapters.sh"
+      _theme_is_termux() { return 1; }
+      theme_resolve "'"$theme_dir"'" dark >/dev/null 2>&1
+      theme_gen_adapter_termux "" >/dev/null 2>&1
+    '
+  if [ ! -f "$nhome/.termux/colors.properties" ]; then
+    log_success "termux: adapter is a no-op off-Termux"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "termux: adapter wrote colors.properties off-Termux"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  rm -rf "$tmp"
+}
+
+test_terminal_emulator_support() {
+  log_step "Terminal Emulator Support Tests"
+
+  local term_lib="$SCRIPT_DIR/.potions/lib/terminal"
+
+  assert_file_exists "$term_lib/manager.sh" "terminal/manager.sh exists"
+  assert_syntax_valid "$term_lib/manager.sh" "terminal/manager.sh syntax"
+  assert_no_local_outside_function "$term_lib/manager.sh" "terminal/manager.sh: no local outside functions"
+
+  # potions bin wires the terminal command; install/upgrade auto-run setup
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_terminal" "potions bin has cmd_terminal"
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "potions terminal setup ghostty" "doctor suggests potions terminal setup ghostty"
+  assert_file_contains "$SCRIPT_DIR/install.sh" "terminal/manager.sh.* setup" "install.sh wires terminal setup"
+  assert_file_contains "$SCRIPT_DIR/upgrade.sh" "terminal/manager.sh.* setup" "upgrade.sh wires terminal setup"
+
+  # generator dispatches the termux adapter target
+  assert_file_contains "$SCRIPT_DIR/.potions/lib/theme/generator.sh" "termux" "generator targets include termux"
+
+  local tmp
+  tmp=$(mktemp -d)
+
+  # Ghostty wiring: backs up an existing config, appends the include exactly once
+  local ghome="$tmp/ghome"
+  mkdir -p "$ghome/.config/ghostty" "$ghome/.potions/config/generated"
+  printf '# managed fragment\n' > "$ghome/.potions/config/generated/ghostty.conf"
+  printf 'font-size = 14\n' > "$ghome/.config/ghostty/config"
+  # Pin XDG_CONFIG_HOME so the manager resolves the config to the test fixture
+  # regardless of the runner's environment (Ubuntu CI presets XDG_CONFIG_HOME).
+  local gxdg="$ghome/.config"
+  HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+    bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
+  HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+    bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
+  local inc_count
+  inc_count=$(grep -Fc "config/generated/ghostty.conf" "$ghome/.config/ghostty/config" 2>/dev/null || true)
+  inc_count=${inc_count:-0}
+  if [ "$inc_count" = "1" ] && [ -f "$ghome/.config/ghostty/config.bak" ]; then
+    log_success "terminal: Ghostty include added once, original backed up"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal: Ghostty wiring not idempotent or no backup (count=$inc_count)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  assert_file_contains "$ghome/.config/ghostty/config" "font-size = 14" "terminal: Ghostty original config preserved"
+
+  # Ghostty setup is a no-op when Ghostty is absent (no config dir, not on PATH)
+  local ahome="$tmp/absent"
+  mkdir -p "$ahome"
+  HOME="$ahome" XDG_CONFIG_HOME="$ahome/.config" POTIONS_HOME="$ahome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+    PATH="/usr/bin:/bin" bash "$term_lib/manager.sh" setup ghostty > /dev/null 2>&1 || true
+  if [ ! -e "$ahome/.config/ghostty/config" ]; then
+    log_success "terminal: Ghostty setup no-ops when emulator absent"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal: Ghostty setup created config when emulator absent"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # status renders without error
+  if HOME="$ghome" XDG_CONFIG_HOME="$gxdg" POTIONS_HOME="$ghome/.potions" REPO_ROOT="$SCRIPT_DIR" \
+       bash "$term_lib/manager.sh" status > /dev/null 2>&1; then
+    log_success "terminal: status runs cleanly"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal: status errored"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Doctor fixtures must keep coreutils on PATH. Termux ships them in
+  # $PREFIX/bin, not /usr/bin; Fedora's container image has no git.
+  local fixture_path="/usr/bin:/bin"
+  if [ -n "${PREFIX:-}" ] && [ -d "${PREFIX}/bin" ]; then
+    fixture_path="${PREFIX}/bin:${fixture_path}"
+  fi
+
+  # doctor: skip Ghostty include check when Ghostty is absent
+  local dabs="$tmp/doctor-absent" dabs_out
+  mkdir -p "$dabs/.potions"
+  dabs_out=$(HOME="$dabs" XDG_CONFIG_HOME="$dabs/.config" POTIONS_HOME="$dabs/.potions" \
+    PATH="$fixture_path" bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1 || true)
+  if echo "$dabs_out" | grep -qi ghostty; then
+    log_failure "doctor: mentioned Ghostty when emulator is absent"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "doctor: skips Ghostty include check when emulator is absent"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # doctor: warn (not a hard failure of unrelated checks) when include is missing
+  local dmiss="$tmp/doctor-miss" dmiss_out dmiss_rc=0
+  mkdir -p "$dmiss/.potions/bin" "$dmiss/.config/ghostty"
+  printf '0.0.0\n' > "$dmiss/.potions/.version"
+  printf '# zshrc\n' > "$dmiss/.potions/.zshrc"
+  printf '# aliases\n' > "$dmiss/.potions/.zsh_aliases"
+  # Stub git so doctor does not fail on images that omit it (Fedora CI).
+  printf '#!/bin/sh\nexit 0\n' > "$dmiss/.potions/bin/git"
+  chmod +x "$dmiss/.potions/bin/git"
+  local dmiss_path="$dmiss/.potions/bin:${fixture_path}"
+  dmiss_out=$(HOME="$dmiss" XDG_CONFIG_HOME="$dmiss/.config" POTIONS_HOME="$dmiss/.potions" \
+    PATH="$dmiss_path" NO_COLOR=1 \
+    bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1) || dmiss_rc=$?
+  if echo "$dmiss_out" | grep -q "potions terminal setup ghostty"; then
+    log_success "doctor: warns to run potions terminal setup ghostty when include is missing"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "doctor: missing Ghostty include did not suggest setup"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+  if [ "$dmiss_rc" -eq 0 ]; then
+    log_success "doctor: missing Ghostty include is not a hard failure"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "doctor: missing Ghostty include failed unrelated checks (rc=$dmiss_rc)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # doctor: reports the include when wired
+  local dwire="$tmp/doctor-wire" dwire_out
+  mkdir -p "$dwire/.potions" "$dwire/.config/ghostty"
+  printf 'config-file = ?%s/.potions/config/generated/ghostty.conf\n' "$dwire" \
+    > "$dwire/.config/ghostty/config"
+  dwire_out=$(HOME="$dwire" XDG_CONFIG_HOME="$dwire/.config" POTIONS_HOME="$dwire/.potions" \
+    PATH="$fixture_path" NO_COLOR=1 bash "$SCRIPT_DIR/.potions/bin/potions" doctor 2>&1 || true)
+  if echo "$dwire_out" | grep -q "Ghostty config includes the managed fragment" \
+     && ! echo "$dwire_out" | grep -q "managed include is missing"; then
+    log_success "doctor: reports Ghostty managed include when present"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "doctor: did not report wired Ghostty include"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  rm -rf "$tmp"
+}
+
+test_reload_system() {
+  log_step "Reload System Tests"
+
+  local reload_lib="$SCRIPT_DIR/.potions/lib/reload"
+  local theme_lib="$SCRIPT_DIR/.potions/lib/theme"
+  local theme_dir="$SCRIPT_DIR/.potions/themes/alchemists-orchid"
+
+  # Structure: reload manager exists
+  assert_file_exists "$reload_lib/manager.sh" "reload/manager.sh exists"
+
+  # Syntax valid
+  assert_syntax_valid "$reload_lib/manager.sh" "reload/manager.sh syntax"
+
+  # No local outside functions
+  assert_no_local_outside_function "$reload_lib/manager.sh" "reload/manager.sh: no local outside functions"
+
+  # bin/potions wires the reload command
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "cmd_reload" "potions bin has cmd_reload"
+  assert_file_contains "$SCRIPT_DIR/.potions/bin/potions" "reload)" "potions bin router has reload case"
+
+  local tmp
+  tmp=$(mktemp -d)
+
+  env HOME="$tmp" POTIONS_HOME="$tmp/.potions" bash "$SCRIPT_DIR/.potions/bin/potions" help > "$tmp/help"
+  local command
+  for command in reload theme terminal; do
+    assert_file_contains "$tmp/help" "potions $command" "potions help lists the $command command"
+  done
+
+  # Set up a minimal temp POTIONS_HOME with config/theme.conf and themes dir.
+  # Mirrors the setup pattern from test_theme_system.
+  mkdir -p "$tmp/config"
+  printf 'alchemists-orchid:dark\n' > "$tmp/config/theme.conf"
+
+  # Functional: TERM=dumb reload all in temp home exits 0 and regenerates.
+  local reload_rc=0
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" all > /dev/null 2>&1 || reload_rc=$?
+  if [ "$reload_rc" -eq 0 ]; then
+    log_success "reload all: exits 0 with TERM=dumb"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload all: expected exit 0, got $reload_rc"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Regeneration produced ansi-map.sh
+  assert_file_exists "$tmp/config/generated/ansi-map.sh" "reload: ansi-map.sh generated (regen happened)"
+
+  # reload_bounded_exec sanity: sleep 5 with timeout 1 -> returns 124
+  local be_rc=0
+  bash -c '
+    . "'"$reload_lib"'/manager.sh"
+    reload_bounded_exec 1 sleep 5
+  ' > /dev/null 2>&1 || be_rc=$?
+  if [ "$be_rc" -eq 124 ]; then
+    log_success "reload_bounded_exec: sleep 5 with 1s timeout returns 124"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload_bounded_exec: expected 124 (timeout), got $be_rc"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # reload_bounded_exec sanity: true with timeout 2 -> returns 0
+  local be_rc2=0
+  bash -c '
+    . "'"$reload_lib"'/manager.sh"
+    reload_bounded_exec 2 true
+  ' > /dev/null 2>&1 || be_rc2=$?
+  if [ "$be_rc2" -eq 0 ]; then
+    log_success "reload_bounded_exec: true with 2s timeout returns 0"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload_bounded_exec: expected 0, got $be_rc2"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Idempotency: run reload twice, both should exit 0
+  local idem_rc1=0 idem_rc2=0
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" all > /dev/null 2>&1 || idem_rc1=$?
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" all > /dev/null 2>&1 || idem_rc2=$?
+  if [ "$idem_rc1" -eq 0 ] && [ "$idem_rc2" -eq 0 ]; then
+    log_success "reload idempotency: two consecutive runs both exit 0"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload idempotency: rc1=$idem_rc1 rc2=$idem_rc2"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # Unknown target exits 2 (usage error)
+  local bad_rc=0
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" badtarget > /dev/null 2>&1 || bad_rc=$?
+  if [ "$bad_rc" -eq 2 ]; then
+    log_success "reload: unknown target exits 2"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "reload: expected exit 2 for bad target, got $bad_rc"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  rm -rf "$tmp"
+}
+
+test_terminal_reload() {
+  log_step "Terminal Reload Tests"
+
+  local reload_lib="$SCRIPT_DIR/.potions/lib/reload"
+  local term_lib="$SCRIPT_DIR/.potions/lib/terminal"
+
+  # terminal/manager.sh mentions reload
+  assert_file_contains "$term_lib/manager.sh" "reload" "terminal/manager.sh mentions reload"
+
+  local tmp
+  tmp=$(mktemp -d)
+  mkdir -p "$tmp/config"
+  printf 'alchemists-orchid:dark\n' > "$tmp/config/theme.conf"
+
+  # `potions terminal reload` (= reload terminal scope) exits 0
+  local trl_rc=0
+  REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$term_lib/manager.sh" reload > /dev/null 2>&1 || trl_rc=$?
+  if [ "$trl_rc" -eq 0 ]; then
+    log_success "terminal reload: exits 0"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal reload: expected exit 0, got $trl_rc"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  # terminal scope matrix must NOT contain NeoVim or Zellij lines
+  local trl_out
+  trl_out=$(REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$term_lib/manager.sh" reload 2>&1 || true)
+  if echo "$trl_out" | grep -q "NeoVim"; then
+    log_failure "terminal reload: matrix must not contain NeoVim"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "terminal reload: matrix does not contain NeoVim"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+  if echo "$trl_out" | grep -q "Zellij"; then
+    log_failure "terminal reload: matrix must not contain Zellij"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  else
+    log_success "terminal reload: matrix does not contain Zellij"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  fi
+
+  # Equivalence: `reload terminal` matrix == `terminal reload` matrix
+  local rel_out trl_out2
+  rel_out=$(REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$reload_lib/manager.sh" terminal 2>&1 || true)
+  trl_out2=$(REPO_ROOT="$SCRIPT_DIR" POTIONS_HOME="$tmp" TERM=dumb \
+    bash "$term_lib/manager.sh" reload 2>&1 || true)
+  # Compare matrix lines only (strip leading info/success log lines that may differ).
+  local rel_matrix trl_matrix
+  rel_matrix=$(echo "$rel_out" | grep -E '^\s+(Shell|Termux|Alacritty|WezTerm|Kitty|Ghostty|Zellij|NeoVim)' || true)
+  trl_matrix=$(echo "$trl_out2" | grep -E '^\s+(Shell|Termux|Alacritty|WezTerm|Kitty|Ghostty|Zellij|NeoVim)' || true)
+  if [ "$rel_matrix" = "$trl_matrix" ]; then
+    log_success "terminal reload equivalence: reload terminal == terminal reload matrix"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_failure "terminal reload equivalence: matrix differs"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+
+  rm -rf "$tmp"
+}
+
 # Main function
 main() {
   echo ""
@@ -665,6 +1424,10 @@ main() {
   fi
   test_documentation
   test_platform_detection
+  test_theme_system
+  test_terminal_emulator_support
+  test_reload_system
+  test_terminal_reload
 
   # Run Termux-specific tests if in Termux environment
   source "$SCRIPT_DIR/packages/accessories.sh" 2>/dev/null || true

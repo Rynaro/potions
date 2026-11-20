@@ -86,9 +86,6 @@ jobs:
     name: Test on Termux (native aarch64)
     runs-on: ubuntu-24.04-arm  # Native ARM64 runner - no QEMU emulation needed
     timeout-minutes: 10
-    # Allow failures while stabilizing the native ARM64 pipeline
-    # Remove this once the pipeline is confirmed stable
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -127,7 +124,10 @@ jobs:
               fi
               
               echo ''
-              ./test.sh --no-simulate
+              # Invoke via bash explicitly: Termux has no /bin/bash, and the
+              # docker container doesn't load termux-exec's shebang-rewriting
+              # LD_PRELOAD, so #!/bin/bash would fail with bad interpreter.
+              bash ./test.sh --no-simulate
             "
 
       - name: Test install simulation
@@ -167,7 +167,7 @@ jobs:
               
               echo ''
               echo '=== Running Install Simulation ==='
-              ./install.sh --test
+              bash ./install.sh --test
             "
 
   idempotency-test:

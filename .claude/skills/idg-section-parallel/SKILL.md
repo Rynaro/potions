@@ -1,0 +1,1 @@
+../../../.eidolons/idg/skills/section-parallel/SKILL.md

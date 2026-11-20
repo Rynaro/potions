@@ -1,0 +1,78 @@
+{
+  "$schema": "https://github.com/Rynaro/potions/themes/dtcg",
+  "meta": {
+    "id": "alchemists-orchid",
+    "name": "Alchemist's Orchid",
+    "author": "Potions",
+    "variants": [
+      "dark",
+      "white",
+      "sepia"
+    ],
+    "schemaVersion": 1
+  },
+  "color": {
+    "primary": {
+      "$value": "#c89bd0",
+      "cterm": 176
+    },
+    "primary-mid": {
+      "$value": "#dac0f2",
+      "cterm": 183
+    },
+    "primary-deep": {
+      "$value": "#6f4a8e",
+      "cterm": 60
+    },
+    "secondary": {
+      "$value": "#d8dee9",
+      "cterm": 188
+    },
+    "accent-warm": {
+      "$value": "#dfca9a",
+      "cterm": 222
+    },
+    "accent-cool": {
+      "$value": "#81a1c1",
+      "cterm": 110
+    },
+    "accent-nature": {
+      "$value": "#a3be8c",
+      "cterm": 108
+    },
+    "error": {
+      "$value": "#bf616a",
+      "cterm": 167
+    }
+  },
+  "component": {
+    "nvim.tab.active": {
+      "$value": "#434c5e",
+      "cterm": 240
+    },
+    "nvim.tab.visible": {
+      "$value": "#3b4252",
+      "cterm": 238
+    },
+    "nvim.tab.inactive": {
+      "$value": "#2e3440",
+      "cterm": 236
+    },
+    "nvim.fg.bright": {
+      "$value": "#eceff4",
+      "cterm": 255
+    },
+    "nvim.fg.dim": {
+      "$value": "#d8dee9",
+      "cterm": 188
+    },
+    "nvim.muted": {
+      "$value": "#7b88a1",
+      "cterm": 103
+    },
+    "nvim.visual": {
+      "$value": "#434c5e",
+      "cterm": 240
+    }
+  }
+}

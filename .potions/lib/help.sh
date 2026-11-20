@@ -21,6 +21,8 @@ desk_shortcuts() {
   cat <<'SHORTCUTS'
 Zellij	Ctrl+a Space	Open Potions Desk
 Zellij	Ctrl+a	Enter prefix mode
+Zellij	F1 / Ctrl+a ?	Open the searchable shortcut browser
+Zellij	Alt+/	Open the shortcut browser (macOS requires Option as Meta)
 Zellij	Alt+h/j/k/l	Focus the pane to the left, below, above or right
 Zellij	Alt+arrows	Focus the pane in that direction
 Zellij	Alt+d	Split pane right
@@ -38,6 +40,10 @@ Zellij	Ctrl+a n / p	Next or previous tab
 Zellij	Ctrl+a 1-9	Focus a numbered tab
 Zellij	Ctrl+a h/j/k/l	Navigate panes
 Zellij	Ctrl+a r	Resize with h/j/k/l or H/J/K/L, then Enter to finish
+Zellij	Ctrl+a Ctrl+h/j/k/l	Resize the pane in that direction
+Zellij	Ctrl+a =	Cycle pane layouts
+Zellij	Ctrl+a < / >	Swap panes backward or forward
+Zellij	Ctrl+a { / }	Move the pane left or right
 Zellij	Ctrl+a z	Toggle fullscreen
 Zellij	Ctrl+a f	Float or embed the focused pane
 Zellij	Ctrl+a F	Show or hide floating panes
@@ -56,6 +62,7 @@ Zsh	Ctrl+r	Reverse history search
 Zsh	Ctrl+p / Ctrl+n	Previous or next history entry
 Zsh	Ctrl+c	Interrupt the running command
 Zsh	Ctrl+d	End of input on an empty prompt outside Zellij
+Neovim	Space ?	Open or close the Neovim cheatsheet
 Neovim	Ctrl+s	Save file
 Neovim	Ctrl+n	Toggle NERDTree file explorer
 Neovim	Ctrl+c	Copy visual selection to clipboard
@@ -71,6 +78,17 @@ Neovim	Space wq	Write and quit
 Neovim	Space w	Save file
 Neovim	Space h/l	Previous or next buffer
 Neovim	Space 1-9	Focus a numbered buffer
+Neovim	Space 0	Focus the last buffer
+Neovim	Tab / Shift+Tab	Next or previous buffer in normal mode
+Neovim	Space H/L	Move the current buffer left or right
+Neovim	Space bp	Pick a buffer
+Neovim	Space bx	Pick a buffer to close
+Neovim	Space bi	Toggle pin on the current buffer
+Neovim	Space bc	Close the current buffer
+Neovim	Space br	Restore the last closed buffer
+Neovim	Space bo	Close all other buffers
+Neovim	Space bP	Close all unpinned buffers
+Neovim	Space b[ / b]	Close buffers to the left or right
 Neovim	Space nf	Reveal current file in NERDTree
 Neovim	Space /	Search word under cursor
 Neovim	Space j/k	Move selected lines down or up

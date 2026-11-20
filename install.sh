@@ -367,7 +367,10 @@ install_packages() {
 
 # Main installation flow
 main() {
-  print_header
+  # Skip banner when invoked from drink.sh — it already showed the logo
+  if [ -z "${POTIONS_FROM_DRINK:-}" ]; then
+    print_header
+  fi
   
   # Handle test mode cleanup
   if [ "$TEST_MODE" = true ]; then
@@ -503,6 +506,28 @@ EOF
       log_success "Potions CLI installed"
     else
       log_warning "CLI script not found in repo, skipping CLI installation"
+    fi
+
+    # Generate theme artifacts for the active theme (zellij/nvim/shell/terminal).
+    # REPO_ROOT is cleared so the theme registry resolves the installed themes.
+    if [ -f "$POTIONS_HOME/lib/theme/manager.sh" ]; then
+      log_info "Generating theme artifacts..."
+      if REPO_ROOT="" POTIONS_HOME="$POTIONS_HOME" bash "$POTIONS_HOME/lib/theme/manager.sh" regen > /dev/null 2>&1; then
+        log_success "Theme artifacts generated"
+      else
+        log_warning "Theme artifacts could not be generated (non-fatal)"
+      fi
+    fi
+
+    # Wire detected terminal emulators (Ghostty/Termux). Configure-only and
+    # idempotent — it touches nothing when no supported emulator is present.
+    if [ -f "$POTIONS_HOME/lib/terminal/manager.sh" ]; then
+      log_info "Configuring terminal emulators..."
+      if REPO_ROOT="" POTIONS_HOME="$POTIONS_HOME" bash "$POTIONS_HOME/lib/terminal/manager.sh" setup --auto > /dev/null 2>&1; then
+        log_success "Terminal emulators configured"
+      else
+        log_warning "Terminal emulator setup skipped (non-fatal)"
+      fi
     fi
 
     # Success message

@@ -2,7 +2,9 @@
 
 This document provides a unified reference for all keybindings across Zsh, Zellij, and Neovim to help understand and avoid conflicts.
 
-Run `potions keys` to search shortcuts in the terminal, or `potions keys --plain` to print the reference. In Zellij, press **Ctrl+a**, release it, then press **Space** to open the Potions desk.
+Press **Ctrl+a**, then **Space**, to open Potions Desk. Press **F1** or **Ctrl+a** then **?** to open its searchable shortcuts directly. From a shell, run `potions keys` or print the reference with `potions keys --plain`. Inside Neovim, **Space ?** opens the editor's cheatsheet.
+
+On macOS, **Alt** means **Option (⌥)**. **Alt+/** also opens the shortcut browser when your terminal forwards Option as Meta. [Terminal setup](terminal-setup/TERMINAL_SETUP.md)
 
 ---
 
@@ -16,7 +18,7 @@ Run `potions keys` to search shortcuts in the terminal, or `potions keys --plain
 | `Ctrl+d` | EOF/Logout | - | - (removed override) | Vim default half-page down restored |
 | `Ctrl+e` | - | - | - (removed) | Use `$` in Neovim |
 | `Ctrl+n` | History next | - | NERDTree toggle | No conflict with zellij |
-| `Ctrl+s` | - | - | Quick save | Enable with `stty -ixon` |
+| `Ctrl+s` | - | - | Quick save | Works out of the box — `.zshrc` runs `stty -ixon` |
 | `Ctrl+u` | Clear line | - | - (removed override) | Vim default half-page up restored |
 | `Ctrl+v` | - | - | Paste | |
 | `Ctrl+Tab` | - | Next tab | - | May not work in all terminals |
@@ -53,6 +55,7 @@ These keys are used after pressing `Ctrl+a` (enters tmux mode):
 
 | Key | Action | macOS Notes |
 |-----|--------|-------------|
+| `F1` | Open floating cheatsheet | Works on every platform, no setup |
 | `Ctrl+Tab` | Next tab | Not forwarded by Terminal.app/iTerm2 — use `Alt+n` instead |
 | `Ctrl+Shift+Tab` | Previous tab | Not forwarded by Terminal.app/iTerm2 — use `Alt+p` instead |
 | `Alt+h/j/k/l` | Navigate panes | Press Alt directly on all platforms |
@@ -185,6 +188,10 @@ All navigation, buffer management, file operations, and editing commands. Press 
 | `Space` `bd` | Order by directory |
 | `Space` `bl` | Order by language |
 | `Space` `bw` | Order by window number |
+| `Space` `bo` | Close all buffers but current |
+| `Space` `bP` | Close all buffers but pinned |
+| `Space` `b[` | Close all buffers to the left |
+| `Space` `b]` | Close all buffers to the right |
 
 #### Move Lines
 
@@ -225,6 +232,12 @@ All navigation, buffer management, file operations, and editing commands. Press 
 
 Note: `Add Cursor Down/Up` (formerly `Ctrl+Shift+Down/Up`) has been removed. Use repeated `Space` `d` to add cursors to additional occurrences.
 
+#### Cheatsheet
+
+| Key | Action |
+|-----|--------|
+| `Space` `?` | Toggle Neovim cheatsheet (floating) |
+
 ### Tier 3 — Standard Vim Motions (not overridden)
 
 These are native Vim bindings. They are intentionally NOT overridden in Potions — use them as-is.
@@ -241,6 +254,17 @@ These are native Vim bindings. They are intentionally NOT overridden in Potions 
 | `w` | Forward word |
 | `b` | Backward word |
 | `e` | End of word |
+| `ge` | Backward to end of previous word |
+| `gE` | Backward to end of previous WORD |
+| `g_` | Last non-blank character of line |
+| `%` | Jump to matching pair (`(`, `{`, `[`, etc.) |
+| `H` | Move cursor to top of screen |
+| `M` | Move cursor to middle of screen |
+| `L` | Move cursor to bottom of screen |
+| `gcc` | Toggle comment on current line (Neovim 0.10+) |
+| `gc{motion}` | Toggle comment over motion (Neovim 0.10+) |
+| `Ctrl+o` | Jump list — go back |
+| `Ctrl+i` | Jump list — go forward |
 | `Ctrl+u` | Scroll half-page up |
 | `Ctrl+d` | Scroll half-page down |
 

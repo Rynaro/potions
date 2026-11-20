@@ -1,5 +1,19 @@
 POTIONS_HOME="$HOME/.potions"
 
+# Zellij emulates xterm-256color. Panes inherit the outer TERM (xterm-ghostty,
+# xterm-kitty, alacritty, wezterm). SSH then forwards that name, and the remote
+# emits scroll-region, charset, and synchronized-output sequences Zellij does
+# not emulate. Scrolling repaints the desynced grid and characters overlap.
+# Pin the pane before the prompt or any SSH so local editing and remote
+# programs both speak the TERM Zellij actually implements. A bare Ghostty
+# (no Zellij) keeps xterm-ghostty so ssh-terminfo can still install it.
+if [ -n "$ZELLIJ" ]; then
+  case "${TERM:-}" in
+    xterm-256color|screen-256color|tmux-256color|xterm-color) ;;
+    *) export TERM=xterm-256color ;;
+  esac
+fi
+
 # Migration detection - check if legacy config needs migration
 # Only show once per session
 if [ -z "$POTIONS_MIGRATION_CHECKED" ]; then
@@ -30,7 +44,7 @@ is_macos() {
   [ "$(uname -s)" = "Darwin" ]
 }
 
-# Function to check if running in an AI code editor terminal (VSCode, Cursor, etc.)
+# Function to check if running in an AI code editor terminal (VSCode, Cursor, Claude Code, etc.)
 # These terminals should not auto-start the multiplexer to avoid terminal output capture issues
 is_ai_code_editor() {
   # Check for VSCode environment variables
@@ -43,6 +57,10 @@ is_ai_code_editor() {
   fi
   # Check for other common AI editor indicators
   if [ -n "$INTELLIJ_TERMINAL" ] || [ "$TERM_PROGRAM" = "jetbrains" ]; then
+    return 0
+  fi
+  # Claude Code sets CLAUDECODE=1; any non-empty value counts.
+  if [ -n "$CLAUDECODE" ]; then
     return 0
   fi
   return 1
@@ -121,6 +139,24 @@ elif is_termux; then
   safe_source "$POTIONS_HOME/config/termux.zsh"
 fi
 
+# Potions theme — apply the active palette to the live terminal (best-effort).
+# The theme generator writes config/generated/ansi-map.sh (OSC repaint +
+# POTIONS_COLOR_* exports). Switch with: potions theme set <variant>.
+# Inside Zellij the generated Zellij theme owns the palette, so this self-skips.
+safe_source "$POTIONS_HOME/config/generated/ansi-map.sh"
+if [[ -o interactive ]] && command -v potions_apply_terminal_palette &> /dev/null; then
+  potions_apply_terminal_palette
+fi
+
+# Disable XON/XOFF flow control so Ctrl+S and Ctrl+Q are free for applications.
+# Neovim binds Ctrl+S to "save"; without this, the terminal swallows Ctrl+S as
+# XOFF and freezes all output until Ctrl+Q — making the advertised save look
+# broken on every platform. Interactive TTY only; the [ -t 0 ] guard and the
+# 2>/dev/null keep it silent in non-tty contexts (CI, piped shells, editors).
+if [[ -o interactive ]] && [ -t 0 ]; then
+  stty -ixon 2>/dev/null
+fi
+
 # Enable word navigation with Ctrl + arrow keys
 # Terminal-specific key bindings for maximum compatibility
 case "$TERM_PROGRAM" in
@@ -189,29 +225,51 @@ TRAPINT() {
     return 128
 }
 
-# Derive a deterministic two-word alchemical session name from the machine's hostname.
-# A single 16-word list produced collisions on common hostnames (e.g. "server" always
-# mapped to "vitriol"). Two independent 16-element lists give 256 combinations, reducing
-# collision probability. Names are hyphen-joined (e.g. "verdant-retort").
-# Formula:
-#   w1 = (ascii_sum % 16) + 1
-#   w2 = ((ascii_sum + hostname_length) % 16) + 1
+# Pick a random two-word alchemical session name from independent 16-element lists.
+# Each call returns a fresh name — capture once per shell if you need stability.
+# Two 16-element lists give 256 combinations; occasional collisions are tolerable
+# since zellij attach --create no-ops on an already-running same-name session.
 _potions_zellij_session_name() {
   local _materials=(golden silver copper iron obsidian azure crimson verdant pale molten
                     frozen ethereal arcane vivid tarnished radiant)
   local _alchemical_words=(cauldron elixir alembic crucible tincture phlogiston azoth vitriol
                            philosopher quintessence transmutation reagent catalyst retort sublimate athanor)
-  local host="${HOSTNAME:-$(hostname 2>/dev/null || echo "lab")}"
-  local sum=0
-  local char
-  for char in ${(s::)host}; do
-    sum=$(( sum + $(printf '%d' "'$char") ))
-  done
-  local len="${#host}"
-  local w1=$(( (sum % 16) + 1 ))
-  local w2=$(( ((sum + len) % 16) + 1 ))
+  local w1=$(( (RANDOM % 16) + 1 ))
+  local w2=$(( (RANDOM % 16) + 1 ))
   echo "${_materials[$w1]}-${_alchemical_words[$w2]}"
 }
+
+# Return the pane to a known state after SSH. A remote TUI can leave mouse
+# tracking or the line-drawing charset armed; the next scroll then repaints
+# with mixed glyphs. The alternate screen is left alone — Zellij lives there.
+_potions_terminal_restore() {
+  [ -t 1 ] || return 0
+  printf '\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?1015l\033[?1004l\033[?2004l\033[0m\033(B\017'
+}
+
+# One wrap per shell. Inside Zellij, also stop Ghostty's ssh wrapper (when it
+# is present) from advertising xterm-ghostty: --terminfo=false makes `ghostty
+# +ssh` fall back to xterm-256color, which matches the pane pin above.
+if [[ -o interactive ]] && [ -z "${_POTIONS_SSH_WRAPPED:-}" ]; then
+  _POTIONS_SSH_WRAPPED=1
+  if (( $+functions[ssh] )); then
+    functions -c ssh _potions_ssh_impl
+  else
+    _potions_ssh_impl() { command ssh "$@"; }
+  fi
+  ssh() {
+    local _st
+    if [ -n "${ZELLIJ:-}" ]; then
+      local GHOSTTY_SHELL_FEATURES="${GHOSTTY_SHELL_FEATURES//ssh-terminfo/}"
+      TERM=xterm-256color _potions_ssh_impl "$@"
+    else
+      _potions_ssh_impl "$@"
+    fi
+    _st=$?
+    _potions_terminal_restore
+    return "$_st"
+  }
+fi
 
 # Auto-start zellij only if not already in zellij and not in an AI code editor terminal
 # AI code editors (VSCode, Cursor, etc.) should not auto-start zellij to avoid

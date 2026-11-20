@@ -1,0 +1,1 @@
+../../../.eidolons/ramza/skills/critic/SKILL.md

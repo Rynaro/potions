@@ -1,0 +1,1 @@
+../../../.eidolons/atlas/skills/rescout/SKILL.md

@@ -1,0 +1,1 @@
+../../../.eidolons/atlas/skills/esl-hop/SKILL.md

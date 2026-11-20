@@ -1,0 +1,1 @@
+../../../.eidolons/ramza/skills/parallel-spec/SKILL.md

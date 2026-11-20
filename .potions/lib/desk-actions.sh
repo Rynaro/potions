@@ -60,7 +60,7 @@ desk_new_tab() {
   fi
   # Zellij 0.41 requires a layout with --cwd. Use the one shipped alongside
   # this library so that opening a tab works from a checkout and an install.
-  local layout="${BASH_SOURCE[0]%/*}/../zellij/layouts/default.kdl"
+  local layout="${BASH_SOURCE[0]%/*}/../zellij/layouts/compact.kdl"
   if ! zellij action new-tab --cwd "$PWD" --layout "$layout" >/dev/null 2>&1; then
     printf '%s\n' 'Zellij could not open a tab in this directory.' >&2
     return 1

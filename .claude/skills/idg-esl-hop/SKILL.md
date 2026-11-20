@@ -1,0 +1,1 @@
+../../../.eidolons/idg/skills/esl-hop/SKILL.md

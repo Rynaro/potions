@@ -1,0 +1,1 @@
+../../../.eidolons/atlas/skills/abstract/SKILL.md

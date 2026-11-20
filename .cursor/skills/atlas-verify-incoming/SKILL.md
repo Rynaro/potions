@@ -1,0 +1,1 @@
+../../../.eidolons/atlas/skills/verify-incoming/SKILL.md

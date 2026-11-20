@@ -62,6 +62,36 @@ set incsearch
 " Set leader key to space (more ergonomic than backslash)
 let mapleader = " "
 
+" --- Quality-of-life options (curated; vim-sensible covers the basics) ---
+set ignorecase
+set smartcase
+set scrolloff=8
+set splitright
+set splitbelow
+set mouse=a
+
+" Persistent undo — Neovim state dir, never a hardcoded path
+lua << EOF
+local undodir = vim.fn.stdpath("state") .. "/undo"
+if vim.fn.isdirectory(undodir) == 0 then
+  vim.fn.mkdir(undodir, "p")
+end
+vim.opt.undodir = undodir
+vim.opt.undofile = true
+EOF
+
+" Flash yanked text (visual confirmation)
+augroup PotionsYankFlash
+  autocmd!
+  autocmd TextYankPost * silent! lua vim.hl.on_yank({ higroup = "Visual", timeout = 150 })
+augroup END
+
+" Restore cursor to last edit position when reopening a file
+augroup PotionsRestoreCursor
+  autocmd!
+  autocmd BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") && &filetype !~# 'commit' | execute "normal! g`\"" | endif
+augroup END
+
 " ============================================================
 " THEME
 " ============================================================
@@ -69,57 +99,22 @@ let mapleader = " "
 " Truecolor detection guard — only enable termguicolors when the terminal
 " supports 24-bit color. This prevents text disappearance on terminals
 " (e.g. Termux with $TERM='screen' or 'linux') that lack truecolor support.
-if $COLORTERM == 'truecolor' || $COLORTERM == '24bit'
+" SSH typically drops COLORTERM; xterm-ghostty still has truecolor.
+if $COLORTERM == 'truecolor' || $COLORTERM == '24bit' || $TERM == 'xterm-ghostty'
   set termguicolors
 endif
 
-" Load Alchemists Orchid theme configuration
-" Theme preferences can be customized in ~/.potions/nvim/lua/theme/alchemists-orchid.lua
-lua << EOF
-local ok, theme_config = pcall(require, 'theme.alchemists-orchid')
-if ok and theme_config.setup then
-  theme_config.setup()
+" Theme is managed by the Potions theme system. The generator compiles the
+" active Alchemist's Orchid variant — colorscheme load + barbar/Visual/cheat
+" highlight overrides (gui from tokens, cterm fallbacks for non-truecolor) —
+" into nvim/generated/palette.vim. Regenerate/switch with:
+"   potions theme set alchemists-orchid <dark|white>   (or: potions theme cycle)
+" Falls back to the plain colorscheme if the generated palette is absent.
+if filereadable(expand("~/.potions/nvim/generated/palette.vim"))
+  source ~/.potions/nvim/generated/palette.vim
 else
-  -- Fallback: set colorscheme directly if config not found
-  vim.cmd('colorscheme alchemists-orchid')
-end
-EOF
-
-" Persist highlight overrides across colorscheme reloads via autocmd ColorScheme.
-" Alchemists Orchid Papyrus palette reference (https://github.com/Rynaro/alchemists-orchid-papyrus)
-" Full canonical token table: docs/color-palette.md
-"   bg (surface.dark):     #1E1B2E  orchid-tinted deep dark   (color.surface.dark)
-"   fg (secondary):        #E5D4F1  soft lavender white       (color.secondary / lavender.300)
-"   primary:               #CDB4DB  orchid.500                (color.primary)
-"   primary-deep:          #6F4A8E  orchid.700                (color.primary-deep)
-"   accent.cool:           #B9C9E6  blue.400                  (color.accent.cool)
-"   accent.nature:         #C8E7D5  mint.400                  (color.accent.nature)
-"   accent.warm:           #F8D1E0  pink.400                  (color.accent.warm)
-"   error:                 #D32F2F  input.border.error
-"   muted-orchid:          #9E93B8  desaturated lavender
-"   selection bg:          #44395a  deep orchid selection      (plugin-internal)
-"   tab active bg:         #2d2640  slightly lighter dark       (plugin-internal)
-"   tab fill bg:           #16121f  very dark purple            (plugin-internal)
-
-augroup ThemeHighlights
-  autocmd!
-  autocmd ColorScheme * call s:SetThemeHighlights()
-augroup END
-
-function! s:SetThemeHighlights()
-  " Visual mode selection — survives colorscheme reloads
-  highlight Visual guifg=#e0d7f5 guibg=#44395a ctermfg=White ctermbg=DarkGrey
-
-  " Barbar buffer tab highlights using Alchemists Orchid palette
-  highlight BufferCurrent       guifg=#e0d7f5 guibg=#2d2640 gui=bold
-  highlight BufferCurrentMod    guifg=#c678dd guibg=#2d2640 gui=bold
-  highlight BufferInactive      guifg=#7a7094 guibg=#16121f
-  highlight BufferInactiveMod   guifg=#c678dd guibg=#16121f
-  highlight BufferTabpageFill   guibg=#16121f
-endfunction
-
-" Trigger immediately for the current colorscheme load
-call s:SetThemeHighlights()
+  silent! colorscheme alchemists-orchid
+endif
 
 " Barbar Lua setup — explicit icon and separator configuration
 lua << EOF
@@ -130,8 +125,10 @@ if ok then
     auto_hide = false,
     tabpages = true,
     clickable = true,
+    insert_at_end = true,
+    focus_on_close = 'previous',
     icons = {
-      buffer_index = false,
+      buffer_index = true,
       buffer_number = false,
       button = '',
       filetype = {
@@ -142,7 +139,6 @@ if ok then
       separator_at_end = true,
       modified = { button = '●' },
       pinned = { button = '', filename = true },
-      current = { buffer_index = true },
     },
     sidebar_filetypes = {
       NERDTree = true,
@@ -159,7 +155,7 @@ EOF
 " NERDTree toggle
 nnoremap <silent> <C-n> :NERDTreeToggle<CR>
 
-" Quick save (Ctrl+S - works with stty -ixon in terminal)
+" Quick save (Ctrl+S; XON/XOFF flow control is disabled in .potions/.zshrc)
 nnoremap <C-s> :w<CR>
 inoremap <C-s> <C-o>:w<CR>
 vnoremap <C-s> <Esc>:w<CR>
@@ -229,6 +225,12 @@ nnoremap <silent> <Space>bn :BufferOrderByName<CR>
 nnoremap <silent> <Space>bd :BufferOrderByDirectory<CR>
 nnoremap <silent> <Space>bl :BufferOrderByLanguage<CR>
 nnoremap <silent> <Space>bw :BufferOrderByWindowNumber<CR>
+
+" --- Bulk buffer close (individual tab control) ---
+nnoremap <silent> <leader>bo :BufferCloseAllButCurrent<CR>
+nnoremap <silent> <leader>bP :BufferCloseAllButPinned<CR>
+nnoremap <silent> <leader>b[ :BufferCloseBuffersLeft<CR>
+nnoremap <silent> <leader>b] :BufferCloseBuffersRight<CR>
 
 " --- Move lines (replaces unreliable Ctrl+Shift+Arrow and Ctrl+k/j) ---
 nnoremap <leader>j :m .+1<CR>==
@@ -387,6 +389,116 @@ if ok then
   }
 end
 EOF
+
+" ============================================================
+" CHEATSHEET — floating quick reference (<leader>?)
+" ============================================================
+" Zero-dependency floating modal. Keep the `sections` table below in sync
+" with .potions/KEYMAPS.md (the canonical cross-tool keymap reference).
+lua << EOF
+local M = {}
+local state = { win = nil, buf = nil }
+
+local sections = {
+  { "Tier 1 — Universal Ctrl", {
+    { "Ctrl+s", "Save file" },
+    { "Ctrl+n", "Toggle NERDTree" },
+    { "Ctrl+c / Ctrl+x", "Copy / cut (visual) to clipboard" },
+    { "Ctrl+v", "Paste from system clipboard" },
+  }},
+  { "Tier 2 — Leader (Space)", {
+    { "<spc> ff/fg/fb", "Telescope files / live-grep / buffers" },
+    { "<spc> fh/fs/fc", "Telescope help / git-status / commits" },
+    { "<spc> fr/fd", "Telescope LSP refs / definitions" },
+    { "<spc> nf", "NERDTree reveal current file" },
+    { "<spc> yr / ya", "Yank relative / absolute path" },
+    { "<spc> h / l", "Previous / next buffer" },
+    { "<spc> H / L", "Move buffer left / right" },
+    { "Tab / S-Tab", "Cycle buffers (normal mode)" },
+    { "<spc> 1..9 / 0", "Go to buffer N / last buffer" },
+    { "<spc> bp / bx", "Buffer pick / pick-delete" },
+    { "<spc> bi / bc / br", "Pin / close / restore buffer" },
+    { "<spc> bo / bP", "Close all but current / but pinned" },
+    { "<spc> b[ / b]", "Close buffers to the left / right" },
+    { "<spc> bb/bn/bd/bl/bw", "Order by num/name/dir/lang/window" },
+    { "<spc> j / k", "Move line(s) down / up" },
+    { "<spc> d / D", "Multi-cursor word / all occurrences" },
+    { "<spc> x / X", "Multi-cursor skip / remove region" },
+    { "<spc> q / Q / w / wq", "Quit / quit! / write / write-quit" },
+    { "<spc> a", "Select all" },
+    { "<spc> <spc>", "Clear search highlight" },
+    { "<spc> tc / tl", "Theme cycle / list" },
+    { "<spc> ?", "Toggle this cheatsheet" },
+  }},
+  { "Tier 3 — Native motions (not overridden)", {
+    { "0 / ^ / $", "Line start / first non-blank / line end" },
+    { "w / b / e", "Next word / back word / end of word" },
+    { "ge / gE", "Backward to end of word" },
+    { "g_", "Last non-blank char of line" },
+    { "gg / G", "Top / bottom of file" },
+    { "{ / }", "Previous / next paragraph" },
+    { "%", "Jump to matching pair" },
+    { "H / M / L", "Top / middle / bottom of screen" },
+    { "gcc / gc{motion}", "Toggle comment (Neovim 0.10+)" },
+    { "Ctrl+o / Ctrl+i", "Jump list back / forward" },
+    { "Ctrl+u / Ctrl+d", "Scroll half-page up / down" },
+  }},
+}
+
+local function build_lines()
+  local lines, width = {}, 0
+  table.insert(lines, "  Potions — Neovim Cheatsheet")
+  table.insert(lines, "")
+  for _, sec in ipairs(sections) do
+    table.insert(lines, "  " .. sec[1])
+    for _, row in ipairs(sec[2]) do
+      table.insert(lines, string.format("    %-22s %s", row[1], row[2]))
+    end
+    table.insert(lines, "")
+  end
+  table.insert(lines, "  q / <Esc> / <leader>?  close")
+  for _, l in ipairs(lines) do width = math.max(width, #l) end
+  return lines, width
+end
+
+local function close()
+  if state.win and vim.api.nvim_win_is_valid(state.win) then
+    vim.api.nvim_win_close(state.win, true)
+  end
+  state.win, state.buf = nil, nil
+end
+
+function M.toggle()
+  if state.win and vim.api.nvim_win_is_valid(state.win) then close(); return end
+  local lines, width = build_lines()
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].filetype = "potions-cheatsheet"
+  local w = math.min(width + 4, vim.o.columns - 4)
+  local h = math.min(#lines, vim.o.lines - 6)
+  local border = vim.g.potions_cheat_border or "rounded"
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor", width = w, height = h,
+    row = math.floor((vim.o.lines - h) / 2),
+    col = math.floor((vim.o.columns - w) / 2),
+    style = "minimal", border = border,
+    title = " Potions ", title_pos = "center", zindex = 60,
+  })
+  vim.wo[win].winhl = "Normal:PotionsCheatNormal,FloatBorder:PotionsCheatBorder,FloatTitle:PotionsCheatTitle"
+  state.win, state.buf = win, buf
+  local opts = { buffer = buf, nowait = true, silent = true }
+  vim.keymap.set("n", "q", close, opts)
+  vim.keymap.set("n", "<Esc>", close, opts)
+  vim.keymap.set("n", "<leader>?", close, opts)
+end
+
+vim.api.nvim_create_user_command("PotionsCheatsheet", M.toggle, {})
+EOF
+
+" Cheatsheet toggle
+nnoremap <silent> <leader>? :PotionsCheatsheet<CR>
 
 " ============================================================
 " USER OVERRIDES

@@ -1,0 +1,7 @@
+# Potions theme manifest — Alchemist's Orchid (built-in).
+# Flat KEY=value; parsed by the theme registry. Safe to read, never sourced.
+META_ID=alchemists-orchid
+META_NAME=Alchemist's Orchid
+META_AUTHOR=Potions
+META_VARIANTS=dark,white,sepia
+META_TRUST=builtin

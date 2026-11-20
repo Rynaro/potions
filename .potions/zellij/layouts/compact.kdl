@@ -1,11 +1,20 @@
+// Compact footer: a single row combining the tab list with a live mode
+// indicator (NORMAL / TMUX / RESIZE / SESSION / ...).
+//
+// Why compact-bar instead of status-bar: the full status-bar renders a
+// multi-line keybinding hint panel derived from the config. With this
+// prefix-based setup it splashes the no-prefix Alt bindings — which on macOS
+// do nothing unless the terminal sends Option as Meta, and read as a dead,
+// mislabeled "Alt + <arrows>" footer (macOS has Option ⌥, not Alt). compact-bar
+// keeps the useful mode indicator but drops that misleading hint dump.
+//
+// Discoverability is preserved by keys that work on EVERY platform with zero
+// setup: the Ctrl+a prefix, F1, or Ctrl+a then ? — all open the cheatsheet.
 layout {
     default_tab_template {
         children
         pane size=1 borderless=true {
-            plugin location="zellij:tab-bar"
-        }
-        pane size=1 borderless=true {
-            plugin location="zellij:status-bar"
+            plugin location="zellij:compact-bar"
         }
     }
 }

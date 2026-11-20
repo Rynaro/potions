@@ -10,6 +10,8 @@ Potions transforms your fresh macOS, WSL, Termux, or Fedora installation into a 
 
 - **Cross-Platform**: macOS, WSL (Windows), Termux (Android), Debian/Linux, Fedora
 - **Pre-configured Tools**: Zsh, Git, NeoVim, Zellij, and more
+- **One-Switch Theming**: WCAG-AAA Alchemist's Orchid palette across shell, NeoVim, Zellij, and your terminal — switch or cycle with `potions theme`
+- **First-class Terminals**: Ghostty (Linux/macOS) and Termux (Android) wired automatically, with live theme changes
 - **Professional CLI**: Manage your installation with `potions` commands
 - **Plugin System**: Extend functionality with custom plugins
 - **User Customization**: Preserved settings that survive upgrades
@@ -32,7 +34,7 @@ From the desk you can inspect the Git working tree, run an installation health c
 
 The scratchpad lives at `$POTIONS_HOME/notes.md` (normally `~/.potions/notes.md`) and stays available across projects and sessions. The desk uses `VISUAL`, then `EDITOR`, and falls back to `nvim` or `vi`. An editor command can include simple flags such as `code --wait`. Use an executable wrapper for arguments that require shell quoting.
 
-Press `/` to search Zellij, Zsh, and Neovim shortcuts by tool, key, or action. For example, search for `split` to find the pane controls. Run `potions keys` to open the browser directly or `potions keys --plain` to print the reference.
+Press `/` to search Zellij, Zsh, and Neovim shortcuts by tool, key, or action. For example, search for `split` to find the pane controls. Press **F1** in Zellij or run `potions keys` to open the browser directly or `potions keys --plain` to print the reference.
 
 ## 🛠️ What's Installed
 
@@ -56,7 +58,33 @@ potions status           # Show installation status
 potions info             # Show system information
 potions doctor           # Run health check
 potions help             # Show help message
+
+potions theme cycle      # Cycle the colorscheme (dark | white | sepia)
+potions theme set alchemists-orchid white
+potions terminal setup   # Wire detected terminals (Ghostty/Termux)
+potions terminal status  # Show detected emulators and wiring
+
+potions reload           # Re-apply config everywhere (regenerate + live-push)
+potions reload terminal  # Re-apply terminal surfaces only (= potions terminal reload)
 ```
+
+### Theming & Terminals
+
+Potions ships the **Alchemist's Orchid** palette (WCAG-AAA, astigmatism-friendly)
+as one source of truth across the shell, NeoVim, Zellij, and your terminal
+emulator. **Ghostty** (Linux/macOS) and **Termux** (Android) are configured
+automatically — palette, cursor/selection, and quality-of-life settings — with
+live theme switching. See the
+[Terminal Setup Guide](.potions/terminal-setup/TERMINAL_SETUP.md).
+
+**`potions reload`** re-applies your current config across every surface in one
+command: it regenerates all artifacts, then live-pushes wherever it safely can
+(the current terminal's palette via OSC, Termux via `termux-reload-settings`,
+Kitty when remote control is on). Surfaces that can't be hot-reloaded from
+outside (Zellij, NeoVim, Ghostty) are reported with the exact one-line action to
+finish. Scope it with `potions reload [all|terminal|shell|nvim|zellij]`;
+`potions terminal reload` is shorthand for the terminal surfaces. Nothing ever
+hangs and nothing is over-promised — the printed status matrix is the truth.
 
 ## 📝 Configuration
 
@@ -107,6 +135,7 @@ Run `./migrate.sh` to migrate from legacy to new structure.
 | `Ctrl+a n` | Next tab | or `Alt+n` |
 | `Ctrl+a p` | Previous tab | or `Alt+p` |
 | `Ctrl+a z` | Toggle fullscreen | or `Alt+Enter` |
+| `F1` | Open cheatsheet | Works everywhere, no setup |
 | `Ctrl+Tab` | Next tab | Not forwarded by Terminal.app — use `Alt+n` |
 
 ### Neovim (Leader: `Space`)
@@ -154,7 +183,7 @@ potions upgrade
 
 ### Manual Upgrade
 
-For an upgrade from 2.12.1 or earlier, use the newer `upgrade.sh` from the release you're installing. Earlier cached upgraders can replace customized files with their templates.
+For an upgrade from 2.15.5 or earlier, use the newer `upgrade.sh` from the release you're installing. Earlier cached upgraders can replace customized files with their templates.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Rynaro/potions/main/upgrade.sh | bash
@@ -184,7 +213,7 @@ Some terminals require configuration for certain key combinations. See the [Term
 | `Ctrl+Tab` not working | Use `Alt+n` or `Ctrl+a n`; or configure terminal (see Terminal Setup Guide) |
 | `Cmd+D/T/W` does nothing in Zellij | These are intercepted by macOS. Use `Alt+d/t/w` or configure Cmd→Alt forwarding |
 | Word navigation broken | Check terminal key mappings, try Alt+f/Alt+b |
-| Ctrl+S freezes terminal | Potions should disable this; if not, run `stty -ixon` |
+| Ctrl+S freezes terminal | Potions disables this automatically (`stty -ixon` in `.zshrc`); if it persists in a non-Potions shell, run `stty -ixon` |
 
 ## 🗑️ Uninstalling
 

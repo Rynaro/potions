@@ -533,6 +533,24 @@ cmd_doctor() {
   else
     log_success "Potions bin directory in PATH"
   fi
+
+  # Ghostty managed include (skip quietly if Ghostty is absent).
+  # Detection matches terminal_has_ghostty: binary on PATH or a config dir.
+  local ghostty_dir ghostty_cfg ghostty_present=false
+  ghostty_dir="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
+  ghostty_cfg="$ghostty_dir/config"
+  if command -v ghostty > /dev/null 2>&1 || [ -d "$ghostty_dir" ]; then
+    ghostty_present=true
+  fi
+  if [ "$ghostty_present" = true ]; then
+    if [ -f "$ghostty_cfg" ] && grep -Fq "config/generated/ghostty.conf" "$ghostty_cfg" 2>/dev/null; then
+      log_success "Ghostty config includes the managed fragment"
+    else
+      log_warning "Ghostty is present but the managed include is missing"
+      log_info "Fix with: potions terminal setup ghostty"
+      # Advisory only — do not fail unrelated health checks.
+    fi
+  fi
   
   echo ""
   if [ $issues -eq 0 ]; then
@@ -608,6 +626,17 @@ Installation
   potions upgrade             Upgrade Potions
   potions help                Print this command reference
 
+Themes and terminals
+  potions theme current               Show the active theme and variant
+  potions theme list                  List installed themes and variants
+  potions theme set <theme> [variant] Switch the theme across tools
+  potions theme cycle                 Cycle to the next variant
+  potions theme install <dir>         Verify and install a theme
+  potions terminal status             Show detected emulators and their configuration
+  potions terminal setup [target]     Configure Ghostty, Termux, or both
+  potions terminal reload             Apply the terminal configuration
+  potions reload [target]             Reapply configuration to all, terminal, shell, nvim or zellij
+
 Plugins
   potions plugin list                 List installed plugins
   potions plugin status               Show plugin system status
@@ -646,10 +675,75 @@ cmd_plugin() {
   exec "$plugins_script" "$subcommand" "$@"
 }
 
+# Command: theme (delegates to the theme manager)
+cmd_theme() {
+  local subcommand="${1:-current}"
+
+  # Find the theme manager (repo checkout first, then installed location)
+  local manager=""
+  if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.potions/lib/theme/manager.sh" ]; then
+    manager="$REPO_ROOT/.potions/lib/theme/manager.sh"
+  elif [ -f "$POTIONS_HOME/lib/theme/manager.sh" ]; then
+    manager="$POTIONS_HOME/lib/theme/manager.sh"
+  fi
+
+  if [ -z "$manager" ] || [ ! -f "$manager" ]; then
+    log_error "Theme manager not found."
+    log_info "Please upgrade Potions to get the theme system."
+    exit 1
+  fi
+
+  # Invoke via bash so the theme system works even if the executable bit
+  # was not preserved when .potions was copied to the install location.
+  exec bash "$manager" "$@"
+}
+
+# Command: reload (delegates to the reload manager)
+cmd_reload() {
+  # Find the reload manager (repo checkout first, then installed location)
+  local manager=""
+  if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.potions/lib/reload/manager.sh" ]; then
+    manager="$REPO_ROOT/.potions/lib/reload/manager.sh"
+  elif [ -f "$POTIONS_HOME/lib/reload/manager.sh" ]; then
+    manager="$POTIONS_HOME/lib/reload/manager.sh"
+  fi
+
+  if [ -z "$manager" ] || [ ! -f "$manager" ]; then
+    log_error "Reload manager not found."
+    log_info "Please upgrade Potions to get the reload system."
+    exit 1
+  fi
+
+  # Invoke via bash so it works even if the executable bit was not preserved
+  # when .potions was copied to the install location.
+  exec bash "$manager" "$@"
+}
+
+# Command: terminal (delegates to the terminal manager)
+cmd_terminal() {
+  # Find the terminal manager (repo checkout first, then installed location)
+  local manager=""
+  if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.potions/lib/terminal/manager.sh" ]; then
+    manager="$REPO_ROOT/.potions/lib/terminal/manager.sh"
+  elif [ -f "$POTIONS_HOME/lib/terminal/manager.sh" ]; then
+    manager="$POTIONS_HOME/lib/terminal/manager.sh"
+  fi
+
+  if [ -z "$manager" ] || [ ! -f "$manager" ]; then
+    log_error "Terminal manager not found."
+    log_info "Please upgrade Potions to get terminal-emulator support."
+    exit 1
+  fi
+
+  # Invoke via bash so it works even if the executable bit was not preserved
+  # when .potions was copied to the install location.
+  exec bash "$manager" "$@"
+}
+
 # Main command router
 main() {
   local command="${1:-desk}"
-  
+
   case "$command" in
     upgrade)
       shift
@@ -681,6 +775,18 @@ main() {
     plugin|plugins)
       shift
       cmd_plugin "$@"
+      ;;
+    theme|themes)
+      shift
+      cmd_theme "$@"
+      ;;
+    terminal|terminals)
+      shift
+      cmd_terminal "$@"
+      ;;
+    reload)
+      shift
+      cmd_reload "$@"
       ;;
     help|--help|-h)
       cmd_help

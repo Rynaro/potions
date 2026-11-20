@@ -100,7 +100,7 @@ class DeskTests(unittest.TestCase):
         self.assertNotIn(b"\x1b", reference)
         for args, overrides in [(("keys", "--plain"), {}), (("keys",), {"TERM": "dumb"})]:
             with self.terminal(*args, **overrides) as term:
-                self.assertNotIn(b"\x1b", term.until(b"Add a cursor on the current word"))
+                self.assertNotIn(b"\x1b", term.until(reference.rstrip().splitlines()[-1].strip()))
                 self.assertEqual(term.process.wait(timeout=5), 0)
         # The CLI remains usable during a partial upgrade.
         shutil.rmtree(self.install / "lib")
@@ -112,7 +112,7 @@ class DeskTests(unittest.TestCase):
             home = term.until(b"Scratchpad")
             self.assertIn(b"Potions Desk", home)
             self.assertNotRegex(home, rb"\x1b\[[0-9;]*m")
-            term.send(b"/[")
+            term.send(b"/*")
             term.until(b"No matching shortcuts")
             term.send(b"\x7fTELESCOPE\r")
             term.until(b"/ TELESCOPE")
