@@ -1,0 +1,1 @@
+../../../.eidolons/apivr/skills/esl-hop/SKILL.md

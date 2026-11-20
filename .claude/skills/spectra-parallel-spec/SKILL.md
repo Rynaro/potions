@@ -1,0 +1,1 @@
+../../../.eidolons/spectra/skills/parallel-spec/SKILL.md

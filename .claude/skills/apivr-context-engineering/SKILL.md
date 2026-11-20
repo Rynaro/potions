@@ -1,0 +1,1 @@
+../../../.eidolons/apivr/skills/context-engineering/SKILL.md

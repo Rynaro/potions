@@ -1,0 +1,1 @@
+../../../.eidolons/forge/skills/verify-incoming/SKILL.md

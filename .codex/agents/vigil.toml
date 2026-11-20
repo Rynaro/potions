@@ -1,0 +1,8 @@
+name = "vigil"
+description = "VIGIL methodology agent; canonical content is installed under .eidolons/vigil."
+developer_instructions = "Load .eidolons/vigil/PERSONA.md and .eidolons/vigil/SPEC.md. Eidolon display identity: VIGIL. Before work, load `.eidolons/cortex/agent-naming.md` and apply its task naming policy to supported display/title controls."
+# generated_by: eidolons
+# eidolons:managed model
+model = "gpt-6-astra"
+# eidolons:managed model_reasoning_effort
+model_reasoning_effort = "medium"
