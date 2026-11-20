@@ -22,6 +22,12 @@ members:
   - name: idg
     version: "^1.11.0"
     source: github:Rynaro/IDG
+  - name: forge
+    version: "^1.11.0"
+    source: github:Rynaro/FORGE
+  - name: vigil
+    version: "^1.9.0"
+    source: github:Rynaro/VIGIL
 
 # Optional documentation of the intended pipeline:
 # composition:

@@ -1,0 +1,1 @@
+../../../.eidolons/vigil/skills/isolate/SKILL.md

@@ -1,0 +1,1 @@
+../../../.eidolons/forge/skills/deliberation/SKILL.md
