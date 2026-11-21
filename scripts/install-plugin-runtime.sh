@@ -9,6 +9,7 @@ install_plugin_runtime() {
   if ! cp "$repo_root/plugins.sh" "$repo_root/.version" "$stage/" ||
      ! cp "$repo_root/packages/accessories.sh" "$stage/packages/" ||
      ! cp -R "$repo_root/plugins/core" "$stage/plugins/core" ||
+     ! cp -R "$repo_root/plugins/bundled" "$stage/plugins/bundled" ||
      ! cp "$repo_root/plugins/scaffold_plugin.sh" "$stage/plugins/" ||
      ! cp "$repo_root/plugins/registry/verified.txt" "$stage/plugins/registry/"; then
     rm -rf "$stage"
@@ -26,4 +27,5 @@ install_plugin_runtime() {
   else
     mv "$stage" "$target" || return 1
   fi
+  POTIONS_HOME="$potions_root" bash "$target/plugins.sh" bootstrap-defaults || return 1
 }

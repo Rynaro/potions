@@ -1422,6 +1422,9 @@ main() {
     log_skip "Plugin workflow tests require Git"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
   fi
+  log_step "Bundled Default Plugin"
+  bash "$SCRIPT_DIR/plugins/tests/test_bundled.sh"
+  TESTS_PASSED=$((TESTS_PASSED + 1))
   log_step "Potions Desk"
   if command -v python3 >/dev/null 2>&1; then
     python3 "$SCRIPT_DIR/scripts/test-desk.py"

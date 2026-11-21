@@ -63,6 +63,15 @@
 !plugins/templates/*.json
 !plugins/templates/*.md
 
+# Bundled default plugin
+!plugins/bundled/
+!plugins/bundled/word-navigation/
+!plugins/bundled/word-navigation/plugin.potions.json
+!plugins/bundled/word-navigation/README.md
+!plugins/bundled/word-navigation/LICENSE
+!plugins/bundled/word-navigation/config/
+!plugins/bundled/word-navigation/config/init.zsh
+
 # Plugin tests
 !plugins/tests/
 !plugins/tests/*.sh

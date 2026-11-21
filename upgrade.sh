@@ -481,6 +481,12 @@ update_dotfiles() {
     return 1
   fi
 
+  # Keep the existing shell configuration until its default plugins are ready.
+  if [ -f "$1/scripts/install-plugin-runtime.sh" ]; then
+    source "$1/scripts/install-plugin-runtime.sh"
+    install_plugin_runtime "$1" "$POTIONS_HOME" || return 1
+  fi
+
   find "$source_dir" -type f -print0 | while IFS= read -r -d '' file; do
     relative_path=${file#"$source_dir"/}
     destination="$POTIONS_HOME/$relative_path"
@@ -498,11 +504,6 @@ update_dotfiles() {
     mkdir -p "$(dirname "$destination")"
     cp "$file" "$destination"
   done
-
-  if [ -f "$1/scripts/install-plugin-runtime.sh" ]; then
-    source "$1/scripts/install-plugin-runtime.sh"
-    install_plugin_runtime "$1" "$POTIONS_HOME" || return 1
-  fi
 
   if [ -f "$source_dir/bin/potions" ]; then
     chmod +x "$POTIONS_HOME/bin/potions"

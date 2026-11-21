@@ -78,6 +78,8 @@ CRITICAL_FILES=(
   "plugins/core/registry.sh"
   "plugins/scaffold_plugin.sh"
   "plugins/registry/verified.txt"
+  "plugins/bundled/word-navigation/plugin.potions.json"
+  "plugins/bundled/word-navigation/config/init.zsh"
   ".version"
   ".potions/.zshrc"
   ".potions/bin/potions"

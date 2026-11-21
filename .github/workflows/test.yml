@@ -76,6 +76,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Zsh for shell behavior tests
+        run: dnf -y install zsh
+
       - name: Run test suite
         run: ./test.sh --no-simulate
 

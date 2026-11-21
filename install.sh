@@ -167,7 +167,7 @@ TEST_MODE=false
 if [[ "$1" == "--test" ]] || [[ "$2" == "--test" ]]; then
   TEST_MODE=true
   TEST_DIR=$(mktemp -d)
-  TEST_POTIONS_HOME="$TEST_DIR/.potions-test"
+  TEST_POTIONS_HOME="$TEST_DIR/.potions"
   log_warning "🧪 TEST MODE ENABLED - No changes will be made to your system"
   log_info "Test directory: $TEST_DIR"
   
@@ -184,6 +184,12 @@ update_potions() {
   else
     log_info "Copying Potions files to your home directory..."
   fi
+
+  local check_dir="$target_dir/.potions"
+  # Prepare default plugins before replacing the shell configuration that uses them.
+  mkdir -p "$check_dir" || return 1
+  source "$POTIONS_ROOT/scripts/install-plugin-runtime.sh"
+  install_plugin_runtime "$POTIONS_ROOT" "$check_dir" || return 1
   
   # Only copy .potions directory - excludes AI agent docs (AGENT.md, .cursorrules, etc.)
   # These files are git-only and should not be deployed to user installations
@@ -203,19 +209,11 @@ update_potions() {
     cp -r .potions "$target_dir/" 2>/dev/null
   fi
   
-  local check_dir="$target_dir/.potions"
-  if [ "$TEST_MODE" = true ]; then
-    check_dir="$TEST_POTIONS_HOME"
-  fi
-  
   if [ ! -d "$check_dir" ]; then
     log_error "Failed to copy Potions files"
     return 1
   fi
   
-  source "$POTIONS_ROOT/scripts/install-plugin-runtime.sh"
-  install_plugin_runtime "$POTIONS_ROOT" "$check_dir" || return 1
-
   # Copy version file if it exists
   if [ -f ".version" ]; then
     cp ".version" "$check_dir/.version" 2>/dev/null || true
