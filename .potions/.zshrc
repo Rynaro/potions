@@ -1,4 +1,4 @@
-POTIONS_HOME="$HOME/.potions"
+POTIONS_HOME="${POTIONS_HOME:-$HOME/.potions}"
 
 # Zellij emulates xterm-256color. Panes inherit the outer TERM (xterm-ghostty,
 # xterm-kitty, alacritty, wezterm). SSH then forwards that name, and the remote

@@ -499,6 +499,11 @@ update_dotfiles() {
     cp "$file" "$destination"
   done
 
+  if [ -f "$1/scripts/install-plugin-runtime.sh" ]; then
+    source "$1/scripts/install-plugin-runtime.sh"
+    install_plugin_runtime "$1" "$POTIONS_HOME" || return 1
+  fi
+
   if [ -f "$source_dir/bin/potions" ]; then
     chmod +x "$POTIONS_HOME/bin/potions"
   fi

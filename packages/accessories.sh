@@ -39,7 +39,7 @@ NC='\033[0m'
 # Environment Variables
 OS_TYPE="$(uname -s)"
 USER_HOME_FOLDER=$HOME
-POTIONS_HOME="$USER_HOME_FOLDER/.potions"
+POTIONS_HOME="${POTIONS_HOME:-$USER_HOME_FOLDER/.potions}"
 ZDOTDIR=$POTIONS_HOME
 
 # Files excluded from installation/upgrade (git-only, never deployed to user systems)

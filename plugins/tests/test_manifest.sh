@@ -197,7 +197,7 @@ EOF
   
   assert_true "validate_plugin_files '$temp_dir/plugin'" "Complete plugin passes"
   
-  # Missing install.sh
+  # Shell-only plugins can omit setup hooks
   local incomplete_dir
   incomplete_dir=$(mktemp -d)
   mkdir -p "$incomplete_dir/plugin"
@@ -206,7 +206,7 @@ EOF
 # Test Plugin
 EOF
   
-  assert_false "validate_plugin_files '$incomplete_dir/plugin' 2>/dev/null" "Missing install.sh fails"
+  assert_true "validate_plugin_files '$incomplete_dir/plugin' 2>/dev/null" "Shell-only plugin supports optional install.sh"
   
   # Cleanup
   rm -rf "$temp_dir" "$incomplete_dir"

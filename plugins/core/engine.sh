@@ -4,10 +4,10 @@
 # Core plugin operations: install, uninstall, activate, deactivate, update, list
 
 # Guard against multiple inclusion
-if [ -n "$ENGINE_SOURCED" ]; then
+if [ -n "$ENGINE_SOURCED" ] && declare -F plugin_install >/dev/null; then
   return 0
 fi
-export ENGINE_SOURCED=1
+ENGINE_SOURCED=1
 
 # Source core modules
 CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,338 +35,233 @@ STATE_FILE="${INSTALLED_PLUGINS_DIR}/.state"
 
 # Ensure plugin directories exist
 ensure_plugin_dirs() {
-  ensure_directory "$INSTALLED_PLUGINS_DIR"
+  mkdir -p "$INSTALLED_PLUGINS_DIR"
 }
 
-# Parse plugin specification
-# Formats: 
-#   plugin_name                    -> name only
-#   owner/repo                     -> GitHub repo
-#   owner/repo, tag: 'v1.0.0'     -> GitHub repo with tag
-#   owner/repo, branch: 'main'    -> GitHub repo with branch
-# Returns: name|source|ref_type|ref_value
+# Plugin names are used in paths, state records and generated shell code.
+valid_plugin_name() {
+  [[ "$1" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]
+}
+
+# Returns name|source|ref_type|ref_value. Accepts GitHub URLs and legacy refs.
 parse_plugin_spec() {
-  local spec="$1"
-  
-  # Remove quotes and extra whitespace
-  spec=$(echo "$spec" | sed "s/['\"]//g" | xargs)
-  
-  # Check for options (tag: or branch:)
-  local ref_type=""
-  local ref_value=""
-  
-  if echo "$spec" | grep -q ", *tag:"; then
-    ref_type="tag"
-    ref_value=$(echo "$spec" | sed -E "s/.*tag:[[:space:]]*'?([^']*)'?.*/\1/")
-    spec=$(echo "$spec" | sed -E "s/,[[:space:]]*tag:.*//" | xargs)
-  elif echo "$spec" | grep -q ", *branch:"; then
-    ref_type="branch"
-    ref_value=$(echo "$spec" | sed -E "s/.*branch:[[:space:]]*'?([^']*)'?.*/\1/")
-    spec=$(echo "$spec" | sed -E "s/,[[:space:]]*branch:.*//" | xargs)
+  local spec="$1" ref_type="" ref_value="" repo name
+  spec=$(printf '%s' "$spec" | sed "s/^[[:space:]'\"]*//;s/[[:space:]'\"]*$//")
+  if [[ "$spec" == *,* ]]; then
+    local options="${spec#*,}"
+    spec="${spec%%,*}"
+    options=$(printf '%s' "$options" | sed "s/^[[:space:]]*//;s/['\"]//g")
+    ref_type="${options%%:*}"
+    ref_value=$(printf '%s' "${options#*:}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    case "$ref_type" in tag|branch) ;; *) return 1 ;; esac
+  elif [[ "$spec" == *@* ]] && [[ "$spec" != git@* ]]; then
+    ref_value="${spec##*@}"
+    spec="${spec%@*}"
+    ref_type=tag
   fi
-  
-  # Determine source type
-  local name source
-  if echo "$spec" | grep -q "/"; then
-    # GitHub repo format: owner/repo
-    source="github:$spec"
-    name=$(basename "$spec" | sed 's/^potions-//')
+  spec=$(printf '%s' "$spec" | sed 's/[[:space:]]*$//')
+  repo="${spec#https://github.com/}"
+  repo="${repo#github:}"
+  repo="${repo%.git}"
+  if [[ "$repo" == */* ]]; then
+    [[ "$repo" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*/[a-zA-Z0-9_][a-zA-Z0-9_.-]*$ ]] || return 1
+    name="${repo##*/}"
+    valid_plugin_name "$name" || return 1
+    if [ -n "$ref_type" ]; then
+      [ -n "$ref_value" ] && git check-ref-format "refs/tags/$ref_value" >/dev/null 2>&1 || return 1
+      [[ "$ref_value" != *'|'* ]] || return 1
+    fi
+    printf '%s|github:%s|%s|%s\n' "$name" "$repo" "$ref_type" "$ref_value"
   else
-    # Simple name
-    name="$spec"
-    source="registry:$spec"
+    valid_plugin_name "$repo" || return 1
+    [ -z "$ref_type" ] || return 1
+    printf '%s|registry:%s||\n' "$repo" "$repo"
   fi
-  
-  echo "${name}|${source}|${ref_type}|${ref_value}"
 }
 
-# Install a plugin
-# Usage: plugin_install <plugin_spec> [--force] [--skip-security]
-plugin_install() {
-  local plugin_spec="$1"
-  local force=false
-  local skip_security=false
-  
+# Run hooks in their own process, with a stable plugin directory and environment.
+plugin_run_hook() {
+  local plugin_path="$1" hook="$2"
+  [ -f "$plugin_path/$hook.sh" ] || return 0
+  (cd "$plugin_path" && POTIONS_HOME="$POTIONS_HOME" bash -eo pipefail "$hook.sh")
+}
+
+# Installs are staged and checked before replacing an existing plugin.
+plugin_install() (
+  local plugin_spec="${1:-}" force=false skip_security=false trust=false
+  [ -n "$plugin_spec" ] || return 1
   shift
-  while [ $# -gt 0 ]; do
+  while [ "$#" -gt 0 ]; do
     case "$1" in
       --force) force=true ;;
       --skip-security) skip_security=true ;;
+      --trust) trust=true ;;
+      *) log "Unknown install option: $1"; return 2 ;;
     esac
     shift
   done
-  
   ensure_plugin_dirs
-  
-  log "Installing plugin: $plugin_spec"
-  
-  # Check if it's a local plugin
+  local temp_dir target_dir="" backup="" replacement=false committed=false
+  temp_dir=$(mktemp -d "$INSTALLED_PLUGINS_DIR/.install.XXXXXX") || return 1
+  plugin_install_cleanup() {
+    local result="$?"
+    if [ "$replacement" = true ] && [ "$committed" != true ]; then
+      rm -rf "$target_dir"
+      [ -z "$backup" ] || mv "$backup/plugin" "$target_dir"
+      if [ -f "$temp_dir/old.lock" ]; then cp "$temp_dir/old.lock" "$LOCKFILE_PATH"; else rm -f "$LOCKFILE_PATH"; fi
+      if [ -f "$temp_dir/old.state" ]; then cp "$temp_dir/old.state" "$STATE_FILE"; else rm -f "$STATE_FILE"; fi
+    fi
+    rm -rf "$temp_dir"
+    return "$result"
+  }
+  trap plugin_install_cleanup EXIT
+  local parsed name source ref_type ref_value plugin_path version commit=none
   if is_local_plugin "$plugin_spec"; then
-    plugin_install_local "$plugin_spec" "$force" "$skip_security"
-    return $?
-  fi
-  
-  # Remote plugin - verify it's in the registry
-  if ! verify_plugin_signature "$plugin_spec"; then
-    log "Installation aborted: Plugin not verified"
-    return 1
-  fi
-  
-  # Parse plugin specification
-  local parsed name source ref_type ref_value
-  parsed=$(parse_plugin_spec "$plugin_spec")
-  IFS='|' read -r name source ref_type ref_value <<< "$parsed"
-  
-  local target_dir="$INSTALLED_PLUGINS_DIR/$name"
-  
-  # Check if already installed
-  if [ -d "$target_dir" ] && [ "$force" != "true" ]; then
-    log "Plugin already installed: $name"
-    log "Use --force to reinstall"
-    return 1
-  fi
-  
-  # Download plugin
-  log "Downloading plugin..."
-  local temp_dir
-  temp_dir=$(mktemp -d)
-  trap "rm -rf $temp_dir" EXIT
-  
-  local repo_url
-  if [[ "$source" == github:* ]]; then
+    plugin_spec="${plugin_spec/#\~/$HOME}"
+    plugin_path=$(cd "$plugin_spec" && pwd -P) || return 1
+    source="local:$plugin_path"
+    [[ "$plugin_path" != *'|'* && "$plugin_path" != *$'\n'* ]] || return 1
+    name=$(get_plugin_name "$plugin_path") || return 1
+    valid_plugin_name "$name" || { log "Invalid plugin name: $name"; return 1; }
+  else
+    command_exists git || { log "Git is required to install GitHub plugins."; return 1; }
+    parsed=$(parse_plugin_spec "$plugin_spec") || { log "Invalid plugin source: $plugin_spec"; return 1; }
+    IFS='|' read -r name source ref_type ref_value <<< "$parsed"
+    if [[ "$source" == registry:* ]]; then
+      registry_fetch_manifest "${source#registry:}" "$temp_dir/manifest.potion" || return 1
+      local repository
+      repository=$(parse_potion_field "$temp_dir/manifest.potion" repository) || return 1
+      parsed=$(parse_plugin_spec "$repository") || return 1
+      IFS='|' read -r name source ref_type ref_value <<< "$parsed"
+      [[ "$source" == github:* ]] || return 1
+    fi
+    name="${name#potions-}"
     local repo="${source#github:}"
-    repo_url="https://github.com/${repo}.git"
-  elif [[ "$source" == registry:* ]]; then
-    # Fetch manifest from registry to get repository info
-    local registry_name="${source#registry:}"
-    log "Fetching plugin manifest from registry: $registry_name"
-    
-    if [ -n "$REGISTRY_SOURCED" ] && command -v registry_fetch_manifest > /dev/null 2>&1; then
-      local manifest_file="$temp_dir/manifest.potion"
-      if registry_fetch_manifest "$registry_name" "$manifest_file"; then
-        # Parse repository from manifest
-        # Look for repository field in YAML
-        local repo_field
-        repo_field=$(grep -E "^[[:space:]]*repository[[:space:]]*:" "$manifest_file" 2>/dev/null | \
-                     head -1 | \
-                     sed -E "s/^[[:space:]]*repository[[:space:]]*:[[:space:]]*//" | \
-                     sed -E "s/^[\"']//;s/[\"']$//" | \
-                     sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        
-        if [ -n "$repo_field" ]; then
-          # Extract owner/repo from URL
-          if echo "$repo_field" | grep -qE '^https://github\.com/'; then
-            repo=$(echo "$repo_field" | sed 's|^https://github\.com/||' | sed 's|\.git$||')
-            repo_url="https://github.com/${repo}.git"
-          elif echo "$repo_field" | grep -qE '^git@github\.com:'; then
-            repo=$(echo "$repo_field" | sed 's|^git@github\.com:||' | sed 's|\.git$||')
-            repo_url="https://github.com/${repo}.git"
-          elif echo "$repo_field" | grep -qE '/'; then
-            # Assume it's already owner/repo format
-            repo="$repo_field"
-            repo_url="https://github.com/${repo}.git"
-          else
-            log "Invalid repository format in manifest: $repo_field"
-            return 1
-          fi
-        else
-          log "No repository field found in manifest"
-          return 1
-        fi
+    local requested_source="$source"
+    [ -z "$ref_type" ] || requested_source="$source, $ref_type: $ref_value"
+    if [ "$force" != true ] && [ -d "$INSTALLED_PLUGINS_DIR/$name" ] &&
+       [ "$(lockfile_get_source "$name" 2>/dev/null || true)" = "$requested_source" ]; then
+      log "Plugin already installed: $name"
+      return 0
+    fi
+    local needs_trust=false
+    is_verified_plugin "$repo" || needs_trust=true
+    local git_args=(--depth=1)
+    [ -z "$ref_value" ] || git_args+=(--branch "$ref_value")
+    git -c core.hooksPath=/dev/null clone "${git_args[@]}" -- "https://github.com/$repo.git" "$temp_dir/plugin" || return 1
+    plugin_path="$temp_dir/plugin"
+    if [ -n "$ref_type" ]; then
+      local namespace=tags
+      [ "$ref_type" != branch ] || namespace=heads
+      git -C "$plugin_path" fetch --depth=1 origin "refs/$namespace/$ref_value" || return 1
+      git -C "$plugin_path" checkout --detach FETCH_HEAD || return 1
+    fi
+    commit=$(git -C "$plugin_path" rev-parse HEAD) || return 1
+    if [ "$needs_trust" = true ] && [ "$trust" != true ]; then
+      if [ -t 0 ] && [ -t 1 ]; then
+        printf 'Repository https://github.com/%s\nRevision %s (%s)\nPlugin code runs with your account permissions. Trust this revision? [y/N] ' "$repo" "$commit" "${ref_value:-default branch}"
+        local answer
+        IFS= read -r answer || return 1
+        case "$answer" in y|Y|yes) ;; *) return 1 ;; esac
       else
-        log "Failed to fetch manifest from registry"
+        log "Review https://github.com/$repo/commit/$commit then install with --trust to allow its code."
         return 1
       fi
-    else
-      log "Registry client not available"
+    fi
+    source="github:$repo"
+    [ -z "$ref_type" ] || source="$source, $ref_type: $ref_value"
+  fi
+  validate_plugin "$plugin_path" || return 1
+  validate_potions_compatibility "$plugin_path" || return 1
+  if [ "$skip_security" != true ]; then
+    quick_scan "$plugin_path" || return 1
+  fi
+  # Remote installations retain their historical repository-derived name.
+  valid_plugin_name "$name" || return 1
+  target_dir="$INSTALLED_PLUGINS_DIR/$name"
+  local previous_state=""
+  [ ! -f "$LOCKFILE_PATH" ] || cp "$LOCKFILE_PATH" "$temp_dir/old.lock" || return 1
+  [ ! -f "$STATE_FILE" ] || cp "$STATE_FILE" "$temp_dir/old.state" || return 1
+  if [ -e "$target_dir" ] || [ -L "$target_dir" ]; then
+    if [ "$force" != true ]; then
+      if [ "$(lockfile_get_source "$name" 2>/dev/null || true)" = "$source" ]; then
+        log "Plugin already installed: $name"
+        return 0
+      fi
+      log "Plugin name already installed: $name. Use --force to replace it."
       return 1
     fi
+    previous_state=$(state_get "$name" 2>/dev/null | cut -d: -f2)
+    ensure_directory "$INSTALLED_PLUGINS_DIR/.backups"
+    backup=$(mktemp -d "$INSTALLED_PLUGINS_DIR/.backups/$name.XXXXXX") || return 1
+    mv "$target_dir" "$backup/plugin" || return 1
+  fi
+  replacement=true
+  if [[ "$source" == local:* ]]; then
+    ln -s "$plugin_path" "$target_dir" || return 1
   else
-    log "Unknown source type: $source"
+    mv "$plugin_path" "$target_dir" || return 1
+  fi
+  if ! plugin_run_hook "$target_dir" install; then
+    log "Plugin installation failed. Previous plugin and records preserved."
     return 1
   fi
-  
-  local git_args=("--depth=1")
-  if [ -n "$ref_type" ] && [ -n "$ref_value" ]; then
-    if [ "$ref_type" = "tag" ]; then
-      git_args+=("--branch" "$ref_value")
-    elif [ "$ref_type" = "branch" ]; then
-      git_args+=("--branch" "$ref_value")
-    fi
-  fi
-  
-  if ! git clone "${git_args[@]}" "$repo_url" "$temp_dir/plugin" 2>/dev/null; then
-    log "Failed to download plugin"
-    return 1
-  fi
-  
-  local plugin_path="$temp_dir/plugin"
-  
-  # Validate plugin
-  if ! validate_plugin "$plugin_path"; then
-    log "Plugin validation failed"
-    return 1
-  fi
-  
-  # Security scan (unless skipped)
-  if [ "$skip_security" != "true" ]; then
-    if ! quick_scan "$plugin_path"; then
-      log "Security scan failed. Use --skip-security to bypass (not recommended)"
-      return 1
-    fi
-  fi
-  
-  # Check Potions compatibility
-  if ! validate_potions_compatibility "$plugin_path"; then
-    log "Plugin not compatible with current Potions version"
-    return 1
-  fi
-  
-  # Remove old installation if exists
-  if [ -d "$target_dir" ]; then
-    rm -rf "$target_dir"
-  fi
-  
-  # Copy plugin to installed directory
-  cp -r "$plugin_path" "$target_dir"
-  
-  # Make scripts executable
-  chmod +x "$target_dir"/*.sh 2>/dev/null || true
-  chmod +x "$target_dir"/packages/*.sh 2>/dev/null || true
-  
-  # Run install script
-  log "Running plugin installation..."
-  if [ -f "$target_dir/install.sh" ]; then
-    (cd "$target_dir" && bash install.sh)
-  fi
-  
-  # Update lockfile
-  local version
-  version=$(get_plugin_version "$target_dir")
-  lockfile_add "$name" "$version" "none" "$source"
-  
-  # Set initial state to active
-  state_set "$name" "active" "$version"
-  
-  log "Plugin installed successfully: $name v$version"
-  return 0
-}
+  version=$(get_plugin_version "$target_dir") || return 1
+  lockfile_add "$name" "$version" "$commit" "$source" || return 1
+  state_set "$name" "${previous_state:-active}" "$version" || return 1
+  committed=true
+  log "Plugin installed: $name v$version"
+  [ "$commit" = none ] || log "Git commit: $commit"
+  [ -z "$backup" ] || log "Previous files backed up to $backup/plugin"
+)
 
-# Install a local plugin
-# Usage: plugin_install_local <path> [force] [skip_security]
+# Legacy API for callers that install a local checkout directly.
 plugin_install_local() {
-  local plugin_path="$1"
-  local force="${2:-false}"
-  local skip_security="${3:-false}"
-  
-  # Expand path
-  plugin_path="${plugin_path/#\~/$HOME}"
-  
-  if [ ! -d "$plugin_path" ]; then
-    log "Local plugin path not found: $plugin_path"
-    return 1
-  fi
-  
-  warn_local_plugin "$plugin_path"
-  
-  # Validate plugin structure
-  if ! validate_plugin "$plugin_path"; then
-    log "Plugin validation failed"
-    return 1
-  fi
-  
-  # Optional security scan
-  if [ "$skip_security" != "true" ]; then
-    log "Running security scan (optional for local plugins)..."
-    quick_scan "$plugin_path" || log "Security warnings found - proceeding anyway for local plugin"
-  fi
-  
-  local name
-  name=$(get_plugin_name "$plugin_path")
-  
-  if [ -z "$name" ]; then
-    name=$(basename "$plugin_path")
-  fi
-  
-  local target_dir="$INSTALLED_PLUGINS_DIR/$name"
-  
-  # Check if already installed
-  if [ -d "$target_dir" ] && [ "$force" != "true" ]; then
-    log "Plugin already installed: $name"
-    log "Use --force to reinstall"
-    return 1
-  fi
-  
-  # Create symlink to local plugin
-  if [ -d "$target_dir" ] || [ -L "$target_dir" ]; then
-    rm -rf "$target_dir"
-  fi
-  
-  ln -s "$plugin_path" "$target_dir"
-  
-  # Run install script
-  log "Running plugin installation..."
-  if [ -f "$plugin_path/install.sh" ]; then
-    (cd "$plugin_path" && bash install.sh)
-  fi
-  
-  # Update lockfile
-  lockfile_add "$name" "local" "none" "local:$plugin_path"
-  
-  # Set initial state to active
-  state_set "$name" "active" "local"
-  
-  log "Local plugin installed: $name"
-  return 0
+  local options=()
+  [ "${2:-false}" != true ] || options+=(--force)
+  [ "${3:-false}" != true ] || options+=(--skip-security)
+  plugin_install "$1" "${options[@]}"
 }
 
 # Uninstall a plugin
 # Usage: plugin_uninstall <plugin_name>
-plugin_uninstall() {
-  local name="$1"
-  
-  if [ -z "$name" ]; then
-    log "Usage: plugin_uninstall <plugin_name>"
-    return 1
-  fi
-  
+plugin_uninstall() (
+  local name="${1:-}"
+  valid_plugin_name "$name" || { log "Invalid plugin name: $name"; return 1; }
   local target_dir="$INSTALLED_PLUGINS_DIR/$name"
-  
   if [ ! -d "$target_dir" ] && [ ! -L "$target_dir" ]; then
     log "Plugin not installed: $name"
     return 1
   fi
-  
-  log "Uninstalling plugin: $name"
-  
-  # Run uninstall script if exists
-  local actual_path="$target_dir"
-  if [ -L "$target_dir" ]; then
-    actual_path=$(readlink "$target_dir")
-  fi
-  
-  if [ -f "$actual_path/uninstall.sh" ]; then
-    log "Running plugin uninstall script..."
-    (cd "$actual_path" && bash uninstall.sh)
-  fi
-  
-  # Remove plugin directory or symlink
-  rm -rf "$target_dir"
-  
-  # Update lockfile
-  lockfile_remove "$name"
-  
-  # Remove state
-  state_remove "$name"
-  
+  plugin_run_hook "$target_dir" uninstall || return 1
+  local temp_dir removed=false committed=false
+  temp_dir=$(mktemp -d "$INSTALLED_PLUGINS_DIR/.uninstall.XXXXXX") || return 1
+  [ ! -f "$LOCKFILE_PATH" ] || cp "$LOCKFILE_PATH" "$temp_dir/old.lock" || return 1
+  [ ! -f "$STATE_FILE" ] || cp "$STATE_FILE" "$temp_dir/old.state" || return 1
+  plugin_uninstall_cleanup() {
+    local result="$?"
+    if [ "$removed" = true ] && [ "$committed" != true ]; then
+      mv "$temp_dir/plugin" "$target_dir"
+      [ ! -f "$temp_dir/old.lock" ] || cp "$temp_dir/old.lock" "$LOCKFILE_PATH"
+      [ ! -f "$temp_dir/old.state" ] || cp "$temp_dir/old.state" "$STATE_FILE"
+    fi
+    rm -rf "$temp_dir"
+    return "$result"
+  }
+  trap plugin_uninstall_cleanup EXIT
+  mv "$target_dir" "$temp_dir/plugin" || return 1
+  removed=true
+  if lockfile_has "$name"; then lockfile_remove "$name" || return 1; fi
+  state_remove "$name" || return 1
+  committed=true
   log "Plugin uninstalled: $name"
-  return 0
-}
+)
 
 # Activate a plugin
 # Usage: plugin_activate <plugin_name>
 plugin_activate() {
   local name="$1"
+  valid_plugin_name "$name" || { log "Invalid plugin name: $name"; return 1; }
   
   if [ -z "$name" ]; then
     log "Usage: plugin_activate <plugin_name>"
@@ -397,13 +292,13 @@ plugin_activate() {
   fi
   
   if [ -f "$actual_path/activate.sh" ]; then
-    (cd "$actual_path" && bash activate.sh)
+    plugin_run_hook "$actual_path" activate || return 1
   fi
   
   # Update state
   local version
   version=$(state_get "$name" | cut -d: -f3)
-  state_set "$name" "active" "$version"
+  state_set "$name" "active" "$version" || return 1
   
   log "Plugin activated: $name"
   return 0
@@ -413,6 +308,7 @@ plugin_activate() {
 # Usage: plugin_deactivate <plugin_name>
 plugin_deactivate() {
   local name="$1"
+  valid_plugin_name "$name" || { log "Invalid plugin name: $name"; return 1; }
   
   if [ -z "$name" ]; then
     log "Usage: plugin_deactivate <plugin_name>"
@@ -443,13 +339,13 @@ plugin_deactivate() {
   fi
   
   if [ -f "$actual_path/deactivate.sh" ]; then
-    (cd "$actual_path" && bash deactivate.sh)
+    plugin_run_hook "$actual_path" deactivate || return 1
   fi
   
   # Update state
   local version
   version=$(state_get "$name" | cut -d: -f3)
-  state_set "$name" "inactive" "$version"
+  state_set "$name" "inactive" "$version" || return 1
   
   log "Plugin deactivated: $name"
   return 0
@@ -458,53 +354,28 @@ plugin_deactivate() {
 # Update a plugin
 # Usage: plugin_update <plugin_name> [--all]
 plugin_update() {
-  local name="$1"
-  
-  if [ "$name" = "--all" ] || [ -z "$name" ]; then
-    # Update all plugins
-    log "Updating all plugins..."
-    for plugin_dir in "$INSTALLED_PLUGINS_DIR"/*/; do
+  local name="${1:---all}"
+  shift || true
+  if [ "$name" = --all ]; then
+    local plugin_dir failed=0
+    for plugin_dir in "$INSTALLED_PLUGINS_DIR"/*; do
       [ -d "$plugin_dir" ] || continue
-      local plugin_name
-      plugin_name=$(basename "$plugin_dir")
-      plugin_update "$plugin_name"
+      plugin_update "${plugin_dir##*/}" "$@" || failed=1
     done
-    return 0
+    return "$failed"
   fi
-  
-  local target_dir="$INSTALLED_PLUGINS_DIR/$name"
-  
-  if [ ! -d "$target_dir" ] && [ ! -L "$target_dir" ]; then
-    log "Plugin not installed: $name"
-    return 1
-  fi
-  
-  # Check if local plugin
+  valid_plugin_name "$name" || return 1
+  local target_dir="$INSTALLED_PLUGINS_DIR/$name" source
+  [ -d "$target_dir" ] || { log "Plugin not installed: $name"; return 1; }
   if [ -L "$target_dir" ]; then
-    log "Local plugin - update manually: $name"
+    log "Local plugin uses your working files: $name"
     return 0
   fi
-  
-  log "Updating plugin: $name"
-  
-  # Get source from lockfile
-  local source
-  source=$(lockfile_get_source "$name")
-  
-  if [ -z "$source" ] || [ "$source" = "local" ]; then
-    log "Cannot update: unknown source"
-    return 1
-  fi
-  
-  # Reinstall with force
-  local plugin_spec
-  if [[ "$source" == github:* ]]; then
-    plugin_spec="${source#github:}"
-  else
-    plugin_spec="$name"
-  fi
-  
-  plugin_install "$plugin_spec" --force
+  source=$(lockfile_get_source "$name") || return 1
+  case "$source" in
+    github:*) plugin_install "${source#github:}" --force "$@" ;;
+    *) log "Cannot update plugin with unknown source: $name"; return 1 ;;
+  esac
 }
 
 # List installed plugins
@@ -521,7 +392,7 @@ plugin_list() {
   
   local count=0
   
-  for plugin_dir in "$INSTALLED_PLUGINS_DIR"/*/; do
+  for plugin_dir in "$INSTALLED_PLUGINS_DIR"/*; do
     [ -d "$plugin_dir" ] || continue
     
     local name
@@ -600,13 +471,14 @@ plugin_search() {
   fi
   
   # Fallback to local registry
-  list_verified_plugins | grep -i "$query" || echo "No plugins found matching: $query"
+  list_verified_plugins | grep -iF -- "$query" || echo "No plugins found matching: $query"
 }
 
 # Show plugin info
 # Usage: plugin_info <plugin_name>
 plugin_info() {
   local name="$1"
+  valid_plugin_name "$name" || { log "Invalid plugin name: $name"; return 1; }
   
   if [ -z "$name" ]; then
     log "Usage: plugin_info <plugin_name>"
@@ -617,7 +489,7 @@ plugin_info() {
   
   if [ ! -d "$target_dir" ] && [ ! -L "$target_dir" ]; then
     # Check if it's in the registry
-    if is_verified_plugin "$name"; then
+    if registry_has_plugin "$name" || is_verified_plugin "$name"; then
       echo "Plugin: $name (not installed)"
       echo ""
       
@@ -693,7 +565,7 @@ state_init() {
 state_get() {
   local name="$1"
   state_init
-  grep "^${name}:" "$STATE_FILE" 2>/dev/null | head -1
+  awk -F: -v name="$name" '$1 == name {print; exit}' "$STATE_FILE"
 }
 
 state_set() {
@@ -702,7 +574,7 @@ state_set() {
   local version="$3"
   
   state_init
-  state_remove "$name" 2>/dev/null
+  state_remove "$name" 2>/dev/null || return 1
   echo "${name}:${status}:${version}" >> "$STATE_FILE"
 }
 
@@ -715,7 +587,7 @@ state_remove() {
   
   local temp_file
   temp_file=$(mktemp)
-  grep -v "^${name}:" "$STATE_FILE" > "$temp_file" 2>/dev/null || true
+  awk -F: -v name="$name" '$1 != name' "$STATE_FILE" > "$temp_file" || return 1
   mv "$temp_file" "$STATE_FILE"
 }
 
@@ -731,22 +603,20 @@ plugin_install_from_potionfile() {
   
   log "Installing plugins from Potionfile..."
   
-  while IFS= read -r line; do
-    # Skip comments and empty lines
+  local failed=0 line spec
+  while IFS= read -r line || [ -n "$line" ]; do
+    line=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')
     [[ "$line" =~ ^[[:space:]]*# ]] && continue
-    [[ -z "${line// }" ]] && continue
-    
-    # Parse plugin or local_plugin declarations
-    if echo "$line" | grep -qE "^[[:space:]]*plugin[[:space:]]"; then
-      local spec
-      spec=$(echo "$line" | sed -E "s/^[[:space:]]*plugin[[:space:]]+['\"]?([^'\"]+)['\"]?.*/\1/")
-      plugin_install "$spec"
-    elif echo "$line" | grep -qE "^[[:space:]]*local_plugin[[:space:]]"; then
-      local path
-      path=$(echo "$line" | sed -E "s/^[[:space:]]*local_plugin[[:space:]]+['\"]?([^'\"]+)['\"]?.*/\1/")
-      plugin_install "$path"
-    fi
+    [[ -z "${line//[[:space:]]/}" ]] && continue
+    case "$line" in
+      plugin[[:space:]]*|local_plugin[[:space:]]*)
+        spec=$(printf '%s' "$line" | sed -E 's/^(plugin|local_plugin)[[:space:]]+//')
+        # Strip the declaration's wrapping quotes, preserving ref options.
+        spec=$(printf '%s' "$spec" | sed "s/^[[:space:]'\"]*//;s/['\"][[:space:]]*,/,/;s/['\"][[:space:]]*$//")
+        plugin_install "$spec" || failed=1
+        ;;
+      *) log "Invalid Potionfile declaration: $line"; failed=1 ;;
+    esac
   done < "$potionfile"
-  
-  log "Potionfile installation complete"
+  return "$failed"
 }

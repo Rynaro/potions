@@ -1414,6 +1414,14 @@ main() {
     log_skip "Upgrade integration test requires Git"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
   fi
+  log_step "Plugin Workflow"
+  if command -v git >/dev/null 2>&1; then
+    bash "$SCRIPT_DIR/plugins/tests/test_workflow.sh"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_skip "Plugin workflow tests require Git"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
   log_step "Potions Desk"
   if command -v python3 >/dev/null 2>&1; then
     python3 "$SCRIPT_DIR/scripts/test-desk.py"

@@ -4,10 +4,10 @@
 # Scans plugin scripts for dangerous patterns and security issues
 
 # Guard against multiple inclusion
-if [ -n "$SCANNER_SOURCED" ]; then
+if [ -n "$SCANNER_SOURCED" ] && declare -F quick_scan >/dev/null; then
   return 0
 fi
-export SCANNER_SOURCED=1
+SCANNER_SOURCED=1
 
 # Source core accessories if not already sourced
 CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -81,7 +81,10 @@ scan_file() {
   
   # Scan for dangerous patterns
   for pattern_info in "${DANGEROUS_PATTERNS[@]}"; do
-    IFS='|' read -r pattern severity description <<< "$pattern_info"
+    description="${pattern_info##*|}"
+    pattern="${pattern_info%|*}"
+    severity="${pattern##*|}"
+    pattern="${pattern%|*}"
     
     if grep -qE "$pattern" "$file" 2>/dev/null; then
       local line_num
@@ -99,7 +102,10 @@ scan_file() {
   
   # Scan for sensitive data patterns
   for pattern_info in "${SENSITIVE_PATTERNS[@]}"; do
-    IFS='|' read -r pattern severity description <<< "$pattern_info"
+    description="${pattern_info##*|}"
+    pattern="${pattern_info%|*}"
+    severity="${pattern##*|}"
+    pattern="${pattern%|*}"
     
     if grep -qiE "$pattern" "$file" 2>/dev/null; then
       local line_num
@@ -196,31 +202,23 @@ quick_scan() {
   
   log "Quick security scan: $plugin_path"
   
-  # Check for most critical patterns only
   local critical_patterns=(
-    'curl.*|.*bash'
-    'wget.*|.*bash'
-    'rm -rf /'
-    ':(){.*:|:.*};:'
-    'mkfs.'
-    '> /dev/sd'
+    'curl.*\|[[:space:]]*(ba)?sh'
+    'wget.*\|[[:space:]]*(ba)?sh'
+    'rm[[:space:]]+-rf[[:space:]]+/'
+    'mkfs\.'
+    '>[[:space:]]*/dev/sd'
     'BEGIN.*PRIVATE KEY'
   )
-  
-  for pattern in "${critical_patterns[@]}"; do
-    if grep -rqE "$pattern" "$plugin_path"/*.sh 2>/dev/null; then
-      log "CRITICAL: Found dangerous pattern: $pattern"
-      return 1
-    fi
-    
-    if [ -d "$plugin_path/packages" ]; then
-      if grep -rqE "$pattern" "$plugin_path/packages"/*.sh 2>/dev/null; then
-        log "CRITICAL: Found dangerous pattern in packages: $pattern"
+  local script pattern
+  while IFS= read -r -d '' script; do
+    for pattern in "${critical_patterns[@]}"; do
+      if grep -qE "$pattern" "$script"; then
+        log "Security scan flagged $script. Review before using --skip-security."
         return 1
       fi
-    fi
-  done
-  
+    done
+  done < <(find "$plugin_path/" -name .git -prune -o -type f \( -name '*.sh' -o -name '*.zsh' -o -name '*.lua' \) -print0)
   log "Quick scan passed"
   return 0
 }
