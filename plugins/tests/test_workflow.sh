@@ -105,47 +105,12 @@ if bash "$CLI" plugin install >/dev/null 2>&1; then exit 1; fi
 grep -q '^yaml-demo:active:' "$POTIONS_HOME/plugins/.state"
 grep -q "_potions_source_plugin 'yaml-demo'" "$POTIONS_HOME/plugins/.init.zsh"
 bash "$CLI" plugin uninstall yaml-demo >/dev/null
-# Cached Shelf discovery stays clean, searches literal user input, and does not
-# turn catalog membership or author-supplied checksum metadata into trust.
-mkdir -p "$POTIONS_HOME/.registry/manifests"
-cat > "$POTIONS_HOME/.registry/index.json" <<'EOF'
-{
-  "version": "1.0.0",
-  "plugins": [
-    {"name": "demo", "description": "Catalog entry with [literal] text", "repository": "https://github.com/fixture/demo@v0.1.0", "version": "0.1.0"}
-  ]
-}
-EOF
-cat > "$POTIONS_HOME/.registry/manifests/demo.potion" <<'EOF'
-name: demo
-version: "0.1.0"
-description: "Catalog entry with [literal] text"
-author: "Fixture"
-repository: "https://github.com/fixture/demo@v0.1.0"
-checksum: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-EOF
-date +%s > "$POTIONS_HOME/.registry/.timestamp"
-search_output=$(bash "$CLI" plugin search '[' 2>&1)
-printf '%s\n' "$search_output" | grep -Fx '  demo' >/dev/null
-assert_no_match 'Directory .* already exists' <<< "$search_output"
-no_match_output=$(bash "$CLI" plugin search '.*' 2>&1)
-printf '%s\n' "$no_match_output" | grep -F 'No plugins found matching: .*' >/dev/null
-info_output=$(bash "$CLI" plugin info demo 2>&1)
-printf '%s\n' "$info_output" | grep -F 'Catalog: Listed in Potions Shelf' >/dev/null
-assert_no_match 'Verified by Potions Quality Assurance|Safe to install|Checksum URL:' <<< "$info_output"
-if bash "$CLI" plugin install demo </dev/null >/dev/null 2>&1; then exit 1; fi
-[ ! -e "$POTIONS_HOME/plugins/demo" ]
-bash "$CLI" plugin install demo --trust >/dev/null 2>&1
-grep -Fq "demo|0.1.0|$first_commit|github:fixture/demo, tag: v0.1.0" "$POTIONS_HOME/Potionfile.lock"
-bash "$CLI" plugin uninstall demo >/dev/null
-# A refreshed catalog removes manifests cached from its previous generation.
-mkdir -p "$TEST_ROOT/bin"
-cat > "$TEST_ROOT/refreshed-index.json" <<'EOF'
-{"version":"1.0.0","plugins":[],"categories":{}}
-EOF
+# Serve reviewed Shelf data locally, including current catalog refreshes.
+mkdir -p "$TEST_ROOT/bin" "$POTIONS_HOME/.registry/manifests"
 printf '#!%s\n' "$BASH" > "$TEST_ROOT/bin/curl"
 cat >> "$TEST_ROOT/bin/curl" <<'EOF'
 set -eu
+[ "${TEST_REGISTRY_OFFLINE:-0}" != 1 ] || exit 7
 url=""
 output=""
 while [ "$#" -gt 0 ]; do
@@ -157,12 +122,100 @@ while [ "$#" -gt 0 ]; do
 done
 case "$url" in
   https://raw.githubusercontent.com/Rynaro/potions-shelf/main/index.json)
-    cp "$TEST_ROOT/refreshed-index.json" "$output" ;;
+    cp "$TEST_ROOT/remote-index.json" "$output" ;;
+  https://raw.githubusercontent.com/Rynaro/potions-shelf/main/plugins/demo.potion)
+    cp "$TEST_ROOT/remote-demo.potion" "$output" ;;
   *) exit 22 ;;
 esac
 EOF
 chmod +x "$TEST_ROOT/bin/curl"
-PATH="$TEST_ROOT/bin:$PATH" bash "$CLI" plugin registry-sync >/dev/null 2>&1
+export PATH="$TEST_ROOT/bin:$PATH"
+cat > "$TEST_ROOT/remote-index.json" <<EOF
+{
+  "version": "1.0.0",
+  "plugins": [
+    {"metadata": {"name": "other", "reviewed_commit": "ignored"}, "name": "demo", "description": "Catalog entry with [literal] text", "repository": "https://github.com/fixture/demo@v0.1.0", "version": "0.1.0", "reviewed_commit": "$first_commit"}
+  ]
+}
+EOF
+cat > "$TEST_ROOT/remote-demo.potion" <<EOF
+name: demo
+version: "0.1.0"
+description: "Catalog entry with [literal] text"
+author: "Fixture"
+repository: "https://github.com/fixture/demo@v0.1.0"
+reviewed_commit: $first_commit
+checksum: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+EOF
+cp "$TEST_ROOT/remote-index.json" "$POTIONS_HOME/.registry/index.json"
+cp "$TEST_ROOT/remote-demo.potion" "$POTIONS_HOME/.registry/manifests/demo.potion"
+date +%s > "$POTIONS_HOME/.registry/.timestamp"
+search_output=$(bash "$CLI" plugin search '[' 2>&1)
+printf '%s\n' "$search_output" | grep -Fx '  demo' >/dev/null
+assert_no_match 'Directory .* already exists' <<< "$search_output"
+no_match_output=$(bash "$CLI" plugin search '.*' 2>&1)
+printf '%s\n' "$no_match_output" | grep -F 'No plugins found matching: .*' >/dev/null
+info_output=$(bash "$CLI" plugin info demo 2>&1)
+printf '%s\n' "$info_output" | grep -F 'Catalog: Listed in Potions Shelf' >/dev/null
+assert_no_match 'Verified by Potions Quality Assurance|Safe to install|Checksum URL:' <<< "$info_output"
+if bash "$CLI" plugin install demo </dev/null >/dev/null 2>&1; then exit 1; fi
+[ ! -e "$POTIONS_HOME/plugins/demo" ]
+# Old locks cannot distinguish direct installs from pre-pin registry installs.
+# Adopting the registry explicitly preserves the previously disabled state.
+bash "$CLI" plugin install fixture/demo@v0.1.0 --trust >/dev/null 2>&1
+bash "$CLI" plugin deactivate demo >/dev/null
+bash "$CLI" plugin install demo --force --trust >/dev/null 2>&1
+grep -Fq "demo|0.1.0|$first_commit|registry:demo" "$POTIONS_HOME/Potionfile.lock"
+grep -q '^demo:inactive:' "$POTIONS_HOME/plugins/.state"
+cp "$POTIONS_HOME/Potionfile.lock" "$TEST_ROOT/registry.lock"
+cp "$POTIONS_HOME/plugins/.state" "$TEST_ROOT/registry.state"
+cp "$POTIONS_HOME/plugins/.init.zsh" "$TEST_ROOT/registry.init"
+# A moved tag is rejected before its optional hook, regardless of bypass flags.
+printf '#!/bin/bash\nprintf ran > "$TEST_ROOT/hook-ran"\n' > demo/install.sh
+git -C demo add install.sh
+git -C demo -c user.name=Fixture -c user.email=fixture@example.test commit -qm changed
+git -C demo tag -f v0.1.0 >/dev/null
+changed_commit=$(git -C demo rev-parse HEAD)
+if bash "$CLI" plugin update demo --trust --skip-security >/dev/null 2>&1; then exit 1; fi
+[ ! -e "$TEST_ROOT/hook-ran" ]
+[ "$(git -C "$POTIONS_HOME/plugins/demo" rev-parse HEAD)" = "$first_commit" ]
+cmp "$TEST_ROOT/registry.lock" "$POTIONS_HOME/Potionfile.lock"
+cmp "$TEST_ROOT/registry.state" "$POTIONS_HOME/plugins/.state"
+cmp "$TEST_ROOT/registry.init" "$POTIONS_HOME/plugins/.init.zsh"
+# Missing or malformed reviewed revisions cannot fall back to direct installs.
+cp "$TEST_ROOT/remote-demo.potion" "$TEST_ROOT/reviewed.potion"
+sed '/^reviewed_commit:/d' "$TEST_ROOT/reviewed.potion" > "$TEST_ROOT/remote-demo.potion"
+if bash "$CLI" plugin install demo --force --trust --skip-security >/dev/null 2>&1; then exit 1; fi
+printf 'reviewed_commit: invalid\n' >> "$TEST_ROOT/remote-demo.potion"
+if bash "$CLI" plugin update demo --trust --skip-security >/dev/null 2>&1; then exit 1; fi
+[ ! -e "$TEST_ROOT/hook-ran" ]
+# A raw manifest merged ahead of a successful index publication cannot advance
+# the revision or source that the published catalog reviewed.
+sed "s/$first_commit/$changed_commit/" "$TEST_ROOT/reviewed.potion" > "$TEST_ROOT/remote-demo.potion"
+if bash "$CLI" plugin update demo --trust --skip-security >/dev/null 2>&1; then exit 1; fi
+[ ! -e "$TEST_ROOT/hook-ran" ]
+cmp "$TEST_ROOT/registry.lock" "$POTIONS_HOME/Potionfile.lock"
+sed 's|fixture/demo@|fixture/other@|' "$TEST_ROOT/reviewed.potion" > "$TEST_ROOT/remote-demo.potion"
+if bash "$CLI" plugin update demo --trust --skip-security >/dev/null 2>&1; then exit 1; fi
+[ ! -e "$TEST_ROOT/hook-ran" ]
+# An approved new revision can update while retaining registry provenance/state.
+sed "s/$first_commit/$changed_commit/" "$TEST_ROOT/reviewed.potion" > "$TEST_ROOT/remote-demo.potion"
+sed "s/$first_commit/$changed_commit/" "$TEST_ROOT/remote-index.json" > "$TEST_ROOT/updated-index.json"
+mv "$TEST_ROOT/updated-index.json" "$TEST_ROOT/remote-index.json"
+bash "$CLI" plugin update demo --trust --skip-security >/dev/null 2>&1
+[ "$(cat "$TEST_ROOT/hook-ran")" = ran ]
+grep -Fq "demo|0.1.0|$changed_commit|registry:demo" "$POTIONS_HOME/Potionfile.lock"
+grep -q '^demo:inactive:' "$POTIONS_HOME/plugins/.state"
+# A current catalog is mandatory even when a valid cached entry exists.
+cp "$POTIONS_HOME/Potionfile.lock" "$TEST_ROOT/registry.lock"
+if TEST_REGISTRY_OFFLINE=1 bash "$CLI" plugin update demo --trust >/dev/null 2>&1; then exit 1; fi
+cmp "$TEST_ROOT/registry.lock" "$POTIONS_HOME/Potionfile.lock"
+cat > "$TEST_ROOT/remote-index.json" <<'EOF'
+{"version":"1.0.0","plugins":[],"categories":{}}
+EOF
+if bash "$CLI" plugin update demo --trust >/dev/null 2>&1; then exit 1; fi
+cmp "$TEST_ROOT/registry.lock" "$POTIONS_HOME/Potionfile.lock"
+bash "$CLI" plugin uninstall demo >/dev/null
 [ ! -e "$POTIONS_HOME/.registry/manifests/demo.potion" ]
 if bash "$CLI" plugin info demo >/dev/null 2>&1; then exit 1; fi
 if bash "$CLI" plugin install demo </dev/null >/dev/null 2>&1; then exit 1; fi

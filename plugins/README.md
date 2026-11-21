@@ -65,6 +65,21 @@ Managed GitHub installations record their exact Git commit in `Potionfile.lock`.
 configuration directly from the installed snapshot. Local files remain mutable.
 The lock records provenance and selected refs. A tag can be moved upstream.
 
+From Potions 2.18.1, installing by Shelf name requires a fresh catalog response
+and a `reviewed_commit` in its entry. Potions checks the fetched Git revision
+against that value before running hooks. The source and review revision must
+also agree with the published index. These checks apply with `--trust` or
+`--skip-security`. A mismatched revision, missing review record, unavailable
+catalog or removed listing stops the operation and preserves the current plugin.
+Updates of a registry installation resolve its Shelf name again and retain its
+enabled or disabled state. The lockfile records its source as `registry:NAME`.
+
+Potions 2.18.0 used `github:` provenance for every remote installation, so its
+lockfile cannot identify which ones originally came from the Shelf. After
+upgrading, use `potions plugin install NAME --force` to explicitly replace an
+old installation with the reviewed catalog version. The current disabled state
+is preserved. Existing direct GitHub sources keep their previous update behavior.
+
 Failed installation hooks restore the previous managed plugin and its records.
 Forced replacement keeps previous files under `plugins/.backups/`. Back up user
 files inside hooks before changing them. External changes made by hooks require

@@ -184,6 +184,31 @@ with your account permissions.
 potions plugin install OWNER/REPO@v1.2.3
 ```
 
+Shelf maintainers use automated checks and source review to reduce the risk of
+malicious code reaching listed plugins. This is a best-effort process and cannot
+guarantee that a plugin is free of vulnerabilities or harmful behavior. From
+Potions 2.18.1, installs by Shelf name require a current listing and verify the
+fetched Git commit against its recorded review revision before running hooks.
+Updates retain that registry source and repeat the check. A moved tag stops the
+installation until the Shelf reviews and records its new revision.
+
+Direct GitHub installations are outside Shelf screening. Their publishers are
+responsible for the code, updates, and support. Potions provides the installation
+mechanism, and you choose whether to run that code with your account permissions.
+
+Please report every suspicious Shelf package, even if you are unsure. Include
+the package name, repository, commit, and a brief description of the behavior.
+Use a public issue for nonsensitive information and follow the security policy
+for sensitive reports. Keep credentials and private files out of public reports.
+[Report a suspicious package privately](https://github.com/Rynaro/potions-shelf/security/advisories/new)
+· [Shelf security policy](https://github.com/Rynaro/potions-shelf/security/policy)
+
+Potions 2.18.0 recorded all remote installs as direct GitHub sources. To move an
+existing install onto the reviewed Shelf path, upgrade Potions and explicitly
+run `potions plugin install NAME --force` using its catalog name. That replacement
+preserves a disabled plugin's state. Direct GitHub installs keep their selected
+source and remain outside Shelf triage.
+
 ### Make your first plugin
 
 A shell plugin needs a manifest and a shell configuration file. Try adding a
