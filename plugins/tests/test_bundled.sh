@@ -2,6 +2,18 @@
 # Exercise the default plugin through the deployed CLI without network access.
 set -eo pipefail
 
+# These fixtures contain text. Appending a sentinel preserves trailing newlines
+# during command substitution and avoids requiring the diffutils package.
+assert_same_text() {
+  local expected actual
+  expected=$(cat -- "$1" && printf '\001') || return 1
+  actual=$(cat -- "$2" && printf '\001') || return 1
+  if [ "$expected" != "$actual" ]; then
+    printf 'Text differs between %s and %s\n' "$1" "$2" >&2
+    return 1
+  fi
+}
+
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 test_root=$(mktemp -d)
 test_root=$(cd "$test_root" && pwd -P)
@@ -37,8 +49,8 @@ bash "$cli" plugin status | grep -F 'Lockfile verification passed' > /dev/null
 cp "$POTIONS_HOME/plugins/.state" "$test_root/initial.state"
 cp "$POTIONS_HOME/Potionfile.lock" "$test_root/initial.lock"
 deploy_runtime
-cmp "$test_root/initial.state" "$POTIONS_HOME/plugins/.state"
-cmp "$test_root/initial.lock" "$POTIONS_HOME/Potionfile.lock"
+assert_same_text "$test_root/initial.state" "$POTIONS_HOME/plugins/.state"
+assert_same_text "$test_root/initial.lock" "$POTIONS_HOME/Potionfile.lock"
 bash "$cli" plugin update --all > /dev/null
 
 # Start all relevant bindings from known sentinels. Platform configuration
@@ -150,9 +162,9 @@ printf '%s\n' 'user configuration' > "$POTIONS_HOME/config/local.zsh"
 printf '%s\n' 'user history' > "$POTIONS_HOME/.zsh_history"
 deploy_runtime
 grep -Eq '^word-navigation:active:' "$POTIONS_HOME/plugins/.state"
-printf '%s\n' 'user configuration' | cmp - "$POTIONS_HOME/config/local.zsh"
-printf '%s\n' 'user history' | cmp - "$POTIONS_HOME/.zsh_history"
-printf '%s\n' '2.18.1' | cmp - "$POTIONS_HOME/.version"
+printf '%s\n' 'user configuration' | assert_same_text - "$POTIONS_HOME/config/local.zsh"
+printf '%s\n' 'user history' | assert_same_text - "$POTIONS_HOME/.zsh_history"
+printf '%s\n' '2.18.1' | assert_same_text - "$POTIONS_HOME/.version"
 
 # First-time migration preserves an existing user's plugin with the same name.
 custom_source="$test_root/custom word navigation"
@@ -168,8 +180,8 @@ cp "$POTIONS_HOME/plugins/.state" "$test_root/collision.state"
 cp "$POTIONS_HOME/Potionfile.lock" "$test_root/collision.lock"
 deploy_runtime
 [ "$(readlink "$POTIONS_HOME/plugins/word-navigation")" = "$custom_source" ]
-cmp "$test_root/collision.state" "$POTIONS_HOME/plugins/.state"
-cmp "$test_root/collision.lock" "$POTIONS_HOME/Potionfile.lock"
+assert_same_text "$test_root/collision.state" "$POTIONS_HOME/plugins/.state"
+assert_same_text "$test_root/collision.lock" "$POTIONS_HOME/Potionfile.lock"
 grep -Fxq 'export USER_WORD_NAVIGATION=preserved' "$custom_source/config/init.zsh"
 bash "$POTIONS_HOME/bin/potions" plugin list | grep -E 'word-navigation.*\(local\)' > /dev/null
 bash "$POTIONS_HOME/bin/potions" plugin info word-navigation | grep -Fx 'Type: Local plugin' > /dev/null
@@ -178,8 +190,8 @@ if bash "$POTIONS_HOME/bin/potions" plugin install bundled:word-navigation > /de
   printf '%s\n' 'Bundled install replaced an existing user plugin without approval.' >&2
   exit 1
 fi
-cmp "$test_root/collision.state" "$POTIONS_HOME/plugins/.state"
-cmp "$test_root/collision.lock" "$POTIONS_HOME/Potionfile.lock"
+assert_same_text "$test_root/collision.state" "$POTIONS_HOME/plugins/.state"
+assert_same_text "$test_root/collision.lock" "$POTIONS_HOME/Potionfile.lock"
 if bash "$POTIONS_HOME/bin/potions" plugin install bundled:../word-navigation > /dev/null 2>&1; then
   printf '%s\n' 'Bundled install accepted a path outside its package name.' >&2
   exit 1
