@@ -43,6 +43,16 @@ valid_plugin_name() {
   [[ "$1" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]
 }
 
+# Recognize only the managed bundle, preserving same-name user installations.
+plugin_is_bundled() {
+  local name="$1" bundle_path
+  [ "$name" = word-navigation ] || return 1
+  [ -L "$INSTALLED_PLUGINS_DIR/$name" ] || return 1
+  [ "$(lockfile_get_source "$name")" = "bundled:$name" ] || return 1
+  bundle_path=$(cd "$REPO_ROOT/plugins/bundled/$name" && pwd -P) || return 1
+  [ "$(readlink "$INSTALLED_PLUGINS_DIR/$name")" = "$bundle_path" ]
+}
+
 # Returns name|source|ref_type|ref_value. Accepts GitHub URLs and legacy refs.
 parse_plugin_spec() {
   local spec="$1" ref_type="" ref_value="" repo name
@@ -115,6 +125,16 @@ plugin_install() (
     return "$result"
   }
   trap plugin_install_cleanup EXIT
+  # Bundles use this runtime's version while an upgrade still has the old marker.
+  local compatibility_version="" bundled_name=""
+  case "$plugin_spec" in
+    bundled:word-navigation)
+      bundled_name=word-navigation
+      plugin_spec="$REPO_ROOT/plugins/bundled/word-navigation"
+      compatibility_version=$(cat "$REPO_ROOT/.version") || return 1
+      ;;
+    bundled:*) log "Unknown bundled plugin: ${plugin_spec#bundled:}"; return 1 ;;
+  esac
   local parsed name source ref_type ref_value plugin_path version commit=none
   local registry_name="" reviewed_commit=""
   if is_local_plugin "$plugin_spec"; then
@@ -124,6 +144,7 @@ plugin_install() (
     [[ "$plugin_path" != *'|'* && "$plugin_path" != *$'\n'* ]] || return 1
     name=$(get_plugin_name "$plugin_path") || return 1
     valid_plugin_name "$name" || { log "Invalid plugin name: $name"; return 1; }
+    [ -z "$bundled_name" ] || source="bundled:$bundled_name"
   else
     command_exists git || { log "Git is required to install GitHub plugins."; return 1; }
     parsed=$(parse_plugin_spec "$plugin_spec") || { log "Invalid plugin source: $plugin_spec"; return 1; }
@@ -199,7 +220,7 @@ plugin_install() (
     [ -z "$registry_name" ] || source="registry:$registry_name"
   fi
   validate_plugin "$plugin_path" || return 1
-  validate_potions_compatibility "$plugin_path" || return 1
+  validate_potions_compatibility "$plugin_path" "$compatibility_version" || return 1
   if [ "$skip_security" != true ]; then
     quick_scan "$plugin_path" || return 1
   fi
@@ -224,7 +245,7 @@ plugin_install() (
     mv "$target_dir" "$backup/plugin" || return 1
   fi
   replacement=true
-  if [[ "$source" == local:* ]]; then
+  if [[ "$source" == local:* || "$source" == bundled:* ]]; then
     ln -s "$plugin_path" "$target_dir" || return 1
   else
     mv "$plugin_path" "$target_dir" || return 1
@@ -394,6 +415,10 @@ plugin_update() {
   valid_plugin_name "$name" || return 1
   local target_dir="$INSTALLED_PLUGINS_DIR/$name" source
   [ -d "$target_dir" ] || { log "Plugin not installed: $name"; return 1; }
+  if plugin_is_bundled "$name"; then
+    log "Bundled plugin is managed by Potions releases: $name"
+    return 0
+  fi
   if [ -L "$target_dir" ]; then
     log "Local plugin uses your working files: $name"
     return 0
@@ -454,7 +479,9 @@ plugin_list() {
     esac
     
     local type_indicator=""
-    if [ -L "$plugin_dir" ]; then
+    if plugin_is_bundled "$name"; then
+      type_indicator=" (bundled)"
+    elif [ -L "$plugin_dir" ]; then
       type_indicator=" (local)"
     fi
     
@@ -578,8 +605,11 @@ plugin_info() {
     echo "Status: $(echo "$state_info" | cut -d: -f2)"
   fi
   
-  # Show if local
-  if [ -L "$target_dir" ]; then
+  # Show whether Potions manages the bundle or the user owns a working copy.
+  if plugin_is_bundled "$name"; then
+    echo "Type: Bundled plugin"
+    echo "Updates: Managed by Potions releases"
+  elif [ -L "$target_dir" ]; then
     echo "Type: Local plugin"
     echo "Path: $actual_path"
   fi

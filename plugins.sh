@@ -85,6 +85,31 @@ show_banner() {
 }
 
 # Command: install
+bootstrap_default_plugins() {
+  local name=word-navigation
+  local marker="$INSTALLED_PLUGINS_DIR/.defaults/$name"
+  # Bundle bytes change with runtime releases, while activation remains user-owned.
+  if plugin_is_bundled "$name"; then
+    local version
+    version=$(get_plugin_version "$INSTALLED_PLUGINS_DIR/$name") || return 1
+    if [ "$(lockfile_get_version "$name")" != "$version" ] ||
+       [ "$(state_get "$name" | cut -d: -f3)" != "$version" ]; then
+      plugin_install "bundled:$name" --force || return 1
+      generate_plugin_init || return 1
+    fi
+  fi
+  [ ! -f "$marker" ] || return 0
+  # Existing names and records belong to the user, including dangling links.
+  if [ ! -e "$INSTALLED_PLUGINS_DIR/$name" ] &&
+     [ ! -L "$INSTALLED_PLUGINS_DIR/$name" ] &&
+     [ -z "$(state_get "$name")" ] && ! lockfile_has "$name"; then
+    plugin_install "bundled:$name" || return 1
+  fi
+  generate_plugin_init || return 1
+  mkdir -p "$(dirname "$marker")" || return 1
+  touch "$marker" || return 1
+}
+
 cmd_install() {
   local plugin_spec="${1:-}" result=0
   shift || true
@@ -351,6 +376,7 @@ ${BOLD}COMMANDS:${NC}
     ${CYAN}menu${NC}                      Open the interactive plugin menu
     ${CYAN}install${NC} [plugin]          Install plugins from Potionfile or specific plugin
                              Options: --trust, --force, --skip-security
+                             bundled:word-navigation restores the offline default
     
     ${CYAN}uninstall${NC} <plugin>        Uninstall a plugin
     
@@ -484,11 +510,12 @@ main() {
   shift || true
   
   case "$command" in
-    install|uninstall|remove|activate|enable|deactivate|disable|update|upgrade|clean|cleanup|regenerate-init|regen)
+    install|uninstall|remove|activate|enable|deactivate|disable|update|upgrade|clean|cleanup|regenerate-init|regen|bootstrap-defaults)
       lock_plugin_operation || return 1 ;;
   esac
 
   case "$command" in
+    bootstrap-defaults) bootstrap_default_plugins ;;
     menu) cmd_menu ;;
     install)
       cmd_install "$@"

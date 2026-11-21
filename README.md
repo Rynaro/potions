@@ -209,6 +209,38 @@ run `potions plugin install NAME --force` using its catalog name. That replaceme
 preserves a disabled plugin's state. Direct GitHub installs keep their selected
 source and remain outside Shelf triage.
 
+### Bundled word navigation
+
+Potions 2.19.0 provides its existing Ctrl+Arrow and terminal-specific Alt+F/B
+word movement through the `word-navigation` plugin. Fresh installs and upgrades
+enable the bundled copy automatically, including offline installs. Its bindings
+take effect at the same point in Zsh startup as previous releases.
+
+Manage it in Potions Desk or use the CLI, then open a new shell.
+
+```sh
+potions plugin deactivate word-navigation
+potions plugin activate word-navigation
+potions plugin uninstall word-navigation
+```
+
+Upgrades preserve a disabled or removed plugin. Restore it offline with
+`potions plugin install bundled:word-navigation`. Potions updates the bundled
+code with its own releases. An existing user plugin with that name takes
+precedence during migration. To develop a separate copy, copy
+`plugins/bundled/word-navigation` from the Potions source and install the copied
+directory as a local plugin. [Plugin source and usage](plugins/bundled/word-navigation/README.md)
+
+The standalone package is available from its public repository and the Shelf.
+Use `--force` when you deliberately switch an existing installation to that
+source. Potions preserves the plugin's disabled state during replacement.
+
+```sh
+potions plugin install word-navigation --force
+```
+
+[Standalone plugin](https://github.com/Rynaro/potions-word-navigation)
+
 ### Make your first plugin
 
 A shell plugin needs a manifest and a shell configuration file. Try adding a

@@ -1,0 +1,10 @@
+{
+  "name": "word-navigation",
+  "version": "1.0.0",
+  "description": "Potions word navigation bindings for Zsh terminals",
+  "author": "Potions",
+  "license": "MIT",
+  "potions_min_version": "2.6.0",
+  "platforms": ["macos", "linux", "wsl", "termux", "fedora"],
+  "dependencies": []
+}

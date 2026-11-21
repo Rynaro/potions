@@ -153,7 +153,7 @@ version_eq() {
 }
 
 # Validate plugin is compatible with current Potions version
-# Usage: validate_potions_compatibility <plugin_path>
+# Usage: validate_potions_compatibility <plugin_path> [runtime_version]
 validate_potions_compatibility() {
   local plugin_path="$1"
   
@@ -165,8 +165,10 @@ validate_potions_compatibility() {
     return 0
   fi
   
-  local current_version
-  current_version=$(get_current_potions_version)
+  local current_version="${2:-}"
+  if [ -z "$current_version" ]; then
+    current_version=$(get_current_potions_version)
+  fi
   
   if version_gte "$current_version" "$min_version"; then
     return 0
