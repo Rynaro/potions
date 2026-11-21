@@ -113,14 +113,15 @@ registry_download() {
 }
 
 # Fetch registry index.json
-# Usage: registry_fetch_index [--force]
+# Usage: registry_fetch_index [--force|--strict]
+# Strict refresh is required before installing or updating a registry package.
 registry_fetch_index() {
   local force="${1:-false}"
   
   ensure_registry_cache_dir
   
   # Check if we should use cache
-  if [ "$force" != "--force" ] && is_cache_valid "$REGISTRY_INDEX_FILE"; then
+  if [ "$force" != "--force" ] && [ "$force" != "--strict" ] && is_cache_valid "$REGISTRY_INDEX_FILE"; then
     return 0
   fi
   
@@ -148,12 +149,76 @@ registry_fetch_index() {
   rm -f "$temp_file"
   
   # If download failed but cache exists, use cache
-  if [ -f "$REGISTRY_INDEX_FILE" ]; then
+  if [ "$force" != "--strict" ] && [ -f "$REGISTRY_INDEX_FILE" ]; then
     log "Using cached registry index (network unavailable)" >&2
     return 0
   fi
   
   return 1
+}
+
+# Read the literal top-level fields emitted by the Shelf manifest validator.
+# Duplicate or indented copies would make the shell reader ambiguous.
+registry_manifest_field() {
+  local manifest="$1" field="$2"
+  awk -v field="$field" '
+    $0 ~ "^[[:space:]]*" field "[[:space:]]*:" {
+      count++
+      if ($0 !~ "^" field ": ") invalid=1
+      value=$0
+      sub("^" field ": ", "", value)
+    }
+    END {
+      if (count != 1 || invalid) exit 1
+      if (value ~ /^".*"$/ || value ~ /^\047.*\047$/) value=substr(value, 2, length(value)-2)
+      print value
+    }
+  ' "$manifest"
+}
+
+# Read one direct string member of a generated index object. Track JSON string
+# escapes and nesting so description text and nested metadata cannot supply it.
+registry_index_field() {
+  local field="$1"
+  awk -v field="$field" '
+    {
+      for (i=1; i<=length($0); i++) {
+        character=substr($0, i, 1)
+        if (character == "\"") {
+          value=""; escaped=0; closed=0
+          for (i++; i<=length($0); i++) {
+            character=substr($0, i, 1)
+            if (character == "\\") { escaped=1; i++; continue }
+            if (character == "\"") { closed=1; break }
+            value=value character
+          }
+          if (!closed) invalid=1
+          if (depth == 1 && expecting == "key") {
+            key=escaped ? "" : value
+            expecting="colon"
+          } else if (depth == 1 && expecting == "value") {
+            if (key == field) {
+              count++
+              result=value
+              if (escaped) invalid=1
+            }
+            expecting="separator"
+          }
+        } else if (character == "{" || character == "[") {
+          depth++
+          if (depth == 1) expecting="key"
+        } else if (character == "}" || character == "]") {
+          depth--
+        } else if (depth == 1 && character == ":") {
+          if (expecting != "colon") invalid=1
+          expecting="value"
+        } else if (depth == 1 && character == ",") {
+          expecting="key"
+        }
+      }
+    }
+    END { if (invalid || depth != 0 || count != 1) exit 1; print result }
+  '
 }
 
 # Get plugin info from index.json
@@ -175,15 +240,20 @@ registry_get_plugin_info() {
   fi
   
   # The shelf keeps each plugin object on one line for the shell client.
-  awk -v plugin_name="$plugin_name" '
-    /^[[:space:]]*\{/ && match($0, /"name"[[:space:]]*:[[:space:]]*"[A-Za-z0-9_-]+"/) {
-      name=substr($0, RSTART, RLENGTH)
-      sub(/^.*:[[:space:]]*"/, "", name)
-      sub(/"$/, "", name)
-      if (name == plugin_name) { print; found=1; exit }
-    }
-    END { if (!found) exit 1 }
-  ' "$REGISTRY_INDEX_FILE"
+  local entry entry_name matching_entry="" matches=0
+  while IFS= read -r entry; do
+    entry_name=$(printf '%s\n' "$entry" | registry_index_field name) || return 1
+    if [ "$entry_name" = "$plugin_name" ]; then
+      matching_entry="$entry"
+      matches=$((matches + 1))
+    fi
+  done < <(awk '
+    /"plugins"[[:space:]]*:/ { in_plugins=1; next }
+    in_plugins && /^[[:space:]]*\]/ { in_plugins=0; next }
+    in_plugins && /^[[:space:]]*\{/ { print }
+  ' "$REGISTRY_INDEX_FILE")
+  [ "$matches" = 1 ] || return 1
+  printf '%s\n' "$matching_entry"
 }
 
 # Fetch plugin manifest (.potion file)

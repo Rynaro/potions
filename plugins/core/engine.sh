@@ -116,6 +116,7 @@ plugin_install() (
   }
   trap plugin_install_cleanup EXIT
   local parsed name source ref_type ref_value plugin_path version commit=none
+  local registry_name="" reviewed_commit=""
   if is_local_plugin "$plugin_spec"; then
     plugin_spec="${plugin_spec/#\~/$HOME}"
     plugin_path=$(cd "$plugin_spec" && pwd -P) || return 1
@@ -128,18 +129,39 @@ plugin_install() (
     parsed=$(parse_plugin_spec "$plugin_spec") || { log "Invalid plugin source: $plugin_spec"; return 1; }
     IFS='|' read -r name source ref_type ref_value <<< "$parsed"
     if [[ "$source" == registry:* ]]; then
-      registry_fetch_manifest "${source#registry:}" "$temp_dir/manifest.potion" || return 1
-      local repository
-      repository=$(parse_potion_field "$temp_dir/manifest.potion" repository) || return 1
+      registry_name="${source#registry:}"
+      registry_fetch_index --strict || { log "Cannot refresh the Shelf. Registry installation requires current catalog data."; return 1; }
+      local index_entry index_repository index_commit
+      index_entry=$(registry_get_plugin_info "$registry_name") || { log "Package is not in the current Shelf: $registry_name"; return 1; }
+      index_repository=$(printf '%s\n' "$index_entry" | registry_index_field repository) || return 1
+      index_commit=$(printf '%s\n' "$index_entry" | registry_index_field reviewed_commit) || {
+        log "Shelf index needs a reviewed_commit before installation: $registry_name"
+        return 1
+      }
+      registry_fetch_manifest "$registry_name" "$temp_dir/manifest.potion" || return 1
+      local repository manifest_name
+      manifest_name=$(registry_manifest_field "$temp_dir/manifest.potion" name) || return 1
+      [ "$manifest_name" = "$registry_name" ] || { log "Shelf manifest name does not match $registry_name"; return 1; }
+      reviewed_commit=$(registry_manifest_field "$temp_dir/manifest.potion" reviewed_commit) || {
+        log "Shelf entry needs a reviewed_commit before installation: $registry_name"
+        return 1
+      }
+      [[ "$reviewed_commit" =~ ^[a-f0-9]{40}$ ]] || { log "Invalid reviewed commit for Shelf package: $registry_name"; return 1; }
+      repository=$(registry_manifest_field "$temp_dir/manifest.potion" repository) || return 1
+      if [ "$repository" != "$index_repository" ] || [ "$reviewed_commit" != "$index_commit" ]; then
+        log "Shelf manifest differs from its published index: $registry_name. Wait for catalog publication and retry."
+        return 1
+      fi
       parsed=$(parse_plugin_spec "$repository") || return 1
       IFS='|' read -r name source ref_type ref_value <<< "$parsed"
       [[ "$source" == github:* ]] || return 1
+      [ "${name#potions-}" = "$registry_name" ] || { log "Shelf repository does not match package name: $registry_name"; return 1; }
     fi
     name="${name#potions-}"
     local repo="${source#github:}"
     local requested_source="$source"
     [ -z "$ref_type" ] || requested_source="$source, $ref_type: $ref_value"
-    if [ "$force" != true ] && [ -d "$INSTALLED_PLUGINS_DIR/$name" ] &&
+    if [ -z "$registry_name" ] && [ "$force" != true ] && [ -d "$INSTALLED_PLUGINS_DIR/$name" ] &&
        [ "$(lockfile_get_source "$name" 2>/dev/null || true)" = "$requested_source" ]; then
       log "Plugin already installed: $name"
       return 0
@@ -157,6 +179,10 @@ plugin_install() (
       git -C "$plugin_path" checkout --detach FETCH_HEAD || return 1
     fi
     commit=$(git -C "$plugin_path" rev-parse HEAD) || return 1
+    if [ -n "$registry_name" ] && [ "$commit" != "$reviewed_commit" ]; then
+      log "Shelf revision mismatch for $registry_name. The source changed after review; installation stopped."
+      return 1
+    fi
     if [ "$needs_trust" = true ] && [ "$trust" != true ]; then
       if [ -t 0 ] && [ -t 1 ]; then
         printf 'Repository https://github.com/%s\nRevision %s (%s)\nPlugin code runs with your account permissions. Trust this revision? [y/N] ' "$repo" "$commit" "${ref_value:-default branch}"
@@ -170,6 +196,7 @@ plugin_install() (
     fi
     source="github:$repo"
     [ -z "$ref_type" ] || source="$source, $ref_type: $ref_value"
+    [ -z "$registry_name" ] || source="registry:$registry_name"
   fi
   validate_plugin "$plugin_path" || return 1
   validate_potions_compatibility "$plugin_path" || return 1
@@ -373,6 +400,10 @@ plugin_update() {
   fi
   source=$(lockfile_get_source "$name") || return 1
   case "$source" in
+    registry:*)
+      [ "${source#registry:}" = "$name" ] || { log "Registry provenance does not match installed plugin: $name"; return 1; }
+      plugin_install "$name" --force "$@"
+      ;;
     github:*) plugin_install "${source#github:}" --force "$@" ;;
     *) log "Cannot update plugin with unknown source: $name"; return 1 ;;
   esac
