@@ -199,13 +199,16 @@ list_verified_plugins() {
     echo ""
     
     local plugins
-    plugins=$(registry_search "" 2>/dev/null)
+    if ! plugins=$(registry_search ""); then
+      printf '%s\n' 'Cannot reach Potions Shelf and no cached catalog is available. Check your connection and run potions plugin registry-sync.' >&2
+      return 1
+    fi
     
     if [ -n "$plugins" ]; then
       for plugin in $plugins; do
         # Get more info from registry if possible
         local info
-        info=$(registry_get_plugin_info "$plugin" 2>/dev/null | head -5)
+        info=$(registry_read_plugin_info "$plugin" 2>/dev/null) || info=""
         if [ -n "$info" ]; then
           # Extract description if available
           local desc

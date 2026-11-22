@@ -491,8 +491,36 @@ validate_plugin_platform() {
   return 1
 }
 
+# Check hooks with Bash and shell configuration with the interpreter that loads it.
+# Return 2 when configuration checks must wait until Zsh is installed.
+validate_plugin_scripts() {
+  local plugin_path="$1" parser_mode="${2:-}" script errors=0
+  for script in "$plugin_path"/*.sh "$plugin_path"/packages/*.sh; do
+    [ -f "$script" ] || continue
+    if ! bash -n "$script"; then
+      log "Bash syntax error in: $script"
+      errors=$((errors + 1))
+    fi
+  done
+  for script in "$plugin_path"/config/*.zsh "$plugin_path"/config/*.sh; do
+    [ -f "$script" ] || continue
+    if ! command_exists zsh; then
+      log "Zsh is required to check plugin shell configuration. Install Zsh, then run potions plugin validate '$plugin_path'." >&2
+      [ "$errors" -eq 0 ] || return 1
+      [ "$parser_mode" = --defer-zsh ] || return 1
+      log "Shell configuration syntax checks deferred until Zsh is available." >&2
+      return 2
+    fi
+    if ! zsh -f -n "$script"; then
+      log "Zsh syntax error in: $script"
+      errors=$((errors + 1))
+    fi
+  done
+  [ "$errors" -eq 0 ]
+}
+
 # Full plugin validation
-# Usage: validate_plugin <plugin_path>
+# Usage: validate_plugin <plugin_path> [--defer-zsh for managed provisioning]
 validate_plugin() {
   local plugin_path="$1"
   local manifest_file
@@ -547,22 +575,22 @@ validate_plugin() {
     errors=$((errors + 1))
   fi
   
-  # Validate bash syntax of all .sh files
-  for script in "$plugin_path"/*.sh "$plugin_path"/packages/*.sh; do
-    if [ -f "$script" ]; then
-      if ! bash -n "$script" 2>/dev/null; then
-        log "Syntax error in: $script"
-        errors=$((errors + 1))
-      fi
-    fi
-  done
+  local syntax_result=0
+  validate_plugin_scripts "$plugin_path" "${2:-}" || syntax_result=$?
+  if [ "$syntax_result" -eq 1 ]; then
+    errors=$((errors + 1))
+  fi
   
   if [ $errors -gt 0 ]; then
     log "Plugin validation failed with $errors error(s)"
     return 1
   fi
   
-  log "Plugin validation passed"
+  if [ "$syntax_result" -eq 2 ]; then
+    log "Plugin structure validated; shell configuration syntax awaits Zsh."
+  else
+    log "Plugin validation passed"
+  fi
   return 0
 }
 

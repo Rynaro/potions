@@ -111,16 +111,29 @@ bootstrap_default_plugins() {
 }
 
 cmd_install() {
-  local plugin_spec="${1:-}" result=0
-  shift || true
+  local plugin_spec="" result=0 option
+  local options=()
+  for option in "$@"; do
+    case "$option" in
+      --trust|--force|--skip-security) options+=("$option") ;;
+      -*) log_error "Unknown install option: $option"; return 2 ;;
+      *)
+        if [ -n "$plugin_spec" ]; then
+          log_error "Install accepts one plugin source. Use a Potionfile for several plugins."
+          return 2
+        fi
+        plugin_spec="$option"
+        ;;
+    esac
+  done
   
   if [ -z "$plugin_spec" ]; then
     # Install from Potionfile
     log_info "Installing plugins from Potionfile..."
-    plugin_install_from_potionfile || result=$?
+    plugin_install_from_potionfile "$POTIONS_HOME/Potionfile" "${options[@]}" || result=$?
   else
     # Install specific plugin
-    plugin_install "$plugin_spec" "$@" || return 1
+    plugin_install "$plugin_spec" "${options[@]}" || return 1
   fi
   
   # Successful entries from a partially failed Potionfile must load as recorded.
@@ -205,21 +218,14 @@ cmd_status() {
     log_success "Lockfile verification passed"
   else
     log_warning "Lockfile verification found issues"
+    return 1
   fi
   echo ""
 }
 
 # Command: search
 cmd_search() {
-  local query="$1"
-  
-  if [ -z "$query" ]; then
-    log_info "Available catalog plugins:"
-    list_verified_plugins
-  else
-    log_info "Searching for: $query"
-    plugin_search "$query"
-  fi
+  plugin_search "${1:-}"
 }
 
 # Command: info
@@ -249,29 +255,30 @@ cmd_verify() {
     exit 1
   fi
   
-  local plugin_path="$INSTALLED_PLUGINS_DIR/$plugin_name"
-  if [ -d "$plugin_name" ]; then
-    plugin_path="$plugin_name"
+  local plugin_path="$INSTALLED_PLUGINS_DIR/$plugin_name" installed=true
+  if is_local_plugin "$plugin_name"; then
+    plugin_path="${plugin_name/#\~/$HOME}"
+    installed=false
   elif ! valid_plugin_name "$plugin_name"; then
     log_error "Invalid plugin name: $plugin_name"
     return 1
   fi
   
   if [ ! -d "$plugin_path" ] && [ ! -L "$plugin_path" ]; then
-    # Check if it's a path
-    if [ -d "$plugin_name" ]; then
-      plugin_path="$plugin_name"
-    else
-      log_error "Plugin not found: $plugin_name"
-      exit 1
-    fi
+    log_error "Plugin not found: $plugin_name"
+    return 1
   fi
   
   if [ -L "$plugin_path" ]; then
     plugin_path=$(readlink "$plugin_path")
   fi
   
-  security_audit "$plugin_path"
+  local result=0
+  security_audit "$plugin_path" || result=1
+  if [ "$installed" = true ]; then
+    lockfile_verify "$plugin_name" || result=1
+  fi
+  return "$result"
 }
 
 # Command: validate
@@ -284,28 +291,23 @@ cmd_validate() {
   fi
   
   local plugin_path="$INSTALLED_PLUGINS_DIR/$plugin_name"
-  if [ -d "$plugin_name" ]; then
-    plugin_path="$plugin_name"
+  if is_local_plugin "$plugin_name"; then
+    plugin_path="${plugin_name/#\~/$HOME}"
   elif ! valid_plugin_name "$plugin_name"; then
     log_error "Invalid plugin name: $plugin_name"
     return 1
   fi
   
   if [ ! -d "$plugin_path" ] && [ ! -L "$plugin_path" ]; then
-    # Check if it's a path
-    if [ -d "$plugin_name" ]; then
-      plugin_path="$plugin_name"
-    else
-      log_error "Plugin not found: $plugin_name"
-      exit 1
-    fi
+    log_error "Plugin not found: $plugin_name"
+    return 1
   fi
   
   if [ -L "$plugin_path" ]; then
     plugin_path=$(readlink "$plugin_path")
   fi
   
-  if validate_plugin "$plugin_path"; then
+  if validate_plugin "$plugin_path" --require-zsh; then
     log_success "Plugin validation passed"
   else
     log_error "Plugin validation failed"
@@ -370,7 +372,7 @@ cmd_help() {
   
   cat << EOF
 ${BOLD}USAGE:${NC}
-    ./plugins.sh <command> [options]
+    potions plugin <command> [options]
 
 ${BOLD}COMMANDS:${NC}
     ${CYAN}menu${NC}                      Open the interactive plugin menu
@@ -412,29 +414,31 @@ ${BOLD}COMMANDS:${NC}
 
 ${BOLD}EXAMPLES:${NC}
     # Install all plugins from Potionfile
-    ./plugins.sh install
+    potions plugin install
     
     # Review and install a GitHub plugin
-    ./plugins.sh install owner/my-plugin@v1.0.0
+    potions plugin install owner/my-plugin@v1.0.0
     
     # Install a local plugin
-    ./plugins.sh install ~/my-plugins/custom-theme
+    potions plugin install ~/my-plugins/custom-theme
     
     # Review and explicitly trust a GitHub repository in scripts
-    ./plugins.sh install owner/my-plugin@v1.0.0 --trust
+    potions plugin install owner/my-plugin@v1.0.0 --trust
 
-    # Install with specific version
-    ./plugins.sh install 'Rynaro/potions-docker, tag: v1.0.0'
+    # Discover and inspect a Shelf package
+    potions plugin search
+    potions plugin info plugin-hello-world
+    potions plugin install plugin-hello-world
     
     # Create a new plugin
-    ./plugins.sh create my-awesome-plugin
+    potions plugin create my-awesome-plugin
     
     # List active plugins only
-    ./plugins.sh list --active
+    potions plugin list --active
 
 ${BOLD}CONFIGURATION:${NC}
-    Potionfile: ~/.potions/Potionfile
-    Plugins:    ~/.potions/plugins/
+    Potionfile: $POTIONS_HOME/Potionfile
+    Plugins:    $POTIONS_HOME/plugins/
     
 ${BOLD}For more information:${NC}
     https://github.com/Rynaro/potions/blob/main/plugins/README.md
@@ -448,7 +452,7 @@ cmd_menu() {
   local choice name action
   while true; do
     plugin_list
-    printf 'Plugins\n  1 Install GitHub repository or local path\n  2 Enable plugin\n  3 Disable plugin\n  4 Update plugin\n  5 Remove plugin\n  6 Create plugin\n  q Quit\n> '
+    printf 'Plugins\n  1 Install Shelf name, GitHub repository or local path\n  2 Enable plugin\n  3 Disable plugin\n  4 Update plugin\n  5 Remove plugin\n  6 Create plugin\n  7 Browse Potions Shelf\n  8 Search Potions Shelf\n  9 Inspect plugin details\n  q Quit\n> '
     IFS= read -r choice || return 0
     case "$choice" in
       q|Q|'') return 0 ;;
@@ -458,9 +462,16 @@ cmd_menu() {
       4) action=update ;;
       5) action=uninstall ;;
       6) action=create ;;
+      7) cmd_search || printf 'Catalog browsing failed. Review the message above.\n'; continue ;;
+      8) action=search ;;
+      9) action=info ;;
       *) printf 'Choose an action from the menu.\n'; continue ;;
     esac
-    printf 'Plugin %s> ' "$action"
+    if [ "$action" = search ]; then
+      printf 'Search query> '
+    else
+      printf 'Plugin %s> ' "$action"
+    fi
     IFS= read -r name || return 0
     [ -n "$name" ] || continue
     if [ "$action" = uninstall ]; then

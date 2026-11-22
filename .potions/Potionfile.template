@@ -1,51 +1,32 @@
-# ~/.potions/Potionfile - Potions Plugin Registry
+# Potions plugin declarations
+# Copy this template to $POTIONS_HOME/Potionfile, then uncomment your choices.
+# Review every repository and the resolved commit before approving its code.
+# Plugin hooks and active shell configuration run with your account permissions.
 #
-# This file declares which plugins should be installed in your Potions environment.
-# Similar to a Gemfile, it provides a declarative way to manage plugins.
+# Install declared plugins interactively with: potions plugin install
+# In scripts, review all sources first, then use: potions plugin install --trust
+# A failed entry returns an error while successful entries remain installed.
 #
-# SYNTAX:
-#   plugin 'name'                           # from Potions Shelf Registry
-#   plugin 'owner/repo'                     # from GitHub (prompts to trust unverified code)
-#   plugin 'owner/repo', branch: 'main'     # specific branch
-#   plugin 'owner/repo', tag: 'v1.0.0'      # specific version
-#   local_plugin './path/to/plugin'           # local plugin linked to your working directory
+# Shelf packages require a current listing and the recorded reviewed commit.
+# Discover available packages with: potions plugin search
 #
-# PLUGIN TYPES:
-#   - Remote plugins: Fetched from Potions Shelf Registry (https://github.com/Rynaro/potions-shelf)
-#   - Local plugins: Your own plugins, no verification required
+# plugin 'plugin-hello-world'
 #
-# REGISTRY:
-#   Plugins are automatically fetched from the Potions Shelf Registry.
-#   Use 'potions plugin registry-sync' to manually update the registry cache.
-#   Use 'potions plugin search' to discover available plugins.
+# GitHub sources can select a release tag or branch. Direct installs require
+# your own source review and are outside Shelf screening.
 #
-# EXAMPLES:
+# plugin 'OWNER/REPOSITORY', tag: 'v1.0.0'
+# plugin 'OWNER/REPOSITORY', branch: 'main'
 #
-#   # Install the official Orchid Flask NeoVim theme
-#   plugin 'orchid-flask'
+# Local plugins link to your working files. Review and validate them too.
+# Relative paths are resolved from this Potionfile's directory. Absolute paths
+# and ~/ paths are also accepted.
 #
-#   # Install a verified plugin from GitHub with specific version
-#   plugin 'Rynaro/potions-docker', tag: 'v2.0.0'
+# local_plugin './my-plugin'
+# local_plugin '~/my-plugins/custom-theme'
 #
-#   # Install a local plugin you're developing
-#   local_plugin '~/my-plugins/custom-theme'
-#
-# COMMANDS:
-#   potions plugin install          # Install all plugins from Potionfile
-#   potions plugin update           # Update all plugins
-#   potions plugin list             # List installed plugins
-#   potions plugin status           # Show plugin status
-#   potions plugin search [query]   # Search available plugins in registry
-#   potions plugin registry-sync    # Sync registry cache
-#   potions plugin registry-status  # Show registry connection status
-#
-# For more information, see:
-#   https://github.com/Rynaro/potions/blob/main/plugins/README.md
-#   Registry: https://github.com/Rynaro/potions-shelf
-#
-# ============================================================================
+# Manage installations with potions plugin list, info, activate, deactivate,
+# update, uninstall, and status. Open a new Zsh session to load state changes.
+# https://github.com/Rynaro/potions/blob/main/plugins/README.md
 
-# Add your plugins below:
-
-# Example: Official Orchid Flask theme
-# plugin 'orchid-flask'
+# Add your plugin declarations below.

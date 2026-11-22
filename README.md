@@ -173,7 +173,11 @@ Run `./migrate.sh` to migrate from legacy to new structure.
 Open **Plugins** in Potions Desk or run `potions plugin`. You can install a plugin
 from anyone’s GitHub repository, including your own fork. The optional
 [Potions Shelf](https://github.com/Rynaro/potions-shelf) lets people discover
-community plugins by name. Use `potions plugin search shell` to look for one.
+community plugins by name. Choose **Browse Potions Shelf**, **Search Potions
+Shelf**, or **Inspect plugin details** in the plugin menu. From the CLI, run
+`potions plugin search` to browse or `potions plugin search shell` to filter.
+`potions plugin info NAME` shows details, including the source and reviewed
+commit for a Shelf package you have yet to install.
 
 To install a release directly, replace `OWNER/REPO` and the tag with the
 publisher’s details. For a community repository, Potions shows the resolved
@@ -241,6 +245,14 @@ potions plugin install word-navigation --force
 
 [Standalone plugin](https://github.com/Rynaro/potions-word-navigation)
 
+### Declare plugins in a Potionfile
+
+Add declarations to `$POTIONS_HOME/Potionfile` and run `potions plugin install`.
+Local paths resolve beside that file. After reviewing remote revisions, scripts
+can explicitly approve their installation with `potions plugin install --trust`.
+Interactive installs ask for each remote revision separately. If an entry fails,
+Potions reports failure and keeps successful entries available.
+
 ### Make your first plugin
 
 A shell plugin needs a manifest and a shell configuration file. Try adding a
@@ -250,6 +262,7 @@ command to the scaffold and installing it from your working directory.
 potions plugin create hello
 printf '%s\n' 'alias potions-hello="echo Hello from Potions"' >> ./hello/config/init.zsh
 potions plugin validate ./hello
+potions plugin verify ./hello
 potions plugin install ./hello
 ```
 

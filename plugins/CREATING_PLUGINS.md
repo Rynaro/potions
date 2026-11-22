@@ -40,6 +40,12 @@ Publish the directory as a GitHub repository and tag a release, for example
 Users can then run `potions plugin install owner/my-plugin@v0.1.0` and review
 the repository/revision in the trust prompt. Scripted installs require `--trust`.
 
+For discovery by name, submit the published revision to Potions Shelf using its
+entry helper and include the generated index in your pull request. The Shelf
+checks the public revision and inspects its files before maintainers review the
+listing. Report suspicious listed packages through its security policy.
+[Shelf contribution guide](https://github.com/Rynaro/potions-shelf/blob/main/CONTRIBUTING.md)
+
 Repositories may contain ordinary nested files. Symlinks within a plugin are
 rejected to keep validation and loading within its directory. Avoid vendoring
 secrets. GitHub installs preserve a Git snapshot, and `status` reports local

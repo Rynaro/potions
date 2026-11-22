@@ -1,24 +1,15 @@
-# Verified Potions Plugins Registry
+# Potions maintainer repository allowlist
 # =================================
 #
-# This file contains the list of plugins that have been verified by the
-# Potions Quality Assurance process. Only plugins listed here can be
-# installed from remote sources.
+# Exact repository entries here suppress the interactive installation approval.
+# The public package catalog is maintained in Rynaro/potions-shelf. A repository
+# outside this allowlist can be installed after explicit user review and approval.
 #
 # Format: owner/repo|min_version|checksum_url|description
 #
-# Adding a plugin to this registry:
-#   1. Plugin author submits a PR to add their plugin
-#   2. Potions maintainer reviews the plugin code
-#   3. Maintainer runs: ./plugins/registry/verify_submission.sh <repo>
-#   4. If approved, maintainer adds entry and regenerates checksums
-#
-# Security note:
-#   All plugins in this registry have been reviewed for:
-#   - No malicious code patterns
-#   - Proper variable quoting
-#   - Safe file operations
-#   - No hardcoded credentials
+# Maintainers must review any changes here as changes to user consent behavior.
+# Repository-wide permission applies to future revisions too. Package authors
+# should submit reviewed commit records to the Shelf for ordinary discovery.
 #
 # ============================================================================
 

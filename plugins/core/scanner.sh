@@ -17,6 +17,7 @@ REPO_ROOT="$(dirname "$PLUGINS_DIR")"
 if [ -z "$ACCESSORIES_SOURCED" ]; then
   source "$REPO_ROOT/packages/accessories.sh"
 fi
+source "$CORE_DIR/manifest.sh"
 
 # Dangerous patterns to check for
 # Format: "pattern|severity|description"
@@ -279,15 +280,11 @@ security_audit() {
   echo "=================================="
   echo ""
   
-  # 1. Validate bash syntax
-  echo "1. Validating script syntax..."
-  for script in "$plugin_path"/*.sh "$plugin_path"/packages/*.sh; do
-    if [ -f "$script" ]; then
-      if ! validate_script_syntax "$script"; then
-        audit_passed=false
-      fi
-    fi
-  done
+  # 1. Validate the manifest and the shell files used by the plugin runtime.
+  echo "1. Validating plugin structure and script syntax..."
+  if ! validate_plugin "$plugin_path" --require-zsh; then
+    audit_passed=false
+  fi
   echo ""
   
   # 2. Scan for dangerous patterns
@@ -301,7 +298,7 @@ security_audit() {
   echo "3. Checking variable quoting..."
   for script in "$plugin_path"/*.sh; do
     if [ -f "$script" ]; then
-      check_unquoted_variables "$script"
+      check_unquoted_variables "$script" || true
     fi
   done
   echo ""

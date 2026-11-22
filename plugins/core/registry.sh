@@ -235,10 +235,15 @@ registry_get_plugin_info() {
     return 1
   fi
   
-  if [ ! -f "$REGISTRY_INDEX_FILE" ]; then
-    return 1
-  fi
-  
+  registry_read_plugin_info "$plugin_name"
+}
+
+# Read metadata from the already fetched index without another network request.
+registry_read_plugin_info() {
+  local plugin_name="$1"
+  [[ "$plugin_name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || return 1
+  [ -f "$REGISTRY_INDEX_FILE" ] || return 1
+
   # The shelf keeps each plugin object on one line for the shell client.
   local entry entry_name matching_entry="" matches=0
   while IFS= read -r entry; do
