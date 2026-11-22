@@ -50,6 +50,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Zsh for shell behavior tests
+        run: sudo apt-get update -qq && sudo apt-get install -y zsh
+
       - name: Run test suite
         run: ./test.sh --no-simulate
 
@@ -77,7 +80,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Zsh for shell behavior tests
-        run: dnf -y install zsh
+        run: dnf -y install zsh git python3 diffutils
 
       - name: Run test suite
         run: ./test.sh --no-simulate
@@ -94,9 +97,8 @@ jobs:
 
       - name: Run test suite
         run: |
-          # Run directly without entrypoint scripts since GitHub Actions
-          # doesn't start containers as root. We run as whatever user the
-          # container defaults to and rely on Termux environment variables.
+          # The image entrypoint drops to the normal Termux system user so
+          # pkg can install the native shell used by the plugin tests.
           docker run --rm --privileged \
             -v "$PWD:/workspace" \
             -w /workspace \
@@ -105,8 +107,9 @@ jobs:
             -e TMPDIR=/data/data/com.termux/files/usr/tmp \
             -e PATH=/data/data/com.termux/files/usr/bin:/usr/bin:/bin \
             termux/termux-docker:aarch64 \
-            bash -c "
+            /entrypoint.sh bash -c "
               set -e
+              pkg install -y zsh git python diffutils
               
               echo '=== Termux Environment Info ==='
               termux-info || true

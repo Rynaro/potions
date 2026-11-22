@@ -219,7 +219,9 @@ plugin_install() (
     [ -z "$ref_type" ] || source="$source, $ref_type: $ref_value"
     [ -z "$registry_name" ] || source="registry:$registry_name"
   fi
-  validate_plugin "$plugin_path" || return 1
+  local syntax_mode=""
+  [ -z "$bundled_name" ] || syntax_mode=--defer-zsh
+  validate_plugin "$plugin_path" "$syntax_mode" || return 1
   validate_potions_compatibility "$plugin_path" "$compatibility_version" || return 1
   if [ "$skip_security" != true ]; then
     quick_scan "$plugin_path" || return 1
@@ -508,28 +510,24 @@ plugin_list() {
 # Search available plugins
 # Usage: plugin_search <query>
 plugin_search() {
-  local query="$1"
-  
-  # Try registry search first
-  if [ -n "$REGISTRY_SOURCED" ] && command -v registry_search > /dev/null 2>&1; then
-    local results
-    results=$(registry_search "$query" 2>/dev/null)
-    
-    if [ -n "$results" ]; then
-      echo ""
-      echo "Search Results:"
-      echo "==============="
-      echo ""
-      for plugin in $results; do
-        printf "  %s\n" "$plugin"
-      done
-      echo ""
-      return 0
-    fi
+  local query="${1:-}" results plugin
+  if ! results=$(registry_search "$query"); then
+    printf '%s\n' 'Cannot reach Potions Shelf and no cached catalog is available. Check your connection and run potions plugin registry-sync.' >&2
+    return 1
   fi
-  
-  # Fallback to local registry
-  list_verified_plugins | grep -iF -- "$query" || echo "No plugins found matching: $query"
+  if [ -z "$results" ]; then
+    if [ -n "$query" ]; then
+      printf 'No plugins found matching: %s\n' "$query"
+    else
+      printf '%s\n' 'No plugins are currently listed in Potions Shelf.'
+    fi
+    return 0
+  fi
+  printf '\nPlugins in Potions Shelf\n\n'
+  while IFS= read -r plugin; do
+    printf '  %s\n' "$plugin"
+  done <<< "$results"
+  printf '\nInspect a package with potions plugin info NAME.\n'
 }
 
 # Show plugin info
@@ -546,51 +544,23 @@ plugin_info() {
   local target_dir="$INSTALLED_PLUGINS_DIR/$name"
   
   if [ ! -d "$target_dir" ] && [ ! -L "$target_dir" ]; then
-    # Check if it's in the registry
-    if registry_has_plugin "$name" || is_verified_plugin "$name"; then
-      echo "Plugin: $name (not installed)"
-      echo ""
-      
-      # Try to get detailed info from registry
-      if [ -n "$REGISTRY_SOURCED" ] && command -v registry_fetch_manifest > /dev/null 2>&1; then
-        local temp_manifest
-        temp_manifest=$(mktemp)
-        if registry_fetch_manifest "$name" "$temp_manifest" 2>/dev/null; then
-          # Display info from manifest (registry returns .potion YAML format)
-          local version author description license repository
-          if command -v parse_potion_field > /dev/null 2>&1; then
-            version=$(parse_potion_field "$temp_manifest" "version" 2>/dev/null || echo "unknown")
-            author=$(parse_potion_field "$temp_manifest" "author" 2>/dev/null || echo "unknown")
-            description=$(parse_potion_field "$temp_manifest" "description" 2>/dev/null || echo "No description")
-            license=$(parse_potion_field "$temp_manifest" "license" 2>/dev/null || echo "unknown")
-            repository=$(parse_potion_field "$temp_manifest" "repository" 2>/dev/null || echo "")
-          else
-            # Fallback: try to extract with grep/sed
-            version=$(grep -E "^[[:space:]]*version[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "unknown")
-            author=$(grep -E "^[[:space:]]*author[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "unknown")
-            description=$(grep -E "^[[:space:]]*description[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "No description")
-            license=$(grep -E "^[[:space:]]*license[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "unknown")
-            repository=$(grep -E "^[[:space:]]*repository[[:space:]]*:" "$temp_manifest" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//' | sed "s/[\"']//g" || echo "")
-          fi
-          
-          echo "Version: $version"
-          echo "Author: $author"
-          echo "Description: $description"
-          echo "License: $license"
-          [ -n "$repository" ] && echo "Repository: $repository"
-          echo ""
-          rm -f "$temp_manifest"
-        fi
-      fi
-      
-      display_plugin_security_status "$name"
-      return 0
+    if ! registry_fetch_index; then
+      printf '%s\n' 'Cannot reach Potions Shelf and no cached catalog is available. Check your connection and run potions plugin registry-sync.' >&2
+      return 1
     fi
-    
-    log "Plugin not found: $name"
-    return 1
+    local info field value
+    info=$(registry_read_plugin_info "$name") || { log "Plugin not found in Potions Shelf: $name"; return 1; }
+    printf 'Plugin: %s (not installed)\n' "$name"
+    for field in version author description license repository reviewed_commit; do
+      value=$(printf '%s\n' "$info" | registry_index_field "$field") || continue
+      printf '%s: %s\n' "$field" "$value"
+    done
+    printf '\nCatalog: Listed in Potions Shelf\n'
+    printf '%s\n' 'Review the source and displayed revision before approving installation.'
+    printf 'Install with potions plugin install %s.\n' "$name"
+    return 0
   fi
-  
+
   local actual_path="$target_dir"
   if [ -L "$target_dir" ]; then
     actual_path=$(readlink "$target_dir")
@@ -653,9 +623,10 @@ state_remove() {
 }
 
 # Install plugins from Potionfile
-# Usage: plugin_install_from_potionfile [potionfile_path]
+# Usage: plugin_install_from_potionfile [potionfile_path] [install_options...]
 plugin_install_from_potionfile() {
   local potionfile="${1:-$POTIONS_HOME/Potionfile}"
+  shift || true
   
   if [ ! -f "$potionfile" ]; then
     log "Potionfile not found: $potionfile"
@@ -664,8 +635,11 @@ plugin_install_from_potionfile() {
   
   log "Installing plugins from Potionfile..."
   
+  local potionfile_dir
+  potionfile_dir=$(cd "$(dirname "$potionfile")" && pwd -P) || return 1
   local failed=0 line spec
-  while IFS= read -r line || [ -n "$line" ]; do
+  # Keep stdin connected to the terminal so each remote entry can ask for trust.
+  while IFS= read -r line <&3 || [ -n "$line" ]; do
     line=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')
     [[ "$line" =~ ^[[:space:]]*# ]] && continue
     [[ -z "${line//[[:space:]]/}" ]] && continue
@@ -674,10 +648,26 @@ plugin_install_from_potionfile() {
         spec=$(printf '%s' "$line" | sed -E 's/^(plugin|local_plugin)[[:space:]]+//')
         # Strip the declaration's wrapping quotes, preserving ref options.
         spec=$(printf '%s' "$spec" | sed "s/^[[:space:]'\"]*//;s/['\"][[:space:]]*,/,/;s/['\"][[:space:]]*$//")
-        plugin_install "$spec" || failed=1
+        if [[ "$line" == local_plugin[[:space:]]* ]] && ! is_local_plugin "$spec"; then
+          log "Local plugin declarations require a filesystem path: $spec"
+          failed=1
+          continue
+        fi
+        case "$spec" in
+          ./*|../*)
+            if [ -d "$potionfile_dir/$spec" ]; then
+              spec="$potionfile_dir/$spec"
+            elif [ -d "$spec" ]; then
+              log "Using caller-relative local plugin path: $spec. Use an absolute path or a path relative to $potionfile."
+            else
+              spec="$potionfile_dir/$spec"
+            fi
+            ;;
+        esac
+        plugin_install "$spec" "$@" 3<&- || failed=1
         ;;
       *) log "Invalid Potionfile declaration: $line"; failed=1 ;;
     esac
-  done < "$potionfile"
+  done 3< "$potionfile"
   return "$failed"
 }

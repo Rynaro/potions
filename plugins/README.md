@@ -19,7 +19,7 @@ GitHub shorthand, `https://github.com/owner/repo.git`, and the legacy
 an inactive plugin's state. Repository names beginning with `potions-` retain
 the historical installed name without that prefix. `list` shows installed names.
 
-For repositories outside the shipped verified registry, the menu and interactive
+For repositories outside the shipped maintainer allowlist, the menu and interactive
 CLI display the exact fetched commit and ask whether to trust its code. In scripts,
 review the repository and pass `--trust` explicitly. This also applies to updates.
 
@@ -47,12 +47,31 @@ to a GitHub repository, and tag a release. `--potion` selects the supported YAML
 manifest instead of JSON. See [Creating plugins](CREATING_PLUGINS.md).
 
 `potions plugin install` reads `~/.potions/Potionfile` (or `$POTIONS_HOME/Potionfile`).
-Declarations are parsed as data. A failed entry makes the command fail.
+Create it from the installed template, preserving any existing declarations,
+then edit the file.
 
 ```sh
-plugin 'owner/my-plugin', tag: 'v0.1.0'
-local_plugin '/absolute/path/my-plugin'
+cp -n "${POTIONS_HOME:-$HOME/.potions}/Potionfile.template" "${POTIONS_HOME:-$HOME/.potions}/Potionfile"
 ```
+
+Declarations are parsed as data. The interactive command asks for trust for each
+remote source that needs approval. A failed entry makes the command fail while
+successful entries remain installed and available in new shells.
+
+```sh
+plugin 'plugin-hello-world'
+local_plugin './my-plugin'
+```
+
+Relative local paths resolve from the Potionfile's directory. Existing paths
+relative to the calling directory are accepted with a migration message when
+there is no matching path beside the Potionfile. Prefer an absolute path or a
+Potionfile-relative path for reproducible use. `~/` uses your home directory.
+
+After reviewing every declared remote source, scripted installs can use
+`potions plugin install --trust`. The existing `--force` and `--skip-security`
+options also apply to every declared entry. Use `--force` deliberately when
+replacing an existing source.
 
 Installs validate names, files, script syntax, supported platforms and the minimum
 Potions version, then scan scripts for dangerous patterns. Use `verify` for a

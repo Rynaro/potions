@@ -82,7 +82,7 @@ class DeskTests(unittest.TestCase):
 
     @contextlib.contextmanager
     def terminal(self, *args, size=(24, 80), **overrides):
-        term = Terminal([self.cli, *args], self.project, dict(self.env, **overrides), size)
+        term = Terminal(["bash", self.cli, *args], self.project, dict(self.env, **overrides), size)
         try:
             yield term
         finally:
@@ -90,7 +90,7 @@ class DeskTests(unittest.TestCase):
 
     def test_printable_entry_points(self):
         def output(*args):
-            return subprocess.check_output([self.cli, *args], env=self.env,
+            return subprocess.check_output(["bash", self.cli, *args], env=self.env,
                                            stdin=subprocess.DEVNULL, timeout=5)
         self.assertEqual(output(), output("help"))
         reference = output("keys", "--plain")
@@ -140,7 +140,7 @@ class DeskTests(unittest.TestCase):
 
     def projects(self, *args):
         return subprocess.check_output(
-            [self.cli, "projects", *args], cwd=self.project, env=self.env,
+            ["bash", self.cli, "projects", *args], cwd=self.project, env=self.env,
             stdin=subprocess.DEVNULL, timeout=5, text=True,
         )
 
@@ -171,7 +171,7 @@ class DeskTests(unittest.TestCase):
         multiline_dir = self.home / "line\nbreak"
         multiline_dir.mkdir()
         for invalid in (self.home / "absent", multiline_dir):
-            result = subprocess.run([self.cli, "projects", "pin", str(invalid)],
+            result = subprocess.run(["bash", self.cli, "projects", "pin", str(invalid)],
                                     env=self.env, capture_output=True, timeout=5)
             self.assertNotEqual(result.returncode, 0)
             self.assertTrue(result.stderr)
@@ -188,7 +188,7 @@ class DeskTests(unittest.TestCase):
             subprocess.run(["git", "init", "-q"], cwd=other, env=self.env, check=True)
             (other / "only-in-next-project").touch()
         editor = self.home / "test editor"
-        editor.write_text('#!/bin/sh\npwd -P > "$HOME/editor-cwd"\n')
+        editor.write_text(f'#!{shutil.which("sh")}\npwd -P > "$HOME/editor-cwd"\n')
         editor.chmod(0o700)
         with self.terminal("projects", VISUAL=str(editor)) as term:
             term.until(b"Projects")
@@ -263,8 +263,7 @@ class DeskTests(unittest.TestCase):
             subprocess.run(["git", "init", "-q"], cwd=self.project, env=self.env, check=True)
         (self.project / "working file").touch()
         editor = self.home / "test editor"
-        editor.write_text("""#!/bin/sh
-test -t 0 && stty -a | grep -Eq '(^|[ ;])icanon([ ;]|$)' || exit 1
+        editor.write_text(f"#!{shutil.which('sh')}\n" + """test -t 0 && stty -a | grep -Eq '(^|[ ;])icanon([ ;]|$)' || exit 1
 if [ "$1" = . ]; then pwd > "$HOME/editor-cwd"; else echo entry >> "$1"; fi
 """)
         editor.chmod(0o700)

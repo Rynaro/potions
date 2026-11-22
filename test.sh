@@ -1415,20 +1415,42 @@ main() {
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
   fi
   log_step "Plugin Workflow"
-  if command -v git >/dev/null 2>&1; then
+  if command -v git >/dev/null 2>&1 && command -v zsh >/dev/null 2>&1; then
     bash "$SCRIPT_DIR/plugins/tests/test_workflow.sh"
     TESTS_PASSED=$((TESTS_PASSED + 1))
   else
-    log_skip "Plugin workflow tests require Git"
+    log_skip "Plugin workflow tests require Git and Zsh"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+  log_step "Plugin Verification"
+  if command -v git >/dev/null 2>&1; then
+    bash "$SCRIPT_DIR/plugins/tests/test_plugin_verification.sh"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_skip "Plugin verification tests require Git"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
+  log_step "Potionfile Installs"
+  if command -v git >/dev/null 2>&1 && command -v zsh >/dev/null 2>&1; then
+    bash "$SCRIPT_DIR/plugins/tests/test_potionfile.sh"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_skip "Potionfile integration tests require Git and Zsh"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
   fi
   log_step "Bundled Default Plugin"
-  bash "$SCRIPT_DIR/plugins/tests/test_bundled.sh"
-  TESTS_PASSED=$((TESTS_PASSED + 1))
+  if command -v zsh >/dev/null 2>&1; then
+    bash "$SCRIPT_DIR/plugins/tests/test_bundled.sh"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_skip "Bundled keymap tests require Zsh"
+    TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+  fi
   log_step "Potions Desk"
   if command -v python3 >/dev/null 2>&1; then
     python3 "$SCRIPT_DIR/scripts/test-desk.py"
-    TESTS_PASSED=$((TESTS_PASSED + 1))
+    python3 "$SCRIPT_DIR/scripts/test-plugin-discovery.py"
+    TESTS_PASSED=$((TESTS_PASSED + 2))
   else
     log_skip "Desk terminal tests require Python 3"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))

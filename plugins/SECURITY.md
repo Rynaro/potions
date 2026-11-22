@@ -11,7 +11,10 @@ currently empty. A full repository entry authorizes all of its fetched revisions
 and its legacy version/checksum columns provide no additional enforcement.
 
 Validation rejects invalid names, missing files, unsupported platforms, syntax
-errors in known scripts and symlinks in plugin contents. Pattern scans flag some
+errors in Bash hooks and Zsh shell configuration, and symlinks in plugin contents.
+Shell configuration requires the Zsh parser during validation, verification, and
+installation. A bundled default may be seeded before Zsh is installed and reports
+that its syntax check is deferred. Pattern scans flag some
 dangerous shell commands. They cannot establish that arbitrary code is safe.
 `--skip-security` bypasses the pattern scan and leaves validation enabled.
 
@@ -36,7 +39,11 @@ Use its private reporting link for sensitive findings and keep credentials and
 private files out of public issues.
 
 `Potionfile.lock` records the selected source/ref and resolved Git commit.
-`potions plugin status` checks the installed Git commit and local modifications.
+`potions plugin status` checks installed revisions and reports a failing exit
+status for integrity problems. `potions plugin verify NAME` validates an installed
+plugin, runs its static scan, and compares its recorded Git revision and local
+modifications. `potions plugin verify ./path` validates and scans that working
+copy. Verification reads files without running plugin hooks or shell configuration.
 Shell startup loads configuration directly. Local installs link to mutable author
 files. Repository refs, including tags, can change on a later update.
 

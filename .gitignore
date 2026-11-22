@@ -183,6 +183,7 @@
 !scripts/
 !scripts/*.sh
 !scripts/test-desk.py
+!scripts/test-plugin-discovery.py
 
 # GitHub Actions workflows
 !.github

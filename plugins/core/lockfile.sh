@@ -184,59 +184,113 @@ lockfile_count() {
   lockfile_read | wc -l | tr -d ' '
 }
 
-# Verify installed plugins match lockfile
-# Usage: lockfile_verify
-lockfile_verify() {
-  local errors=0
-  local plugins_dir="$POTIONS_HOME/plugins"
-  
-  if [ ! -f "$LOCKFILE_PATH" ]; then
-    log "No lockfile found"
+# Verify one installed record without changing its source or running plugin code.
+lockfile_verify_entry() {
+  local name="$1" version="$2" checksum="$3" source="$4"
+  local plugin_path="$POTIONS_HOME/plugins/$name"
+  if ! [[ "$name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
+    log "Invalid plugin name in lockfile"
     return 1
   fi
-  
-  while IFS='|' read -r name version checksum source; do
-    [ -z "$name" ] && continue
-    
-    local plugin_path="$plugins_dir/$name"
-    
-    # Check if plugin directory exists
-    if [ ! -d "$plugin_path" ]; then
-      log "Missing plugin: $name (expected at $plugin_path)"
-      errors=$((errors + 1))
-      continue
-    fi
-    
-    # Check version matches (if not local)
-    if [[ "$source" != local* ]]; then
-      local installed_version
-      installed_version=$(get_plugin_version "$plugin_path" 2>/dev/null)
-      
-      if [ "$installed_version" != "$version" ]; then
-        log "Version mismatch for $name: expected $version, found $installed_version"
-        errors=$((errors + 1))
+  if [ ! -d "$plugin_path" ]; then
+    log "Missing plugin: $name (expected at $plugin_path)"
+    return 1
+  fi
+  case "$source" in
+    local:*)
+      if [ ! -L "$plugin_path" ] || [ "$(readlink "$plugin_path")" != "${source#local:}" ]; then
+        log "Local plugin path differs from its record: $name"
+        return 1
       fi
-    fi
-    
-    if [[ "$checksum" =~ ^[a-f0-9]{40}$ ]]; then
-      local installed_commit
-      installed_commit=$(git -C "$plugin_path" rev-parse HEAD 2>/dev/null || true)
-      if [ "$installed_commit" != "$checksum" ] ||
-         [ -n "$(git -C "$plugin_path" status --porcelain --untracked-files=all 2>/dev/null)" ]; then
-        log "Plugin differs from recorded Git revision: $name"
-        errors=$((errors + 1))
+      ;;
+    bundled:word-navigation)
+      local bundle_path
+      bundle_path=$(cd "$REPO_ROOT/plugins/bundled/word-navigation" && pwd -P) || return 1
+      if [ "$name" != word-navigation ] || [ ! -L "$plugin_path" ] ||
+         [ "$(readlink "$plugin_path")" != "$bundle_path" ]; then
+        log "Bundled plugin path differs from its record: $name"
+        return 1
       fi
+      ;;
+    github:*|registry:*)
+      if [ -L "$plugin_path" ] || ! [[ "$checksum" =~ ^[a-f0-9]{40}$ ]]; then
+        log "Recorded Git revision is unavailable for $name. Reinstall from its reviewed source to restore verification."
+        return 1
+      fi
+      ;;
+    *)
+      log "Plugin provenance is unavailable for $name. Review and reinstall its source to restore verification."
+      return 1
+      ;;
+  esac
+  if [[ "$source" != local:* ]]; then
+    local installed_version
+    installed_version=$(get_plugin_version "$plugin_path" 2>/dev/null) || return 1
+    if [ "$installed_version" != "$version" ]; then
+      log "Version mismatch for $name: expected $version, found $installed_version"
+      return 1
     fi
+  fi
+  if [[ "$checksum" =~ ^[a-f0-9]{40}$ ]]; then
+    local installed_commit changes ignored_runtime
+    installed_commit=$(git -C "$plugin_path" rev-parse HEAD 2>/dev/null) || return 1
+    changes=$(git -C "$plugin_path" status --porcelain --untracked-files=all 2>/dev/null) || return 1
+    # Startup and lifecycle hooks use these files even when Git ignores them.
+    ignored_runtime=$(git -C "$plugin_path" ls-files --others --ignored --exclude-standard -- \
+      ':(top,glob)config/*.zsh' ':(top,glob)config/*.sh' \
+      ':(top)install.sh' ':(top)uninstall.sh' ':(top)activate.sh' ':(top)deactivate.sh') || return 1
+    if [ "$installed_commit" != "$checksum" ] || [ -n "$changes" ] || [ -n "$ignored_runtime" ]; then
+      log "Plugin differs from recorded Git revision: $name"
+      return 1
+    fi
+  fi
+}
 
+# Verify all installed records, or only the requested installed plugin.
+# Usage: lockfile_verify [plugin_name]
+lockfile_verify() {
+  local requested="${1:-}" errors=0 matches=0 name version checksum source
+  if [ ! -f "$LOCKFILE_PATH" ]; then
+    if [ -z "$requested" ]; then
+      local plugin_path
+      for plugin_path in "$POTIONS_HOME/plugins"/*; do
+        if [ -d "$plugin_path" ] || [ -L "$plugin_path" ]; then
+          log "Installed plugins have no lockfile"
+          return 1
+        fi
+      done
+      log "No plugins recorded"
+      return 0
+    fi
+    log "No lockfile found for plugin: $requested"
+    return 1
+  fi
+  while IFS='|' read -r name version checksum source; do
+    [ -n "$name" ] || continue
+    [ -z "$requested" ] || [ "$name" = "$requested" ] || continue
+    matches=$((matches + 1))
+    lockfile_verify_entry "$name" "$version" "$checksum" "$source" || errors=$((errors + 1))
   done < <(lockfile_read)
-  
-  if [ $errors -gt 0 ]; then
+  if [ -z "$requested" ]; then
+    local plugin_path plugin_name
+    for plugin_path in "$POTIONS_HOME/plugins"/*; do
+      [ -d "$plugin_path" ] || [ -L "$plugin_path" ] || continue
+      plugin_name="${plugin_path##*/}"
+      if ! lockfile_has "$plugin_name"; then
+        log "Installed plugin has no lockfile record: $plugin_name"
+        errors=$((errors + 1))
+      fi
+    done
+  fi
+  if [ -n "$requested" ] && [ "$matches" -ne 1 ]; then
+    log "Expected one lockfile record for plugin: $requested"
+    errors=$((errors + 1))
+  fi
+  if [ "$errors" -gt 0 ]; then
     log "Lockfile verification failed with $errors error(s)"
     return 1
   fi
-  
   log "Lockfile verification passed"
-  return 0
 }
 
 # Generate lockfile from currently installed plugins
